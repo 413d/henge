@@ -1,0 +1,356 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8480A2002E00000000000001 /* HengeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1202E00000000000001 /* HengeApp.swift */; };
+		8480A2012E00000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1212E00000000000001 /* AppDelegate.swift */; };
+		8480A2022E00000000000001 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1222E00000000000001 /* AppEnvironment.swift */; };
+		8480A2032E00000000000001 /* ApplicationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1232E00000000000001 /* ApplicationState.swift */; };
+		8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1242E00000000000001 /* FixTextUseCase.swift */; };
+		8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1252E00000000000001 /* HengeCoordinator.swift */; };
+		8480A2062E00000000000001 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1262E00000000000001 /* AppConfiguration.swift */; };
+		8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1272E00000000000001 /* ConfigurationStore.swift */; };
+		8480A2082E00000000000001 /* Shortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1282E00000000000001 /* Shortcut.swift */; };
+		8480A2092E00000000000001 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1292E00000000000001 /* AppRuntime.swift */; };
+		8480A20A2E00000000000001 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12A2E00000000000001 /* MenuBarView.swift */; };
+		8480A20B2E00000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12B2E00000000000001 /* SettingsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		8480A1092E00000000000001 /* Henge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Henge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8480A1152E00000000000001 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
+		8480A1162E00000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8480A1202E00000000000001 /* HengeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeApp.swift; sourceTree = "<group>"; };
+		8480A1212E00000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		8480A1222E00000000000001 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		8480A1232E00000000000001 /* ApplicationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationState.swift; sourceTree = "<group>"; };
+		8480A1242E00000000000001 /* FixTextUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixTextUseCase.swift; sourceTree = "<group>"; };
+		8480A1252E00000000000001 /* HengeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeCoordinator.swift; sourceTree = "<group>"; };
+		8480A1262E00000000000001 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		8480A1272E00000000000001 /* ConfigurationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationStore.swift; sourceTree = "<group>"; };
+		8480A1282E00000000000001 /* Shortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shortcut.swift; sourceTree = "<group>"; };
+		8480A1292E00000000000001 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
+		8480A12A2E00000000000001 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		8480A12B2E00000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8480A1072E00000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		8480A1012E00000000000001 = {
+			isa = PBXGroup;
+			children = (
+				8480A10A2E00000000000001 /* Sources */,
+				8480A1142E00000000000001 /* App */,
+				8480A1032E00000000000001 /* Products */,
+				8480A1152E00000000000001 /* Package.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		8480A1032E00000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1092E00000000000001 /* Henge.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8480A10A2E00000000000001 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				8480A10B2E00000000000001 /* App */,
+				8480A10C2E00000000000001 /* Application */,
+				8480A10D2E00000000000001 /* Configuration */,
+				8480A10E2E00000000000001 /* Domain */,
+				8480A1102E00000000000001 /* Infrastructure */,
+				8480A1112E00000000000001 /* UI */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		8480A10B2E00000000000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1202E00000000000001 /* HengeApp.swift */,
+				8480A1212E00000000000001 /* AppDelegate.swift */,
+				8480A1222E00000000000001 /* AppEnvironment.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		8480A10C2E00000000000001 /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1232E00000000000001 /* ApplicationState.swift */,
+				8480A1242E00000000000001 /* FixTextUseCase.swift */,
+				8480A1252E00000000000001 /* HengeCoordinator.swift */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		8480A10D2E00000000000001 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1262E00000000000001 /* AppConfiguration.swift */,
+				8480A1272E00000000000001 /* ConfigurationStore.swift */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		8480A10E2E00000000000001 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				8480A10F2E00000000000001 /* Hotkey */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		8480A10F2E00000000000001 /* Hotkey */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1282E00000000000001 /* Shortcut.swift */,
+			);
+			path = Hotkey;
+			sourceTree = "<group>";
+		};
+		8480A1102E00000000000001 /* Infrastructure */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1292E00000000000001 /* AppRuntime.swift */,
+			);
+			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		8480A1112E00000000000001 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1122E00000000000001 /* MenuBar */,
+				8480A1132E00000000000001 /* Settings */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		8480A1122E00000000000001 /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				8480A12A2E00000000000001 /* MenuBarView.swift */,
+			);
+			path = MenuBar;
+			sourceTree = "<group>";
+		};
+		8480A1132E00000000000001 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				8480A12B2E00000000000001 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		8480A1142E00000000000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1162E00000000000001 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8480A1042E00000000000001 /* Henge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8480A1052E00000000000001 /* Build configuration list for PBXNativeTarget "Henge" */;
+			buildPhases = (
+				8480A1062E00000000000001 /* Sources */,
+				8480A1072E00000000000001 /* Frameworks */,
+				8480A1082E00000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Henge;
+			productName = Henge;
+			productReference = 8480A1092E00000000000001 /* Henge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8480A1002E00000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					8480A1042E00000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 8480A3002E00000000000001 /* Build configuration list for PBXProject "Henge" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 8480A1012E00000000000001;
+			productRefGroup = 8480A1032E00000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8480A1042E00000000000001 /* Henge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8480A1082E00000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8480A1062E00000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8480A2002E00000000000001 /* HengeApp.swift in Sources */,
+				8480A2012E00000000000001 /* AppDelegate.swift in Sources */,
+				8480A2022E00000000000001 /* AppEnvironment.swift in Sources */,
+				8480A2032E00000000000001 /* ApplicationState.swift in Sources */,
+				8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */,
+				8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */,
+				8480A2062E00000000000001 /* AppConfiguration.swift in Sources */,
+				8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */,
+				8480A2082E00000000000001 /* Shortcut.swift in Sources */,
+				8480A2092E00000000000001 /* AppRuntime.swift in Sources */,
+				8480A20A2E00000000000001 /* MenuBarView.swift in Sources */,
+				8480A20B2E00000000000001 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		8480A3012E00000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		8480A3022E00000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		8480A3032E00000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.henge.Henge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		8480A3042E00000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.henge.Henge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8480A3002E00000000000001 /* Build configuration list for PBXProject "Henge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8480A3012E00000000000001 /* Debug */,
+				8480A3022E00000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8480A1052E00000000000001 /* Build configuration list for PBXNativeTarget "Henge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8480A3032E00000000000001 /* Debug */,
+				8480A3042E00000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8480A1002E00000000000001 /* Project object */;
+}

@@ -4,6 +4,10 @@
 
 Henge is a lightweight, privacy-first macOS utility that instantly fixes text typed in the wrong keyboard layout. One keystroke turns `ghbdtn` into `привет` — just like a ninja transformation jutsu.
 
+## Current Status
+
+The repository currently contains the M0 project skeleton: resident menu bar app structure, local JSON configuration persistence and baseline tests are implemented, while the actual text-correction pipeline is intentionally deferred to later milestones.
+
 ## ✨ Features
 
 - **One-hotkey fix** — correct the last typed word or selected text (`ru` ↔ `en`).
@@ -24,14 +28,13 @@ Henge is a lightweight, privacy-first macOS utility that instantly fixes text ty
 2. Drag **Henge.app** into your `Applications` folder.
 3. Launch it. The Henge icon will appear in your menu bar.
 
-## ⌨️ Default Hotkeys
+## ⌨️ Default Hotkey
 
 | Action | Shortcut |
 |---|---|
-| Fix last word | `Ctrl + Shift + X` |
-| Fix selected text | `Ctrl + Shift + C` |
+| Fix selected text or the word around the caret | `⌥X` |
 
-You can remap both in **Settings → Hotkeys**.
+You can remap it in **Settings → Hotkeys**.
 
 ## 🔒 Privacy
 
