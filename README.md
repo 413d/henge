@@ -6,16 +6,31 @@ Henge is a lightweight, privacy-first macOS utility that instantly fixes text ty
 
 ## Current Status
 
-The repository currently contains the M0 project skeleton plus the first **Milestone 1** spike slice: a resident menu bar app with local JSON configuration persistence, a Carbon-based global hotkey backend, and read-only Accessibility probes for the focused element and the current selection.
+The repository contains the M0 project skeleton plus the **Milestone 1 native API spikes** (HEN-010 … HEN-016), implemented and covered by 40 passing unit tests:
 
-Milestone 1 is **not complete yet**. Still open:
+- global hotkey via Carbon `RegisterEventHotKey` — HEN-010;
+- RU ↔ EN keyboard layout mapping via Carbon TIS + `UCKeyTranslate` with a bundled ANSI fallback — HEN-011;
+- Accessibility focused-element probe — HEN-012;
+- Accessibility selection read — HEN-013;
+- direct Accessibility selection write seam — HEN-014;
+- secure-field short-circuit before any text access — HEN-015;
+- full-fidelity `NSPasteboard` snapshot/restore — HEN-016.
 
-- keyboard layout mapping (`TISCopyCurrentKeyboardInputSource` / `UCKeyTranslate`) — HEN-011;
-- clipboard preservation fallback — HEN-016;
-- manual cross-application validation in TextEdit, Safari and VS Code (HEN-010, HEN-013, HEN-014, HEN-015);
-- wiring the direct AX selection writer into the end-to-end pipeline — HEN-014.
+Milestone 1 is **not closed yet**. Remaining work is manual cross-application validation on a GUI session with Accessibility permission (TextEdit, Safari, VS Code) and wiring the selection writer into the end-to-end pipeline. The text-correction pipeline itself remains deliberately deferred; the hotkey currently only resolves context and reports a safe, text-free probe status.
 
-The text-correction pipeline itself remains deliberately deferred; the hotkey currently only resolves context and reports a safe, text-free probe status.
+### Native API probe harness
+
+Native spikes can be validated from a GUI terminal (not over SSH) without launching the menu bar UI:
+
+```bash
+swift run Henge --probe help       # list probe commands
+swift run Henge --probe layout     # HEN-011: RU <-> EN mapping
+swift run Henge --probe clipboard  # HEN-016: snapshot -> marker -> restore
+swift run Henge --probe ax         # HEN-012/013/015: focused element, selection, secure flag
+swift run Henge --probe hotkey     # HEN-010: register <Option>X and wait up to 10s for a key event
+```
+
+The probes never print user text, passwords or clipboard contents; the clipboard probe restores the original pasteboard contents. Accessibility permission is required for `--probe ax` and `--probe hotkey`.
 
 ## ✨ Features
 
