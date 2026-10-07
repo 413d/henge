@@ -6,7 +6,16 @@ Henge is a lightweight, privacy-first macOS utility that instantly fixes text ty
 
 ## Current Status
 
-The repository currently contains the M0 project skeleton: resident menu bar app structure, local JSON configuration persistence and baseline tests are implemented, while the actual text-correction pipeline is intentionally deferred to later milestones.
+The repository currently contains the M0 project skeleton plus the first **Milestone 1** spike slice: a resident menu bar app with local JSON configuration persistence, a Carbon-based global hotkey backend, and read-only Accessibility probes for the focused element and the current selection.
+
+Milestone 1 is **not complete yet**. Still open:
+
+- keyboard layout mapping (`TISCopyCurrentKeyboardInputSource` / `UCKeyTranslate`) — HEN-011;
+- clipboard preservation fallback — HEN-016;
+- manual cross-application validation in TextEdit, Safari and VS Code (HEN-010, HEN-013, HEN-014, HEN-015);
+- wiring the direct AX selection writer into the end-to-end pipeline — HEN-014.
+
+The text-correction pipeline itself remains deliberately deferred; the hotkey currently only resolves context and reports a safe, text-free probe status.
 
 ## ✨ Features
 

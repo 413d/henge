@@ -11,6 +11,9 @@ struct SettingsView: View {
                 LabeledContent("Default shortcut") {
                     Text(coordinator.shortcutDescription)
                 }
+
+                Text(coordinator.hotkeyStatusText)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Permissions") {
@@ -23,14 +26,19 @@ struct SettingsView: View {
                 }
             }
 
-            Section("M0 status") {
-                Text("Project skeleton and configuration persistence are in place. Hotkey handling, text extraction and replacement remain deferred to later milestones.")
+            Section("Milestone status") {
+                Text("Project skeleton and configuration persistence are in place. Global hotkey registration is now wired for native validation, while text extraction and replacement remain in progress.")
                     .foregroundStyle(.secondary)
             }
 
             Section("Text correction") {
                 Text(fixTextStatusText)
                     .foregroundStyle(.secondary)
+
+                if let lastProbeStatusText = coordinator.lastProbeStatusText {
+                    Text(lastProbeStatusText)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20)

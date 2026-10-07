@@ -14,6 +14,10 @@ struct MenuBarView: View {
 
                 Text(coordinator.shortcutDescription)
                     .font(.system(.body, design: .rounded).weight(.semibold))
+
+                Text(coordinator.hotkeyStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Divider()
@@ -39,6 +43,12 @@ struct MenuBarView: View {
                 Text(fixTextStatusText)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+
+                if let lastProbeStatusText = coordinator.lastProbeStatusText {
+                    Text(lastProbeStatusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Divider()
