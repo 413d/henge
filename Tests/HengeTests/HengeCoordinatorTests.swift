@@ -393,6 +393,8 @@ struct HengeCoordinatorTests {
 
 private final class StubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
+    let layoutMapper: LayoutMapping
+    let clipboardManager: ClipboardManaging
     private let registrationError: Error?
     private let focusedElementProbe: FocusedElementProbe
     private let selectionProbe: SelectionProbe
@@ -407,12 +409,16 @@ private final class StubRuntime: AppRuntime {
         focusedElementProbe: FocusedElementProbe = .available(
             FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
         ),
-        selectionProbe: SelectionProbe = .unavailable(.noSelection)
+        selectionProbe: SelectionProbe = .unavailable(.noSelection),
+        layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper(),
+        clipboardManager: ClipboardManaging = MockClipboardManager()
     ) {
         self.hasAccessibilityPermission = hasAccessibilityPermission
         self.registrationError = registrationError
         self.focusedElementProbe = focusedElementProbe
         self.selectionProbe = selectionProbe
+        self.layoutMapper = layoutMapper
+        self.clipboardManager = clipboardManager
     }
 
     func openAccessibilitySettings() {

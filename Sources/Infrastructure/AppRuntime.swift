@@ -121,6 +121,8 @@ enum SelectionWriteFailure: Equatable {
 
 protocol AppRuntime {
     var hasAccessibilityPermission: Bool { get }
+    var layoutMapper: LayoutMapping { get }
+    var clipboardManager: ClipboardManaging { get }
 
     func openAccessibilitySettings()
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws
@@ -154,7 +156,17 @@ final class LiveAppRuntime: AppRuntime {
         AXIsProcessTrusted()
     }
 
+    let layoutMapper: LayoutMapping
+    let clipboardManager: ClipboardManaging
     private let globalHotkeyCenter = GlobalHotkeyCenter()
+
+    init(
+        layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper(),
+        clipboardManager: ClipboardManaging = AppKitClipboardManager()
+    ) {
+        self.layoutMapper = layoutMapper
+        self.clipboardManager = clipboardManager
+    }
 
     func openAccessibilitySettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
