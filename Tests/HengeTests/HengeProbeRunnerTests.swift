@@ -61,4 +61,122 @@ struct HengeProbeRunnerTests {
         #expect(output.contains("--probe hotkey"))
         #expect(output.contains("--probe all"))
     }
+
+    @Test
+    func hotkeyProbeReportsReceivedEvent() {
+        let runtime = ProbeStubRuntime(fireOnRegister: true)
+        let output = HengeProbeRunner.runHotkeyProbe(runtime: runtime, timeout: 2)
+        #expect(output.contains("Hotkey event received."))
+        #expect(runtime.unregisterCount == 1)
+    }
+
+    @Test
+    func hotkeyProbeReportsTimeoutAndUnregisters() {
+        let runtime = ProbeStubRuntime(fireOnRegister: false)
+        let output = HengeProbeRunner.runHotkeyProbe(runtime: runtime, timeout: 0.2)
+        #expect(output.contains("No hotkey event received"))
+        #expect(runtime.unregisterCount == 1)
+    }
+
+    @Test
+    func hotkeyProbeReportsRegistrationFailure() {
+        let runtime = ProbeStubRuntime(fireOnRegister: false, registrationError: ProbeRegistrationError.denied)
+        let output = HengeProbeRunner.runHotkeyProbe(runtime: runtime, timeout: 0.2)
+        #expect(output.contains("Hotkey registration FAILED"))
+        #expect(runtime.unregisterCount == 0)
+    }
+
+    @Test
+    func accessibilityProbeReportsMissingPermission() {
+        let runtime = ProbeStubRuntime(hasAccessibilityPermission: false)
+        let output = HengeProbeRunner.runAccessibilityProbe(runtime: runtime)
+        #expect(output.contains("AXIsProcessTrusted: false"))
+        #expect(output.contains("Accessibility permission is required"))
+    }
+
+    @Test
+    func accessibilityProbeReportsRoleAndSecureFlagWithoutText() {
+        let runtime = ProbeStubRuntime(
+            hasAccessibilityPermission: true,
+            focusedElementProbe: .available(
+                FocusedElementSnapshot(role: "AXSecureTextField", subrole: nil, isSecure: true)
+            )
+        )
+        let output = HengeProbeRunner.runAccessibilityProbe(runtime: runtime)
+        #expect(output.contains("Secure field detected: true"))
+        #expect(output.contains("Selection: skipped (secure field)."))
+        #expect(runtime.selectionInspectionCount == 0)
+    }
+
+    @Test
+    func accessibilityProbeReadsSelectionForNonSecureField() {
+        let runtime = ProbeStubRuntime(
+            hasAccessibilityPermission: true,
+            focusedElementProbe: .available(
+                FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+            )
+        )
+        let output = HengeProbeRunner.runAccessibilityProbe(runtime: runtime)
+        #expect(output.contains("Secure field detected: false"))
+        #expect(output.contains("Selection: unavailable"))
+        #expect(runtime.selectionInspectionCount == 1)
+    }
+}
+
+private enum ProbeRegistrationError: Error {
+    case denied
+}
+
+private final class ProbeStubRuntime: AppRuntime {
+    var hasAccessibilityPermission: Bool
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let clipboardManager: ClipboardManaging = MockClipboardManager()
+
+    private let fireOnRegister: Bool
+    private let registrationError: Error?
+    private let focusedElementProbe: FocusedElementProbe
+    private(set) var unregisterCount = 0
+    private(set) var selectionInspectionCount = 0
+
+    init(
+        fireOnRegister: Bool = false,
+        registrationError: Error? = nil,
+        hasAccessibilityPermission: Bool = true,
+        focusedElementProbe: FocusedElementProbe = .unavailable(.noFocusedElement)
+    ) {
+        self.fireOnRegister = fireOnRegister
+        self.registrationError = registrationError
+        self.hasAccessibilityPermission = hasAccessibilityPermission
+        self.focusedElementProbe = focusedElementProbe
+    }
+
+    func openAccessibilitySettings() {
+    }
+
+    func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws {
+        if let registrationError {
+            throw registrationError
+        }
+
+        if fireOnRegister {
+            handler()
+        }
+    }
+
+    func unregisterFixTextHotkey() {
+        unregisterCount += 1
+    }
+
+    func inspectFocusedElement() -> FocusedElementProbe {
+        focusedElementProbe
+    }
+
+    func inspectSelection() -> SelectionProbe {
+        selectionInspectionCount += 1
+        return .unavailable(.noSelection)
+    }
+
+    func replaceSelection(with text: String) -> SelectionWriteResult {
+        .unavailable(.noSelection)
+    }
 }

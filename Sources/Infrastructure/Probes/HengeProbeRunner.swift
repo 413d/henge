@@ -142,10 +142,17 @@ enum HengeProbeRunner {
         switch runtime.inspectFocusedElement() {
         case let .unavailable(reason):
             lines.append("Focused element: unavailable — \(reason.description)")
+        case let .available(snapshot) where snapshot.isSecure:
+            // DL-016 / safety invariant: a secure field is a complete no-op.
+            // Report only the non-sensitive role markers and stop; never touch the selection.
+            lines.append("Focused element role: \(snapshot.role ?? "<none>")")
+            lines.append("Focused element subrole: \(snapshot.subrole ?? "<none>")")
+            lines.append("Secure field detected: true")
+            lines.append("Selection: skipped (secure field).")
         case let .available(snapshot):
             lines.append("Focused element role: \(snapshot.role ?? "<none>")")
             lines.append("Focused element subrole: \(snapshot.subrole ?? "<none>")")
-            lines.append("Secure field detected: \(snapshot.isSecure)")
+            lines.append("Secure field detected: false")
 
             switch runtime.inspectSelection() {
             case let .available(selection):
@@ -160,29 +167,40 @@ enum HengeProbeRunner {
 
     // MARK: - Hotkey probe
 
-    static func runHotkeyProbe(runtime: AppRuntime) -> String {
+    /// Mutable flag shared between the Carbon hotkey callback and the run loop below.
+    private final class HotkeyFlag {
+        var fired = false
+    }
+
+    /// Registers `⌥X` and pumps the main run loop for up to 10 seconds.
+    ///
+    /// Carbon delivers `kEventHotKeyPressed` on the main run loop, so the probe must
+    /// run the loop rather than block the main thread on a semaphore.
+    static func runHotkeyProbe(runtime: AppRuntime, timeout: TimeInterval = 10) -> String {
         var lines: [String] = []
         lines.append("Henge hotkey probe")
         lines.append("==================")
-        lines.append("Registering ⌥X for 10 seconds. Press ⌥X to confirm the global hotkey fires.")
+        lines.append("Registering ⌥X for \(Int(timeout)) seconds. Press ⌥X to confirm the global hotkey fires.")
 
-        var fired = false
-        let semaphore = DispatchSemaphore(value: 0)
+        let flag = HotkeyFlag()
 
         do {
             try runtime.registerFixTextHotkey(Shortcut(key: "x", modifiers: [.option])) {
-                fired = true
-                semaphore.signal()
+                flag.fired = true
             }
         } catch {
             lines.append("Hotkey registration FAILED: \(error.localizedDescription)")
             return lines.joined(separator: "\n")
         }
 
-        let waitResult = semaphore.wait(timeout: .now() + 10)
+        let deadline = Date().addingTimeInterval(timeout)
+        while !flag.fired && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+
         runtime.unregisterFixTextHotkey()
 
-        lines.append(fired && waitResult == .success ? "Hotkey event received." : "No hotkey event received within 10 seconds.")
+        lines.append(flag.fired ? "Hotkey event received." : "No hotkey event received within \(Int(timeout)) seconds.")
 
         return lines.joined(separator: "\n")
     }
@@ -196,8 +214,8 @@ enum HengeProbeRunner {
         Usage:
           swift run Henge --probe layout      Validate RU <-> EN layout mapping (HEN-011)
           swift run Henge --probe clipboard   Validate full-fidelity pasteboard preservation (HEN-016)
-          swift run Henge --probe ax          Inspect Accessibility focused element and selection (HEN-013/014)
-          swift run Henge --probe hotkey      Register ⌥X and wait up to 10s for a key event (HEN-015)
+          swift run Henge --probe ax          Inspect Accessibility focused element and selection (HEN-012/013/015)
+          swift run Henge --probe hotkey      Register ⌥X and wait up to 10s for a key event (HEN-010)
           swift run Henge --probe all         Run layout, clipboard, and ax probes
           swift run Henge --probe help        Show this message
 
