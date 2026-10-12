@@ -5,11 +5,16 @@ struct AppEnvironment {
 
     static func live() -> AppEnvironment {
         let configurationStore = JSONConfigurationStore()
+        let runtime = LiveAppRuntime()
+        let transformer = SimpleTextTransformer(
+            detector: MajorityLayoutDetector(),
+            mapper: runtime.layoutMapper
+        )
 
         return AppEnvironment(
             configurationStore: configurationStore,
-            fixTextUseCase: DeferredFixTextUseCase(),
-            runtime: LiveAppRuntime()
+            fixTextUseCase: LiveFixTextUseCase(runtime: runtime, transformer: transformer),
+            runtime: runtime
         )
     }
 }

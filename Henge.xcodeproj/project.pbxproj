@@ -19,6 +19,15 @@
 		8480A2092E00000000000001 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1292E00000000000001 /* AppRuntime.swift */; };
 		8480A20A2E00000000000001 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12A2E00000000000001 /* MenuBarView.swift */; };
 		8480A20B2E00000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12B2E00000000000001 /* SettingsView.swift */; };
+		8480A20E2E00000000000001 /* Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12F2E00000000000001 /* Layout.swift */; };
+		8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1302E00000000000001 /* LayoutMapping.swift */; };
+		8480A20C2E00000000000001 /* LayoutDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12C2E00000000000001 /* LayoutDetector.swift */; };
+		8480A20D2E00000000000001 /* TextTransformer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12D2E00000000000001 /* TextTransformer.swift */; };
+		8480A2102E00000000000001 /* ClipboardSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1312E00000000000001 /* ClipboardSnapshot.swift */; };
+		8480A2112E00000000000001 /* AppKitClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1322E00000000000001 /* AppKitClipboardManager.swift */; };
+		8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1332E00000000000001 /* ClipboardManaging.swift */; };
+		8480A2132E00000000000001 /* HengeProbeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1342E00000000000001 /* HengeProbeRunner.swift */; };
+		8480A2142E00000000000001 /* NativeKeyboardLayoutMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1352E00000000000001 /* NativeKeyboardLayoutMapper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +46,15 @@
 		8480A1292E00000000000001 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		8480A12A2E00000000000001 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		8480A12B2E00000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		8480A12C2E00000000000001 /* LayoutDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDetector.swift; sourceTree = "<group>"; };
+		8480A12D2E00000000000001 /* TextTransformer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTransformer.swift; sourceTree = "<group>"; };
+		8480A12F2E00000000000001 /* Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layout.swift; sourceTree = "<group>"; };
+		8480A1302E00000000000001 /* LayoutMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutMapping.swift; sourceTree = "<group>"; };
+		8480A1312E00000000000001 /* ClipboardSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSnapshot.swift; sourceTree = "<group>"; };
+		8480A1322E00000000000001 /* AppKitClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitClipboardManager.swift; sourceTree = "<group>"; };
+		8480A1332E00000000000001 /* ClipboardManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManaging.swift; sourceTree = "<group>"; };
+		8480A1342E00000000000001 /* HengeProbeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeProbeRunner.swift; sourceTree = "<group>"; };
+		8480A1352E00000000000001 /* NativeKeyboardLayoutMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeKeyboardLayoutMapper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,6 +132,7 @@
 			isa = PBXGroup;
 			children = (
 				8480A10F2E00000000000001 /* Hotkey */,
+				8480A12E2E00000000000001 /* Layout */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -126,10 +145,50 @@
 			path = Hotkey;
 			sourceTree = "<group>";
 		};
+		8480A12E2E00000000000001 /* Layout */ = {
+			isa = PBXGroup;
+			children = (
+				8480A12F2E00000000000001 /* Layout.swift */,
+				8480A1302E00000000000001 /* LayoutMapping.swift */,
+				8480A12C2E00000000000001 /* LayoutDetector.swift */,
+				8480A12D2E00000000000001 /* TextTransformer.swift */,
+			);
+			path = Layout;
+			sourceTree = "<group>";
+		};
+		8480A1362E00000000000001 /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1322E00000000000001 /* AppKitClipboardManager.swift */,
+				8480A1332E00000000000001 /* ClipboardManaging.swift */,
+				8480A1312E00000000000001 /* ClipboardSnapshot.swift */,
+			);
+			path = Clipboard;
+			sourceTree = "<group>";
+		};
+		8480A1372E00000000000001 /* Layout */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1352E00000000000001 /* NativeKeyboardLayoutMapper.swift */,
+			);
+			path = Layout;
+			sourceTree = "<group>";
+		};
+		8480A1382E00000000000001 /* Probes */ = {
+			isa = PBXGroup;
+			children = (
+				8480A1342E00000000000001 /* HengeProbeRunner.swift */,
+			);
+			path = Probes;
+			sourceTree = "<group>";
+		};
 		8480A1102E00000000000001 /* Infrastructure */ = {
 			isa = PBXGroup;
 			children = (
 				8480A1292E00000000000001 /* AppRuntime.swift */,
+				8480A1362E00000000000001 /* Clipboard */,
+				8480A1372E00000000000001 /* Layout */,
+				8480A1382E00000000000001 /* Probes */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -246,6 +305,15 @@
 				8480A2092E00000000000001 /* AppRuntime.swift in Sources */,
 				8480A20A2E00000000000001 /* MenuBarView.swift in Sources */,
 				8480A20B2E00000000000001 /* SettingsView.swift in Sources */,
+				8480A20E2E00000000000001 /* Layout.swift in Sources */,
+				8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */,
+				8480A20C2E00000000000001 /* LayoutDetector.swift in Sources */,
+				8480A20D2E00000000000001 /* TextTransformer.swift in Sources */,
+				8480A2102E00000000000001 /* ClipboardSnapshot.swift in Sources */,
+				8480A2112E00000000000001 /* AppKitClipboardManager.swift in Sources */,
+				8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */,
+				8480A2132E00000000000001 /* HengeProbeRunner.swift in Sources */,
+				8480A2142E00000000000001 /* NativeKeyboardLayoutMapper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
