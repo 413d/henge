@@ -19,10 +19,16 @@ public enum NoOpReason: String, Equatable {
 public struct SimpleTextTransformer: TextTransforming {
     private let detector: LayoutDetecting
     private let mapper: LayoutMapping
+    private let casePreserver: CasePreserving
 
-    public init(detector: LayoutDetecting, mapper: LayoutMapping) {
+    public init(
+        detector: LayoutDetecting,
+        mapper: LayoutMapping,
+        casePreserver: CasePreserving = DefaultCasePreserver()
+    ) {
         self.detector = detector
         self.mapper = mapper
+        self.casePreserver = casePreserver
     }
 
     public func transform(_ text: String) -> TransformationResult {
@@ -46,6 +52,31 @@ public struct SimpleTextTransformer: TextTransforming {
             return .noOp(.unchanged)
         }
 
-        return .transformed(mappedText)
+        let originalCharacters = Array(text)
+        let mappedCharacters = Array(mappedText)
+
+        guard mappedCharacters.count == originalCharacters.count else {
+            return .transformed(mappedText)
+        }
+
+        var resolved = ""
+        resolved.reserveCapacity(mappedCharacters.count)
+
+        for index in 0..<mappedCharacters.count {
+            let original = originalCharacters[index]
+            let mapped = mappedCharacters[index]
+
+            if original.isLetter && mapped.isLetter {
+                resolved.append(casePreserver.preserveCase(original: original, transformed: mapped))
+            } else {
+                resolved.append(mapped)
+            }
+        }
+
+        if resolved == text {
+            return .noOp(.unchanged)
+        }
+
+        return .transformed(resolved)
     }
 }

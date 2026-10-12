@@ -10,5 +10,8 @@ public protocol LayoutMapping: Sendable {
 
     /// Translates `text` character by character, leaving characters without a
     /// mapping untouched.
+    ///
+    /// Implementations are expected to preserve the input character count so
+    /// domain-level case preservation can be applied positionally.
     func map(text: String, from source: Layout, to target: Layout) -> String
 }

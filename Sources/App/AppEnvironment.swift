@@ -8,7 +8,8 @@ struct AppEnvironment {
         let runtime = LiveAppRuntime()
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: runtime.layoutMapper
+            mapper: runtime.layoutMapper,
+            casePreserver: DefaultCasePreserver()
         )
 
         return AppEnvironment(

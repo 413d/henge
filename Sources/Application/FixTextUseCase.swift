@@ -18,6 +18,11 @@ struct DeferredFixTextUseCase: FixTextUseCaseProtocol {
     }
 }
 
+/// The current M3 live slice intentionally stays selection-first.
+///
+/// The pure-domain word boundary detection is implemented and fully testable,
+/// but live word-around-caret orchestration remains a later integration step so
+/// this use case does not yet expand beyond the existing AX selection seam.
 struct LiveFixTextUseCase: FixTextUseCaseProtocol {
     let availability: FixTextAvailability = .available
 

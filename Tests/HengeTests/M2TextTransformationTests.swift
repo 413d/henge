@@ -58,6 +58,26 @@ struct M2TextTransformationTests {
     }
 
     @Test
+    func transformerPreservesTitleCaseThroughIntegration() {
+        let transformer = SimpleTextTransformer(
+            detector: MajorityLayoutDetector(),
+            mapper: NativeKeyboardLayoutMapper()
+        )
+
+        #expect(transformer.transform("Ghbdtn") == .transformed("Привет"))
+    }
+
+    @Test
+    func transformerFallsBackToMappedTextWhenMapperChangesCharacterCount() {
+        let transformer = SimpleTextTransformer(
+            detector: MajorityLayoutDetector(),
+            mapper: LengthChangingLayoutMapper()
+        )
+
+        #expect(transformer.transform("abc") == .transformed("converted!"))
+    }
+
+    @Test
     func transformerReturnsNoOpForEmptyText() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
@@ -164,7 +184,7 @@ struct M2TextTransformationTests {
     }
 }
 
-private final class SelectionStubRuntime: AppRuntime {
+final class SelectionStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
@@ -210,7 +230,7 @@ private final class SelectionStubRuntime: AppRuntime {
     }
 }
 
-private extension SelectionWriteFailure {
+extension SelectionWriteFailure {
     init(from reason: SelectionProbeFailure) {
         switch reason {
         case .missingPermission:
@@ -226,5 +246,15 @@ private extension SelectionWriteFailure {
         case let .accessibilityError(error):
             self = .accessibilityError(error)
         }
+    }
+}
+
+private struct LengthChangingLayoutMapper: LayoutMapping {
+    func map(_ character: Character, from source: Layout, to target: Layout) -> Character? {
+        nil
+    }
+
+    func map(text: String, from source: Layout, to target: Layout) -> String {
+        "converted!"
     }
 }

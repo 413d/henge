@@ -23,6 +23,8 @@
 		8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1302E00000000000001 /* LayoutMapping.swift */; };
 		8480A20C2E00000000000001 /* LayoutDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12C2E00000000000001 /* LayoutDetector.swift */; };
 		8480A20D2E00000000000001 /* TextTransformer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12D2E00000000000001 /* TextTransformer.swift */; };
+		8480A2152E00000000000001 /* CasePreserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2162E00000000000001 /* CasePreserver.swift */; };
+		8480A2172E00000000000001 /* WordBoundaryDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2182E00000000000001 /* WordBoundaryDetector.swift */; };
 		8480A2102E00000000000001 /* ClipboardSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1312E00000000000001 /* ClipboardSnapshot.swift */; };
 		8480A2112E00000000000001 /* AppKitClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1322E00000000000001 /* AppKitClipboardManager.swift */; };
 		8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1332E00000000000001 /* ClipboardManaging.swift */; };
@@ -48,6 +50,8 @@
 		8480A12B2E00000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8480A12C2E00000000000001 /* LayoutDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDetector.swift; sourceTree = "<group>"; };
 		8480A12D2E00000000000001 /* TextTransformer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTransformer.swift; sourceTree = "<group>"; };
+		8480A2162E00000000000001 /* CasePreserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CasePreserver.swift; sourceTree = "<group>"; };
+		8480A2182E00000000000001 /* WordBoundaryDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoundaryDetector.swift; sourceTree = "<group>"; };
 		8480A12F2E00000000000001 /* Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layout.swift; sourceTree = "<group>"; };
 		8480A1302E00000000000001 /* LayoutMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutMapping.swift; sourceTree = "<group>"; };
 		8480A1312E00000000000001 /* ClipboardSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSnapshot.swift; sourceTree = "<group>"; };
@@ -152,6 +156,8 @@
 				8480A1302E00000000000001 /* LayoutMapping.swift */,
 				8480A12C2E00000000000001 /* LayoutDetector.swift */,
 				8480A12D2E00000000000001 /* TextTransformer.swift */,
+				8480A2162E00000000000001 /* CasePreserver.swift */,
+				8480A2182E00000000000001 /* WordBoundaryDetector.swift */,
 			);
 			path = Layout;
 			sourceTree = "<group>";
@@ -309,6 +315,8 @@
 				8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */,
 				8480A20C2E00000000000001 /* LayoutDetector.swift in Sources */,
 				8480A20D2E00000000000001 /* TextTransformer.swift in Sources */,
+				8480A2152E00000000000001 /* CasePreserver.swift in Sources */,
+				8480A2172E00000000000001 /* WordBoundaryDetector.swift in Sources */,
 				8480A2102E00000000000001 /* ClipboardSnapshot.swift in Sources */,
 				8480A2112E00000000000001 /* AppKitClipboardManager.swift in Sources */,
 				8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */,
