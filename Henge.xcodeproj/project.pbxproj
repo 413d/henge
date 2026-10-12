@@ -30,6 +30,9 @@
 		8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1332E00000000000001 /* ClipboardManaging.swift */; };
 		8480A2132E00000000000001 /* HengeProbeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1342E00000000000001 /* HengeProbeRunner.swift */; };
 		8480A2142E00000000000001 /* NativeKeyboardLayoutMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1352E00000000000001 /* NativeKeyboardLayoutMapper.swift */; };
+		8480A2192E00000000000001 /* ApplicationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21A2E00000000000001 /* ApplicationIdentity.swift */; };
+		8480A21B2E00000000000001 /* ActiveApplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */; };
+		8480A21D2E00000000000001 /* AppKitClipboardReplacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21E2E00000000000001 /* AppKitClipboardReplacement.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +62,9 @@
 		8480A1332E00000000000001 /* ClipboardManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManaging.swift; sourceTree = "<group>"; };
 		8480A1342E00000000000001 /* HengeProbeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeProbeRunner.swift; sourceTree = "<group>"; };
 		8480A1352E00000000000001 /* NativeKeyboardLayoutMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeKeyboardLayoutMapper.swift; sourceTree = "<group>"; };
+		8480A21A2E00000000000001 /* ApplicationIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationIdentity.swift; sourceTree = "<group>"; };
+		8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveApplicationProvider.swift; sourceTree = "<group>"; };
+		8480A21E2E00000000000001 /* AppKitClipboardReplacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitClipboardReplacement.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,10 +141,19 @@
 		8480A10E2E00000000000001 /* Domain */ = {
 			isa = PBXGroup;
 			children = (
+				8480A21F2E00000000000001 /* Applications */,
 				8480A10F2E00000000000001 /* Hotkey */,
 				8480A12E2E00000000000001 /* Layout */,
 			);
 			path = Domain;
+			sourceTree = "<group>";
+		};
+		8480A21F2E00000000000001 /* Applications */ = {
+			isa = PBXGroup;
+			children = (
+				8480A21A2E00000000000001 /* ApplicationIdentity.swift */,
+			);
+			path = Applications;
 			sourceTree = "<group>";
 		};
 		8480A10F2E00000000000001 /* Hotkey */ = {
@@ -166,6 +181,7 @@
 			isa = PBXGroup;
 			children = (
 				8480A1322E00000000000001 /* AppKitClipboardManager.swift */,
+				8480A21E2E00000000000001 /* AppKitClipboardReplacement.swift */,
 				8480A1332E00000000000001 /* ClipboardManaging.swift */,
 				8480A1312E00000000000001 /* ClipboardSnapshot.swift */,
 			);
@@ -192,11 +208,20 @@
 			isa = PBXGroup;
 			children = (
 				8480A1292E00000000000001 /* AppRuntime.swift */,
+				8480A2202E00000000000001 /* Applications */,
 				8480A1362E00000000000001 /* Clipboard */,
 				8480A1372E00000000000001 /* Layout */,
 				8480A1382E00000000000001 /* Probes */,
 			);
 			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		8480A2202E00000000000001 /* Applications */ = {
+			isa = PBXGroup;
+			children = (
+				8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */,
+			);
+			path = Applications;
 			sourceTree = "<group>";
 		};
 		8480A1112E00000000000001 /* UI */ = {
@@ -322,6 +347,9 @@
 				8480A2122E00000000000001 /* ClipboardManaging.swift in Sources */,
 				8480A2132E00000000000001 /* HengeProbeRunner.swift in Sources */,
 				8480A2142E00000000000001 /* NativeKeyboardLayoutMapper.swift in Sources */,
+				8480A2192E00000000000001 /* ApplicationIdentity.swift in Sources */,
+				8480A21B2E00000000000001 /* ActiveApplicationProvider.swift in Sources */,
+				8480A21D2E00000000000001 /* AppKitClipboardReplacement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

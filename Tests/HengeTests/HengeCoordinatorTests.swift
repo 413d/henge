@@ -40,6 +40,27 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func exceptionChangesArePersistedImmediatelyAndDeduplicated() {
+        let store = InMemoryConfigurationStore()
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+        let application = ApplicationIdentity(bundleIdentifier: "com.example.Editor", displayName: "Editor")!
+
+        coordinator.addApplicationException(application)
+        coordinator.addApplicationException(application)
+        #expect(store.load().excludedApplicationBundleIdentifiers == ["com.example.Editor"])
+
+        coordinator.removeApplicationException(bundleIdentifier: "com.example.Editor")
+        #expect(store.load().excludedApplicationBundleIdentifiers.isEmpty)
+    }
+
+    @Test
     func reEnablingHotkeyRegistersAgain() {
         let runtime = StubRuntime(hasAccessibilityPermission: true)
         let coordinator = HengeCoordinator(
@@ -251,7 +272,7 @@ struct HengeCoordinatorTests {
     }
 
     @Test
-    func selectionProbeStatusReportsSelectionSummaryWithoutText() async {
+    func statusReportsFocusedElementWithoutUserText() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
             selectionProbe: .available(
@@ -274,14 +295,14 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(coordinator.lastProbeStatusText?.contains("6 chars at [6, 6]") == true)
+        #expect(coordinator.lastProbeStatusText?.contains("Focused element resolved") == true)
         #expect(coordinator.lastProbeStatusText?.contains("ghbdtn") == false)
         #expect(useCase.executionCount == 0)
         _ = coordinator
     }
 
     @Test
-    func missingSelectionReportsNoSelectionStatus() async {
+    func coordinatorDelegatesMissingSelectionHandlingToUseCase() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.noSelection)
@@ -299,13 +320,13 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(coordinator.lastProbeStatusText?.contains("No text selection is currently available") == true)
-        #expect(useCase.executionCount == 0)
+        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
+        #expect(useCase.executionCount == 1)
         _ = coordinator
     }
 
     @Test
-    func unsupportedSelectionBlocksExecution() async {
+    func coordinatorDelegatesUnsupportedSelectionHandlingToUseCase() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.unsupported)
@@ -323,8 +344,8 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(useCase.executionCount == 0)
-        #expect(coordinator.lastProbeStatusText?.contains("does not expose a readable text selection") == true)
+        #expect(useCase.executionCount == 1)
+        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
         _ = coordinator
     }
 
@@ -355,7 +376,7 @@ struct HengeCoordinatorTests {
         await Task.yield()
 
         #expect(useCase.executionCount == 1)
-        #expect(coordinator.lastProbeStatusText?.contains("6 chars at [6, 6]") == true)
+        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
         _ = coordinator
     }
 
@@ -386,13 +407,14 @@ struct HengeCoordinatorTests {
         await Task.yield()
 
         #expect(useCase.executionCount == 0)
-        #expect(coordinator.lastProbeStatusText?.contains("6 chars at [6, 6]") == true)
+        #expect(coordinator.lastProbeStatusText?.contains("Focused element resolved") == true)
         _ = coordinator
     }
 }
 
 private final class StubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
+    var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
     let layoutMapper: LayoutMapping
     let clipboardManager: ClipboardManaging
     private let registrationError: Error?
@@ -485,7 +507,7 @@ private final class SpyFixTextUseCase: FixTextUseCaseProtocol {
         self.availability = availability
     }
 
-    func execute() {
+    func execute(excludingApplicationBundleIdentifiers: Set<String>) {
         executionCount += 1
     }
 }

@@ -129,6 +129,7 @@ private enum ProbeRegistrationError: Error {
 
 private final class ProbeStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
+    var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 

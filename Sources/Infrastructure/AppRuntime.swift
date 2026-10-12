@@ -77,10 +77,18 @@ enum SelectionProbeFailure: Error, Equatable {
 struct SelectionSnapshot: Equatable {
     let text: String
     let range: SelectionRangeSnapshot
+    var isCaretContext = false
 
     var summary: String {
         "Selection resolved: \(text.count) chars at [\(range.location), \(range.length)]."
     }
+}
+
+enum TextContextProbe: Equatable {
+    case unavailable(SelectionProbeFailure)
+    /// For a selection, `text` is selected text and range is non-empty. Without
+    /// a selection, `text` is the element value and range is the caret offset.
+    case available(SelectionSnapshot)
 }
 
 struct SelectionRangeSnapshot: Equatable {
@@ -121,6 +129,8 @@ enum SelectionWriteFailure: Equatable {
 
 protocol AppRuntime {
     var hasAccessibilityPermission: Bool { get }
+    var activeApplication: ApplicationIdentity? { get }
+    func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity?
     var layoutMapper: LayoutMapping { get }
     var clipboardManager: ClipboardManaging { get }
 
@@ -129,7 +139,31 @@ protocol AppRuntime {
     func unregisterFixTextHotkey()
     func inspectFocusedElement() -> FocusedElementProbe
     func inspectSelection() -> SelectionProbe
+    func inspectTextContext() -> TextContextProbe
     func replaceSelection(with text: String) -> SelectionWriteResult
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
+}
+
+extension AppRuntime {
+    func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity? {
+        ApplicationIdentity(bundleIdentifier: bundleIdentifier, displayName: bundleIdentifier)
+    }
+
+    func inspectTextContext() -> TextContextProbe {
+        switch inspectSelection() {
+        case let .available(selection): return .available(selection)
+        case let .unavailable(reason): return .unavailable(reason)
+        }
+    }
+
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        replaceSelection(with: text)
+    }
+
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        .unavailable(.unsupported)
+    }
 }
 
 enum HotkeyRegistrationError: Error {
@@ -158,14 +192,28 @@ final class LiveAppRuntime: AppRuntime {
 
     let layoutMapper: LayoutMapping
     let clipboardManager: ClipboardManaging
+    private let clipboardReplacement: ClipboardReplacing
+    private let applicationProvider: ActiveApplicationProviding
     private let globalHotkeyCenter = GlobalHotkeyCenter()
+
+    var activeApplication: ApplicationIdentity? {
+        applicationProvider.activeApplication()
+    }
+
+    func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity? {
+        applicationProvider.application(bundleIdentifier: bundleIdentifier)
+    }
 
     init(
         layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper(),
-        clipboardManager: ClipboardManaging = AppKitClipboardManager()
+        clipboardManager: ClipboardManaging = AppKitClipboardManager(),
+        clipboardReplacement: ClipboardReplacing? = nil,
+        applicationProvider: ActiveApplicationProviding = WorkspaceActiveApplicationProvider()
     ) {
         self.layoutMapper = layoutMapper
         self.clipboardManager = clipboardManager
+        self.clipboardReplacement = clipboardReplacement ?? AppKitClipboardReplacement(clipboardManager: clipboardManager)
+        self.applicationProvider = applicationProvider
     }
 
     func openAccessibilitySettings() {
@@ -204,6 +252,35 @@ final class LiveAppRuntime: AppRuntime {
         }
     }
 
+    func inspectTextContext() -> TextContextProbe {
+        switch resolveFocusedElement() {
+        case let .failure(reason):
+            return .unavailable(selectionFailure(from: reason))
+        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
+            return .unavailable(.secureField)
+        case let .success(resolvedElement):
+            let rangeResult = copySelectedTextRange(from: resolvedElement.element)
+            guard case let .success(range) = rangeResult else {
+                if case let .failure(error) = rangeResult {
+                    return .unavailable(error)
+                }
+                return .unavailable(.unsupported)
+            }
+
+            if range.length > 0 {
+                switch readSelectedText(from: resolvedElement.element, range: range) {
+                case let .available(snapshot): return .available(snapshot)
+                case let .unavailable(reason): return .unavailable(reason)
+                }
+            }
+
+            guard let text = copyStringAttribute(kAXValueAttribute as CFString, from: resolvedElement.element) else {
+                return .unavailable(.unsupported)
+            }
+            return .available(SelectionSnapshot(text: text, range: range, isCaretContext: true))
+        }
+    }
+
     func replaceSelection(with text: String) -> SelectionWriteResult {
         switch resolveFocusedElement() {
         case let .failure(reason):
@@ -239,6 +316,77 @@ final class LiveAppRuntime: AppRuntime {
             }
 
             return .success(snapshot.range)
+        }
+    }
+
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        switch resolveFocusedElement() {
+        case let .failure(reason):
+            return .unavailable(selectionWriteFailure(from: reason))
+        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
+            return .unavailable(.secureField)
+        case let .success(resolvedElement):
+            guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
+                return .unavailable(.unsupported)
+            }
+
+            let rangeStatus = context.isCaretContext || range != context.range
+                ? setSelectedTextRange(range, on: resolvedElement.element)
+                : .success
+            guard rangeStatus == .success else {
+                return .unavailable(writeFailure(from: rangeStatus))
+            }
+
+            let status = AXUIElementSetAttributeValue(
+                resolvedElement.element,
+                kAXSelectedTextAttribute as CFString,
+                text as CFString
+            )
+            guard status == .success else {
+                _ = setSelectedTextRange(context.range, on: resolvedElement.element)
+                return .unavailable(writeFailure(from: status))
+            }
+            _ = setSelectedTextRange(
+                SelectionRangeSnapshot(location: range.location + text.utf16.count, length: 0),
+                on: resolvedElement.element
+            )
+            return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
+        }
+    }
+
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        switch resolveFocusedElement() {
+        case let .failure(reason):
+            return .unavailable(selectionWriteFailure(from: reason))
+        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
+            return .unavailable(.secureField)
+        case let .success(resolvedElement):
+            guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
+                return .unavailable(.unsupported)
+            }
+
+            let rangeStatus = context.isCaretContext || range != context.range
+                ? setSelectedTextRange(range, on: resolvedElement.element)
+                : .success
+            guard rangeStatus == .success else {
+                return .unavailable(.unsupported)
+            }
+            guard clipboardReplacement.replaceSelection(
+                expectedText: expectedText,
+                with: text,
+                verifyReplacement: { [self] in
+                    guard let currentText = copyStringAttribute(kAXValueAttribute as CFString, from: resolvedElement.element) else {
+                        return false
+                    }
+                    return substring(
+                        in: SelectionRangeSnapshot(location: range.location, length: text.utf16.count),
+                        of: currentText
+                    ) == text
+                }
+            ) else {
+                return .unavailable(.unsupported)
+            }
+            return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
         }
     }
 
@@ -305,29 +453,77 @@ final class LiveAppRuntime: AppRuntime {
         case let .success(range) where range.length <= 0:
             return .unavailable(.noSelection)
         case let .success(range):
-            var selectedTextValue: CFTypeRef?
-            let textStatus = AXUIElementCopyAttributeValue(
-                element,
-                kAXSelectedTextAttribute as CFString,
-                &selectedTextValue
-            )
+            return readSelectedText(from: element, range: range)
+        }
+    }
 
-            guard textStatus == .success else {
-                switch textStatus {
-                case .attributeUnsupported:
-                    return .unavailable(.unsupported)
-                case .noValue:
-                    return .unavailable(.noSelection)
-                default:
-                    return .unavailable(.accessibilityError(textStatus))
-                }
+    private func readSelectedText(from element: AXUIElement, range: SelectionRangeSnapshot) -> SelectionProbe {
+        var selectedTextValue: CFTypeRef?
+        let textStatus = AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedTextValue)
+        guard textStatus == .success else {
+            switch textStatus {
+            case .attributeUnsupported: return .unavailable(.unsupported)
+            case .noValue: return .unavailable(.noSelection)
+            default: return .unavailable(.accessibilityError(textStatus))
             }
+        }
+        guard let text = selectedTextValue as? String else {
+            return .unavailable(.unsupported)
+        }
+        return .available(SelectionSnapshot(text: text, range: range))
+    }
 
-            guard let text = selectedTextValue as? String else {
-                return .unavailable(.unsupported)
+    private func isCurrentTextContext(context: SelectionSnapshot, targetRange: SelectionRangeSnapshot, expectedText: String, element: AXUIElement) -> Bool {
+        guard let currentRange = copySelectedTextRangeForWrite(from: element), currentRange == context.range else {
+            return false
+        }
+        if context.isCaretContext {
+            guard let currentText = copyStringAttribute(kAXValueAttribute as CFString, from: element), currentText == context.text else {
+                return false
             }
+            return substring(in: targetRange, of: currentText) == expectedText
+        }
+        var selectedTextValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedTextValue) == .success else {
+            return false
+        }
+        return (selectedTextValue as? String) == context.text
+            && targetRange == context.range
+            && expectedText == context.text
+    }
 
-            return .available(SelectionSnapshot(text: text, range: range))
+    private func substring(in range: SelectionRangeSnapshot, of text: String) -> String? {
+        guard range.location >= 0, range.length >= 0,
+              let start = String.Index(utf16Offset: range.location, in: text).samePosition(in: text),
+              let end = String.Index(utf16Offset: range.location + range.length, in: text).samePosition(in: text),
+              start <= end else { return nil }
+        return String(text[start..<end])
+    }
+
+    private func copySelectedTextRangeForWrite(from element: AXUIElement) -> SelectionRangeSnapshot? {
+        var value: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &value)
+        guard status == .success, let axValue = value, CFGetTypeID(axValue) == AXValueGetTypeID() else {
+            return nil
+        }
+        let typedValue = unsafeDowncast(axValue, to: AXValue.self)
+        guard AXValueGetType(typedValue) == .cfRange else { return nil }
+        var range = CFRange()
+        guard AXValueGetValue(typedValue, .cfRange, &range) else { return nil }
+        return SelectionRangeSnapshot(location: range.location, length: range.length)
+    }
+
+    private func setSelectedTextRange(_ range: SelectionRangeSnapshot, on element: AXUIElement) -> AXError {
+        var cfRange = CFRange(location: range.location, length: range.length)
+        guard let value = AXValueCreate(.cfRange, &cfRange) else { return .failure }
+        return AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, value)
+    }
+
+    private func writeFailure(from error: AXError) -> SelectionWriteFailure {
+        switch error {
+        case .attributeUnsupported: return .unsupported
+        case .noValue: return .noSelection
+        default: return .accessibilityError(error)
         }
     }
 

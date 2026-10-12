@@ -186,6 +186,7 @@ struct M2TextTransformationTests {
 
 final class SelectionStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
+    var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 

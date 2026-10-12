@@ -1,7 +1,9 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var coordinator: HengeCoordinator
+    @State private var isChoosingApplication = false
 
     var body: some View {
         Form {
@@ -26,9 +28,30 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Milestone status") {
-                Text("Project skeleton and configuration persistence are in place. Global hotkey registration is now wired for native validation, while text extraction and replacement remain in progress.")
-                    .foregroundStyle(.secondary)
+            Section("Exceptions") {
+                if coordinator.state.configuration.excludedApplicationBundleIdentifiers.isEmpty {
+                    Text("No excluded applications.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(coordinator.state.configuration.excludedApplicationBundleIdentifiers, id: \.self) { bundleIdentifier in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(coordinator.applicationDisplayName(for: bundleIdentifier))
+                                Text(bundleIdentifier)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Remove") {
+                                coordinator.removeApplicationException(bundleIdentifier: bundleIdentifier)
+                            }
+                        }
+                    }
+                }
+
+                Button("Add Application…") {
+                    isChoosingApplication = true
+                }
             }
 
             Section("Text correction") {
@@ -42,9 +65,31 @@ struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(minWidth: 420, minHeight: 280)
+        .frame(minWidth: 460, minHeight: 420)
         .onAppear {
             coordinator.refreshPermissions()
+        }
+        .fileImporter(isPresented: $isChoosingApplication, allowedContentTypes: [.applicationBundle], allowsMultipleSelection: false) { result in
+            guard case let .success(urls) = result,
+                  let url = urls.first else {
+                return
+            }
+            let didStartAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            guard let bundle = Bundle(url: url),
+                  let bundleIdentifier = bundle.bundleIdentifier else {
+                return
+            }
+            let displayName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+                ?? url.deletingPathExtension().lastPathComponent
+            if let application = ApplicationIdentity(bundleIdentifier: bundleIdentifier, displayName: displayName) {
+                coordinator.addApplicationException(application)
+            }
         }
     }
 

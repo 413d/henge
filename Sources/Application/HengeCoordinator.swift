@@ -8,6 +8,8 @@ final class HengeCoordinator: ObservableObject {
     private let configurationStore: ConfigurationStore
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
+    private let exceptionManager = ExceptionManager()
+    private let exceptionMatcher = ExceptionMatcher()
 
     init(environment: AppEnvironment) {
         configurationStore = environment.configurationStore
@@ -66,6 +68,10 @@ final class HengeCoordinator: ObservableObject {
         state.lastProbeStatus
     }
 
+    func applicationDisplayName(for bundleIdentifier: String) -> String {
+        runtime.applicationIdentity(for: bundleIdentifier)?.displayName ?? bundleIdentifier
+    }
+
     var statusItemSymbolName: String {
         state.configuration.isEnabled ? "keyboard" : "keyboard.badge.ellipsis"
     }
@@ -81,7 +87,24 @@ final class HengeCoordinator: ObservableObject {
             return
         }
 
-        fixTextUseCase.execute()
+        state.lastProbeStatus = "Correction attempted."
+        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: Set(state.configuration.excludedApplicationBundleIdentifiers))
+    }
+
+    func addApplicationException(_ application: ApplicationIdentity) {
+        state.configuration.excludedApplicationBundleIdentifiers = exceptionManager.add(
+            application,
+            to: state.configuration.excludedApplicationBundleIdentifiers
+        )
+        configurationStore.save(state.configuration)
+    }
+
+    func removeApplicationException(bundleIdentifier: String) {
+        state.configuration.excludedApplicationBundleIdentifiers = exceptionManager.remove(
+            bundleIdentifier: bundleIdentifier,
+            from: state.configuration.excludedApplicationBundleIdentifiers
+        )
+        configurationStore.save(state.configuration)
     }
 
     func refreshPermissions() {
@@ -117,13 +140,20 @@ final class HengeCoordinator: ObservableObject {
     }
 
     private func handleFixTextHotkey() {
-        let accessibilityGranted = runtime.hasAccessibilityPermission
-        state.accessibilityGranted = accessibilityGranted
-
         guard state.configuration.isEnabled else {
-            state.lastProbeStatus = "Global shortcut ignored because Henge is currently disabled."
             return
         }
+
+        guard let application = runtime.activeApplication else {
+            state.lastProbeStatus = "Henge could not identify the active application and left the text untouched."
+            return
+        }
+        guard !exceptionMatcher.contains(application, in: Set(state.configuration.excludedApplicationBundleIdentifiers)) else {
+            return
+        }
+
+        let accessibilityGranted = runtime.hasAccessibilityPermission
+        state.accessibilityGranted = accessibilityGranted
 
         guard accessibilityGranted else {
             state.lastProbeStatus = FocusedElementProbeFailure.missingPermission.description
@@ -138,19 +168,14 @@ final class HengeCoordinator: ObservableObject {
             state.lastProbeStatus = "Focused secure text field detected. Henge left the content untouched."
             return
         case let .available(snapshot):
-            switch runtime.inspectSelection() {
-            case let .available(selection):
-                state.lastProbeStatus = "Focused element resolved: \(snapshot.summary). \(selection.summary)"
-            case let .unavailable(reason):
-                state.lastProbeStatus = "Focused element resolved: \(snapshot.summary). \(reason.description)"
-                return
-            }
+            state.lastProbeStatus = "Focused element resolved: \(snapshot.summary)."
         }
 
         guard canTriggerFixText else {
             return
         }
 
-        fixTextUseCase.execute()
+        state.lastProbeStatus = "Correction attempted."
+        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: Set(state.configuration.excludedApplicationBundleIdentifiers))
     }
 }
