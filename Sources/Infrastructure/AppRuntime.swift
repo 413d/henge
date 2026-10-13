@@ -613,6 +613,7 @@ private final class GlobalHotkeyCenter {
 
     private var eventHandler: EventHandlerRef?
     private var hotKey: EventHotKeyRef?
+    private var currentShortcut: Shortcut?
     private var handler: (() -> Void)?
 
     deinit {
@@ -624,12 +625,16 @@ private final class GlobalHotkeyCenter {
     }
 
     func register(shortcut: Shortcut, handler: @escaping () -> Void) throws {
-        unregister()
         try installEventHandlerIfNeeded()
 
         let hotkey = try CarbonHotkey(shortcut: shortcut)
 
-        self.handler = handler
+        if hotKey != nil, currentShortcut == shortcut {
+            self.handler = handler
+            return
+        }
+
+        var newHotKey: EventHotKeyRef?
 
         let status = RegisterEventHotKey(
             hotkey.keyCode,
@@ -637,13 +642,17 @@ private final class GlobalHotkeyCenter {
             hotkeyID,
             GetApplicationEventTarget(),
             0,
-            &self.hotKey
+            &newHotKey
         )
 
         guard status == noErr else {
-            self.handler = nil
             throw HotkeyRegistrationError.registrationFailed(status)
         }
+
+        if let hotKey { UnregisterEventHotKey(hotKey) }
+        hotKey = newHotKey
+        currentShortcut = shortcut
+        self.handler = handler
     }
 
     func unregister() {
@@ -652,6 +661,7 @@ private final class GlobalHotkeyCenter {
             self.hotKey = nil
         }
 
+        currentShortcut = nil
         handler = nil
     }
 

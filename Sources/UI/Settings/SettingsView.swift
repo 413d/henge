@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @EnvironmentObject private var coordinator: HengeCoordinator
     @State private var isChoosingApplication = false
+    @State private var isRecordingShortcut = false
+    @State private var shortcutCaptureMessage: String?
+    @State private var isConfirmingReset = false
 
     var body: some View {
         Form {
@@ -11,8 +14,35 @@ struct SettingsView: View {
                 Toggle("Enable Henge", isOn: enabledBinding)
                 Toggle("Launch at Login", isOn: launchAtLoginBinding)
 
-                LabeledContent("Default shortcut") {
-                    Text(coordinator.shortcutDescription)
+                LabeledContent("Global shortcut") {
+                    HStack {
+                        Text(coordinator.shortcutDescription)
+                            .monospaced()
+                        Button(isRecordingShortcut ? "Press shortcut…" : "Change…") {
+                            shortcutCaptureMessage = nil
+                            isRecordingShortcut = true
+                        }
+                    }
+                }
+
+                if isRecordingShortcut {
+                    ShortcutRecorder { shortcut in
+                        isRecordingShortcut = false
+                        guard let shortcut else {
+                            shortcutCaptureMessage = "Use a key together with ⌘, ⌥, ⌃, or ⇧."
+                            return
+                        }
+                        coordinator.setShortcut(shortcut)
+                    }
+                    .frame(height: 30)
+                    Text("Press a key with at least one modifier. Escape cancels.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let shortcutCaptureMessage {
+                    Text(shortcutCaptureMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
 
                 Text(coordinator.hotkeyStatusText)
@@ -72,11 +102,24 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section {
+                Button("Reset Settings to Defaults…", role: .destructive) {
+                    isConfirmingReset = true
+                }
+            }
         }
         .padding(20)
         .frame(minWidth: 460, minHeight: 420)
         .onAppear {
             coordinator.refreshPermissions()
+        }
+        .confirmationDialog("Reset all Henge settings?", isPresented: $isConfirmingReset, titleVisibility: .visible) {
+            Button("Reset Settings", role: .destructive) {
+                coordinator.resetConfigurationToDefaults()
+            }
+        } message: {
+            Text("This restores the default shortcut and removes application exceptions.")
         }
         .fileImporter(isPresented: $isChoosingApplication, allowedContentTypes: [.applicationBundle], allowsMultipleSelection: false) { result in
             guard case let .success(urls) = result,
@@ -123,5 +166,55 @@ struct SettingsView: View {
         case let .deferred(message):
             return message
         }
+    }
+}
+
+private struct ShortcutRecorder: NSViewRepresentable {
+    let onCapture: (Shortcut?) -> Void
+
+    func makeNSView(context: Context) -> ShortcutCaptureView {
+        let view = ShortcutCaptureView()
+        view.onCapture = onCapture
+        DispatchQueue.main.async { view.window?.makeFirstResponder(view) }
+        return view
+    }
+
+    func updateNSView(_ nsView: ShortcutCaptureView, context: Context) {
+        nsView.onCapture = onCapture
+    }
+}
+
+private final class ShortcutCaptureView: NSView {
+    var onCapture: ((Shortcut?) -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.controlBackgroundColor.setFill()
+        bounds.fill()
+        let text = "Type the new shortcut…"
+        (text as NSString).draw(at: NSPoint(x: 8, y: 6), withAttributes: [.foregroundColor: NSColor.secondaryLabelColor])
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onCapture?(nil)
+            return
+        }
+
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        var modifiers: Shortcut.Modifiers = []
+        if flags.contains(.command) { modifiers.insert(.command) }
+        if flags.contains(.option) { modifiers.insert(.option) }
+        if flags.contains(.control) { modifiers.insert(.control) }
+        if flags.contains(.shift) { modifiers.insert(.shift) }
+
+        guard !modifiers.isEmpty,
+              let key = event.charactersIgnoringModifiers?.uppercased(),
+              key.count == 1 else {
+            onCapture?(nil)
+            return
+        }
+        onCapture?(Shortcut(key: key, modifiers: modifiers))
     }
 }

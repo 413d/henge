@@ -76,7 +76,9 @@ final class HengeCoordinator: ObservableObject {
 
     var hotkeyStatusText: String {
         if let hotkeyRegistrationError = state.hotkeyRegistrationError {
-            return hotkeyRegistrationError
+            return state.hotkeyRegistered
+                ? "\(hotkeyRegistrationError) The current shortcut remains active."
+                : hotkeyRegistrationError
         }
 
         if state.hotkeyRegistered, !state.accessibilityGranted {
@@ -140,11 +142,39 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func resetConfigurationToDefaults() {
-        state.configuration = AppConfiguration.default
+        let defaults = AppConfiguration.default
+        do {
+            try registerHotkey(defaults.shortcut)
+        } catch {
+            state.hotkeyRegistrationError = error.localizedDescription
+            return
+        }
+        state.hotkeyRegistered = true
+        state.hotkeyRegistrationError = nil
+
+        state.configuration = defaults
         syncLaunchAtLoginState()
         state.lastProbeStatus = nil
         configurationStore.save(state.configuration)
         updateHotkeyRegistration()
+    }
+
+    func setShortcut(_ shortcut: Shortcut) {
+        guard shortcut != state.configuration.shortcut else { return }
+
+        if state.configuration.isEnabled {
+            do {
+                try registerHotkey(shortcut)
+            } catch {
+                state.hotkeyRegistrationError = error.localizedDescription
+                return
+            }
+            state.hotkeyRegistered = true
+            state.hotkeyRegistrationError = nil
+        }
+
+        state.configuration.shortcut = shortcut
+        configurationStore.save(state.configuration)
     }
 
     func triggerFixText() {
@@ -210,17 +240,21 @@ final class HengeCoordinator: ObservableObject {
         }
 
         do {
-            try runtime.registerFixTextHotkey(state.configuration.shortcut) { [weak self] in
-                Task { @MainActor [weak self] in
-                    self?.handleFixTextHotkey()
-                }
-            }
+            try registerHotkey(state.configuration.shortcut)
 
             state.hotkeyRegistered = true
             state.hotkeyRegistrationError = nil
         } catch {
             state.hotkeyRegistered = false
             state.hotkeyRegistrationError = error.localizedDescription
+        }
+    }
+
+    private func registerHotkey(_ shortcut: Shortcut) throws {
+        try runtime.registerFixTextHotkey(shortcut) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.handleFixTextHotkey()
+            }
         }
     }
 
