@@ -6,17 +6,9 @@ Henge is a lightweight, privacy-first macOS utility that instantly fixes text ty
 
 ## Current Status
 
-The repository contains the M0 project skeleton plus the **Milestone 1 native API spikes** (HEN-010 … HEN-016), implemented and covered by 40 passing unit tests:
+The repository contains the Henge MVP implementation, including the RU ↔ EN text correction flow, configuration and menu bar lifecycle. The current unit suite passes with `swift test` (105 tests).
 
-- global hotkey via Carbon `RegisterEventHotKey` — HEN-010;
-- RU ↔ EN keyboard layout mapping via Carbon TIS + `UCKeyTranslate` with a bundled ANSI fallback — HEN-011;
-- Accessibility focused-element probe — HEN-012;
-- Accessibility selection read — HEN-013;
-- direct Accessibility selection write seam — HEN-014;
-- secure-field short-circuit before any text access — HEN-015;
-- full-fidelity `NSPasteboard` snapshot/restore — HEN-016.
-
-Milestone 1 is **not closed yet**. Remaining work is manual cross-application validation on a GUI session with Accessibility permission (TextEdit, Safari, VS Code) and wiring the selection writer into the end-to-end pipeline. The text-correction pipeline itself remains deliberately deferred; the hotkey currently only resolves context and reports a safe, text-free probe status.
+Henge M7 is being prepared as a Release Candidate. Live security/performance validation in real applications, Developer ID signing, notarization and clean-machine installation are still required before an RC is available. There is no stable MVP release yet.
 
 ### Native API probe harness
 
@@ -35,10 +27,9 @@ The probes never print user text, passwords or clipboard contents; the clipboard
 ## ✨ Features
 
 - **One-hotkey fix** — correct the last typed word or selected text (`ru` ↔ `en`).
-- **Blazing fast** — < 50 ms from keystroke to corrected text.
 - **Runs in the menu bar** — no main window, just a tray icon with a context menu.
 - **App exceptions** — exclude specific apps (e.g., terminal, IDE) from being modified.
-- **Password-safe** — password fields are always ignored. No exceptions.
+- **Secure-field guard** — secure fields are stopped before text operations; live app validation remains an RC gate.
 - **100% offline** — no network, no telemetry, no data leaves your Mac.
 - **Auto-start** — optional launch at login.
 
@@ -48,9 +39,7 @@ The probes never print user text, passwords or clipboard contents; the clipboard
 
 ## 🚀 Installation
 
-1. Download the latest `.dmg` from [Releases](../../releases).
-2. Drag **Henge.app** into your `Applications` folder.
-3. Launch it. The Henge icon will appear in your menu bar.
+The M7 Release Candidate is not published yet. Once a release is available, download its `.dmg`, drag **Henge.app** into your `Applications` folder, then launch it. Henge requires Accessibility permission for text correction; it remains available in the menu bar if permission has not been granted.
 
 ## ⌨️ Default Hotkey
 
