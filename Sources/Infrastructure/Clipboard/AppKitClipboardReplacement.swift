@@ -6,10 +6,30 @@ protocol ClipboardReplacing {
     /// Copies the current selection, verifies it matches the expected source,
     /// pastes the replacement, and restores the original full-fidelity clipboard.
     func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> Bool
+    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool
+    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool
+}
+
+extension ClipboardReplacing {
+    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool {
+        guard validateTarget() else { return false }
+        return replaceSelection(expectedText: expectedText, with: replacement, verifyReplacement: verifyReplacement)
+    }
+
+    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool {
+        replaceSelection(expectedText: expectedText, with: replacement, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
+    }
 }
 
 protocol ClipboardEventPosting {
     func postCommandKey(virtualKey: CGKeyCode) -> Bool
+    func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool
+}
+
+extension ClipboardEventPosting {
+    func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool {
+        postCommandKey(virtualKey: virtualKey)
+    }
 }
 
 protocol ReplacementPasteboard {
@@ -30,14 +50,23 @@ private struct AppKitReplacementPasteboard: ReplacementPasteboard {
 
 struct SystemClipboardEventPoster: ClipboardEventPosting {
     func postCommandKey(virtualKey: CGKeyCode) -> Bool {
+        postCommandKey(virtualKey: virtualKey, to: 0)
+    }
+
+    func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool {
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: virtualKey, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: virtualKey, keyDown: false) else {
             return false
         }
         down.flags = .maskCommand
         up.flags = .maskCommand
-        down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
+        if processIdentifier > 0 {
+            CGEventPostToPid(processIdentifier, down)
+            CGEventPostToPid(processIdentifier, up)
+        } else {
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
+        }
         return true
     }
 }
@@ -65,6 +94,25 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         with replacement: String,
         verifyReplacement: () -> Bool
     ) -> Bool {
+        replaceSelection(expectedText: expectedText, with: replacement, validateTarget: { true }, verifyReplacement: verifyReplacement)
+    }
+
+    func replaceSelection(
+        expectedText: String,
+        with replacement: String,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool
+    ) -> Bool {
+        replaceSelection(expectedText: expectedText, with: replacement, processIdentifier: 0, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
+    }
+
+    func replaceSelection(
+        expectedText: String,
+        with replacement: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool
+    ) -> Bool {
         let originalClipboard = clipboardManager.snapshot()
         var didAttemptRestore = false
         defer {
@@ -72,13 +120,13 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         }
 
         let beforeCopyChangeCount = pasteboard.changeCount
-        guard eventPoster.postCommandKey(virtualKey: 8), waitForClipboardChange(after: beforeCopyChangeCount),
-              pasteboard.string() == expectedText else {
+        guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier), waitForClipboardChange(after: beforeCopyChangeCount),
+              validateTarget(), pasteboard.string() == expectedText else {
             return false
         }
 
         pasteboard.clear()
-        guard pasteboard.setString(replacement), eventPoster.postCommandKey(virtualKey: 9) else {
+        guard pasteboard.setString(replacement), validateTarget(), postCommandKey(virtualKey: 9, processIdentifier: processIdentifier) else {
             return false
         }
 
@@ -86,6 +134,13 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         didAttemptRestore = true
         let clipboardRestored = clipboardManager.restore(originalClipboard)
         return replacementCompleted && clipboardRestored
+    }
+
+    private func postCommandKey(virtualKey: CGKeyCode, processIdentifier: pid_t) -> Bool {
+        if processIdentifier > 0 {
+            return eventPoster.postCommandKey(virtualKey: virtualKey, to: processIdentifier)
+        }
+        return eventPoster.postCommandKey(virtualKey: virtualKey)
     }
 
     private func waitForClipboardChange(after changeCount: Int) -> Bool {

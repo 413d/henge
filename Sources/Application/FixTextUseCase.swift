@@ -73,7 +73,8 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             in: targetRange,
             context: context,
             expectedText: targetText,
-            with: replacement
+            with: replacement,
+            in: application
         )
         guard case .unavailable(.unsupported) = directResult else { return }
 
@@ -81,7 +82,8 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             in: targetRange,
             context: context,
             expectedText: targetText,
-            with: replacement
+            with: replacement,
+            in: application
         )
     }
 

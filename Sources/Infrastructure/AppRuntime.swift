@@ -143,6 +143,8 @@ protocol AppRuntime {
     func replaceSelection(with text: String) -> SelectionWriteResult
     func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
     func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult
 }
 
 extension AppRuntime {
@@ -163,6 +165,14 @@ extension AppRuntime {
 
     func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
         .unavailable(.unsupported)
+    }
+
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
+        replaceText(in: range, context: context, expectedText: expectedText, with: text)
+    }
+
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
+        replaceTextUsingClipboard(in: range, context: context, expectedText: expectedText, with: text)
     }
 }
 
@@ -320,15 +330,22 @@ final class LiveAppRuntime: AppRuntime {
     }
 
     func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        guard let application = activeApplication else { return .unavailable(.unsupported) }
+        return replaceText(in: range, context: context, expectedText: expectedText, with: text, in: application)
+    }
+
+    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
         switch resolveFocusedElement() {
         case let .failure(reason):
             return .unavailable(selectionWriteFailure(from: reason))
         case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
             return .unavailable(.secureField)
         case let .success(resolvedElement):
+            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
             guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
                 return .unavailable(.unsupported)
             }
+            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
 
             let rangeStatus = context.isCaretContext || range != context.range
                 ? setSelectedTextRange(range, on: resolvedElement.element)
@@ -355,12 +372,18 @@ final class LiveAppRuntime: AppRuntime {
     }
 
     func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+        guard let application = activeApplication else { return .unavailable(.unsupported) }
+        return replaceTextUsingClipboard(in: range, context: context, expectedText: expectedText, with: text, in: application)
+    }
+
+    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
         switch resolveFocusedElement() {
         case let .failure(reason):
             return .unavailable(selectionWriteFailure(from: reason))
         case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
             return .unavailable(.secureField)
         case let .success(resolvedElement):
+            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
             guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
                 return .unavailable(.unsupported)
             }
@@ -371,9 +394,15 @@ final class LiveAppRuntime: AppRuntime {
             guard rangeStatus == .success else {
                 return .unavailable(.unsupported)
             }
+            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
+            guard let targetPID = validatedProcessIdentifier(for: resolvedElement.element, in: application) else {
+                return .unavailable(.unsupported)
+            }
             guard clipboardReplacement.replaceSelection(
                 expectedText: expectedText,
                 with: text,
+                processIdentifier: targetPID,
+                validateTarget: { [self] in isFocusedElement(resolvedElement.element, in: application) },
                 verifyReplacement: { [self] in
                     guard let currentText = copyStringAttribute(kAXValueAttribute as CFString, from: resolvedElement.element) else {
                         return false
@@ -388,6 +417,22 @@ final class LiveAppRuntime: AppRuntime {
             }
             return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
         }
+    }
+
+    private func isFocusedElement(_ element: AXUIElement, in application: ApplicationIdentity) -> Bool {
+        guard validatedProcessIdentifier(for: element, in: application) != nil else { return false }
+        guard case let .success(currentElement) = resolveFocusedElement(),
+              !currentElement.snapshot.isSecure,
+              CFEqual(element, currentElement.element) else { return false }
+        return activeApplication?.bundleIdentifier == application.bundleIdentifier
+    }
+
+    private func validatedProcessIdentifier(for element: AXUIElement, in application: ApplicationIdentity) -> pid_t? {
+        guard activeApplication?.bundleIdentifier == application.bundleIdentifier else { return nil }
+        var targetPID: pid_t = 0
+        guard AXUIElementGetPid(element, &targetPID) == .success,
+              NSRunningApplication(processIdentifier: targetPID)?.bundleIdentifier == application.bundleIdentifier else { return nil }
+        return targetPID
     }
 
     private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
