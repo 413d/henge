@@ -4,4 +4,6 @@ struct ApplicationState: Equatable {
     var hotkeyRegistered: Bool
     var hotkeyRegistrationError: String?
     var lastProbeStatus: String?
+    var launchAtLoginEnabled: Bool
+    var launchAtLoginError: String?
 }

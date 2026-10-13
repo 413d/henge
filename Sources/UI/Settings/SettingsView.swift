@@ -9,6 +9,7 @@ struct SettingsView: View {
         Form {
             Section("General") {
                 Toggle("Enable Henge", isOn: enabledBinding)
+                Toggle("Launch at Login", isOn: launchAtLoginBinding)
 
                 LabeledContent("Default shortcut") {
                     Text(coordinator.shortcutDescription)
@@ -16,6 +17,14 @@ struct SettingsView: View {
 
                 Text(coordinator.hotkeyStatusText)
                     .foregroundStyle(.secondary)
+
+                if coordinator.state.launchAtLoginError == nil {
+                    Text(coordinator.launchAtLoginStatusText)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(coordinator.launchAtLoginStatusText)
+                        .foregroundStyle(.red)
+                }
             }
 
             Section("Permissions") {
@@ -97,6 +106,13 @@ struct SettingsView: View {
         Binding(
             get: { coordinator.isEnabled },
             set: { coordinator.setEnabled($0) }
+        )
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { coordinator.state.launchAtLoginEnabled },
+            set: { coordinator.setLaunchAtLogin($0) }
         )
     }
 

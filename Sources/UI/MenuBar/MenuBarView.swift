@@ -63,7 +63,7 @@ struct MenuBarView: View {
             }
 
             Button("Quit Henge") {
-                NSApplication.shared.terminate(nil)
+                coordinator.quitApplication()
             }
         }
         .padding(12)

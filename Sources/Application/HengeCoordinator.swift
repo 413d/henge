@@ -8,19 +8,43 @@ final class HengeCoordinator: ObservableObject {
     private let configurationStore: ConfigurationStore
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
+    private let loginItemManager: LoginItemManaging
+    private let terminateApplication: () -> Void
     private let exceptionManager = ExceptionManager()
     private let exceptionMatcher = ExceptionMatcher()
 
-    init(environment: AppEnvironment) {
+    init(
+        environment: AppEnvironment,
+        terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
+    ) {
         configurationStore = environment.configurationStore
         fixTextUseCase = environment.fixTextUseCase
         runtime = environment.runtime
+        loginItemManager = environment.loginItemManager
+        self.terminateApplication = terminateApplication
+
+        let loadedConfiguration = environment.configurationStore.load()
+        let systemLaunchAtLogin = environment.loginItemManager.status == .enabled
+        let normalizedConfiguration = AppConfiguration(
+            schemaVersion: loadedConfiguration.schemaVersion,
+            isEnabled: loadedConfiguration.isEnabled,
+            launchAtLogin: systemLaunchAtLogin,
+            shortcut: loadedConfiguration.shortcut,
+            excludedApplicationBundleIdentifiers: loadedConfiguration.excludedApplicationBundleIdentifiers
+        )
+
+        if normalizedConfiguration != loadedConfiguration {
+            environment.configurationStore.save(normalizedConfiguration)
+        }
+
         state = ApplicationState(
-            configuration: environment.configurationStore.load(),
+            configuration: normalizedConfiguration,
             accessibilityGranted: environment.runtime.hasAccessibilityPermission,
             hotkeyRegistered: false,
             hotkeyRegistrationError: nil,
-            lastProbeStatus: nil
+            lastProbeStatus: nil,
+            launchAtLoginEnabled: systemLaunchAtLogin,
+            launchAtLoginError: nil
         )
 
         updateHotkeyRegistration()
@@ -64,6 +88,16 @@ final class HengeCoordinator: ObservableObject {
             : "Global shortcut is inactive while Henge is disabled."
     }
 
+    var launchAtLoginStatusText: String {
+        if let launchAtLoginError = state.launchAtLoginError {
+            return launchAtLoginError
+        }
+
+        return state.launchAtLoginEnabled
+            ? "Launch at Login is enabled."
+            : "Launch at Login is disabled."
+    }
+
     var lastProbeStatusText: String? {
         state.lastProbeStatus
     }
@@ -83,12 +117,31 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func setLaunchAtLogin(_ launchAtLogin: Bool) {
-        state.configuration.launchAtLogin = launchAtLogin
-        configurationStore.save(state.configuration)
+        let previousState = state.launchAtLoginEnabled
+        state.launchAtLoginError = nil
+
+        do {
+            try loginItemManager.setEnabled(launchAtLogin)
+            let actualState = currentLaunchAtLoginEnabled()
+
+            guard actualState == launchAtLogin else {
+                throw LoginItemUpdateError.updateFailed("Launch at Login state could not be verified.")
+            }
+
+            state.launchAtLoginEnabled = actualState
+            state.configuration.launchAtLogin = actualState
+            configurationStore.save(state.configuration)
+        } catch {
+            state.launchAtLoginEnabled = previousState
+            state.configuration.launchAtLogin = previousState
+            state.launchAtLoginError = error.localizedDescription
+            configurationStore.save(state.configuration)
+        }
     }
 
     func resetConfigurationToDefaults() {
         state.configuration = AppConfiguration.default
+        syncLaunchAtLoginState()
         state.lastProbeStatus = nil
         configurationStore.save(state.configuration)
         updateHotkeyRegistration()
@@ -121,10 +174,30 @@ final class HengeCoordinator: ObservableObject {
 
     func refreshPermissions() {
         state.accessibilityGranted = runtime.hasAccessibilityPermission
+        syncLaunchAtLoginState()
     }
 
     func openAccessibilitySettings() {
         runtime.openAccessibilitySettings()
+    }
+
+    func quitApplication() {
+        runtime.unregisterFixTextHotkey()
+        state.hotkeyRegistered = false
+        state.hotkeyRegistrationError = nil
+        terminateApplication()
+    }
+
+    private func syncLaunchAtLoginState() {
+        let actualStatus = currentLaunchAtLoginEnabled()
+        state.launchAtLoginEnabled = actualStatus
+        state.configuration.launchAtLogin = actualStatus
+        state.launchAtLoginError = nil
+        configurationStore.save(state.configuration)
+    }
+
+    private func currentLaunchAtLoginEnabled() -> Bool {
+        loginItemManager.status == .enabled
     }
 
     private func updateHotkeyRegistration() {

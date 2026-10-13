@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Henge
 
@@ -43,17 +44,20 @@ struct HengeCoordinatorTests {
     func coordinatorPersistsLaunchAtLoginChanges() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let loginItemManager = FakeLoginItemManager(currentStatus: .enabled)
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
                 fixTextUseCase: DeferredFixTextUseCase(),
-                runtime: runtime
+                runtime: runtime,
+                loginItemManager: loginItemManager
             )
         )
 
         coordinator.setLaunchAtLogin(false)
 
         #expect(store.load().launchAtLogin == false)
+        #expect(loginItemManager.setEnabledCalls == [false])
     }
 
     @Test
@@ -453,6 +457,196 @@ struct HengeCoordinatorTests {
         #expect(useCase.executionCount == 0)
         #expect(coordinator.lastProbeStatusText?.contains("Focused element resolved") == true)
         _ = coordinator
+    }
+
+    @Test
+    func coordinatorSyncsLaunchAtLoginStateFromSystemReality() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: FakeLoginItemManager(currentStatus: .disabled)
+            )
+        )
+
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(coordinator.state.configuration.launchAtLogin == false)
+    }
+
+    @Test
+    func coordinatorRollsBackLaunchAtLoginStateOnFailure() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: FailingLoginItemManager(currentStatus: .enabled)
+            )
+        )
+
+        coordinator.setLaunchAtLogin(false)
+
+        #expect(coordinator.state.launchAtLoginEnabled == true)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(coordinator.state.launchAtLoginError != nil)
+    }
+
+    @Test
+    func coordinatorRejectsUnverifiedLaunchAtLoginStateChanges() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
+        let loginItemManager = NonMutatingLoginItemManager(currentStatus: .enabled)
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        coordinator.setLaunchAtLogin(false)
+
+        #expect(loginItemManager.setEnabledCalls == [false])
+        #expect(coordinator.state.launchAtLoginEnabled == true)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(coordinator.state.launchAtLoginError?.contains("could not be verified") == true)
+    }
+
+    @Test
+    func refreshPermissionsResyncsLaunchAtLoginStateFromSystemReality() {
+        let store = InMemoryConfigurationStore()
+        let loginItemManager = FakeLoginItemManager(currentStatus: .enabled)
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        loginItemManager.updateStatus(.disabled)
+
+        coordinator.refreshPermissions()
+
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(store.load().launchAtLogin == false)
+    }
+
+    @Test
+    func quitApplicationUnregistersHotkeyBeforeTermination() {
+        let store = InMemoryConfigurationStore()
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        var terminateCallCount = 0
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: FakeLoginItemManager(currentStatus: .enabled)
+            ),
+            terminateApplication: {
+                terminateCallCount += 1
+            }
+        )
+
+        let configurationBeforeQuit = store.load()
+
+        coordinator.quitApplication()
+
+        #expect(runtime.unregisterCount == 1)
+        #expect(terminateCallCount == 1)
+        #expect(store.load() == configurationBeforeQuit)
+    }
+}
+
+private extension AppEnvironment {
+    init(
+        configurationStore: ConfigurationStore,
+        fixTextUseCase: FixTextUseCaseProtocol,
+        runtime: AppRuntime
+    ) {
+        self.init(
+            configurationStore: configurationStore,
+            fixTextUseCase: fixTextUseCase,
+            runtime: runtime,
+            loginItemManager: InMemoryLoginItemManager(initialEnabled: true)
+        )
+    }
+}
+
+private final class FakeLoginItemManager: LoginItemManaging, @unchecked Sendable {
+    private let lock = NSLock()
+    private var currentStatus: LoginItemStatus
+    private(set) var setEnabledCalls: [Bool] = []
+
+    init(currentStatus: LoginItemStatus) {
+        self.currentStatus = currentStatus
+    }
+
+    var status: LoginItemStatus {
+        lock.lock(); defer { lock.unlock() }
+        return currentStatus
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        lock.lock(); defer { lock.unlock() }
+        setEnabledCalls.append(enabled)
+        currentStatus = enabled ? .enabled : .disabled
+    }
+
+    func updateStatus(_ status: LoginItemStatus) {
+        lock.lock(); defer { lock.unlock() }
+        currentStatus = status
+    }
+}
+
+private final class FailingLoginItemManager: LoginItemManaging, @unchecked Sendable {
+    private let lock = NSLock()
+    private var currentStatus: LoginItemStatus
+
+    init(currentStatus: LoginItemStatus) {
+        self.currentStatus = currentStatus
+    }
+
+    var status: LoginItemStatus {
+        lock.lock(); defer { lock.unlock() }
+        return currentStatus
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        throw LoginItemUpdateError.updateFailed("Launch at Login update failed.")
+    }
+}
+
+private final class NonMutatingLoginItemManager: LoginItemManaging, @unchecked Sendable {
+    private let lock = NSLock()
+    private var currentStatus: LoginItemStatus
+    private(set) var setEnabledCalls: [Bool] = []
+
+    init(currentStatus: LoginItemStatus) {
+        self.currentStatus = currentStatus
+    }
+
+    var status: LoginItemStatus {
+        lock.lock(); defer { lock.unlock() }
+        return currentStatus
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        lock.lock(); defer { lock.unlock() }
+        setEnabledCalls.append(enabled)
     }
 }
 
