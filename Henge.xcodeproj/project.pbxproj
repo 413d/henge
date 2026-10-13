@@ -15,6 +15,7 @@
 		8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1252E00000000000001 /* HengeCoordinator.swift */; };
 		8480A2062E00000000000001 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1262E00000000000001 /* AppConfiguration.swift */; };
 		8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1272E00000000000001 /* ConfigurationStore.swift */; };
+		8480A2202E00000000000001 /* ConfigurationMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2212E00000000000001 /* ConfigurationMigrator.swift */; };
 		8480A2082E00000000000001 /* Shortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1282E00000000000001 /* Shortcut.swift */; };
 		8480A2092E00000000000001 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1292E00000000000001 /* AppRuntime.swift */; };
 		8480A20A2E00000000000001 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12A2E00000000000001 /* MenuBarView.swift */; };
@@ -47,6 +48,7 @@
 		8480A1252E00000000000001 /* HengeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeCoordinator.swift; sourceTree = "<group>"; };
 		8480A1262E00000000000001 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		8480A1272E00000000000001 /* ConfigurationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationStore.swift; sourceTree = "<group>"; };
+		8480A2212E00000000000001 /* ConfigurationMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationMigrator.swift; sourceTree = "<group>"; };
 		8480A1282E00000000000001 /* Shortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shortcut.swift; sourceTree = "<group>"; };
 		8480A1292E00000000000001 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		8480A12A2E00000000000001 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
@@ -134,6 +136,7 @@
 			children = (
 				8480A1262E00000000000001 /* AppConfiguration.swift */,
 				8480A1272E00000000000001 /* ConfigurationStore.swift */,
+				8480A2212E00000000000001 /* ConfigurationMigrator.swift */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -332,6 +335,7 @@
 				8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */,
 				8480A2062E00000000000001 /* AppConfiguration.swift in Sources */,
 				8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */,
+				8480A2202E00000000000001 /* ConfigurationMigrator.swift in Sources */,
 				8480A2082E00000000000001 /* Shortcut.swift in Sources */,
 				8480A2092E00000000000001 /* AppRuntime.swift in Sources */,
 				8480A20A2E00000000000001 /* MenuBarView.swift in Sources */,

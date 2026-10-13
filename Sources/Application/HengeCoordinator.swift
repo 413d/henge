@@ -82,6 +82,18 @@ final class HengeCoordinator: ObservableObject {
         updateHotkeyRegistration()
     }
 
+    func setLaunchAtLogin(_ launchAtLogin: Bool) {
+        state.configuration.launchAtLogin = launchAtLogin
+        configurationStore.save(state.configuration)
+    }
+
+    func resetConfigurationToDefaults() {
+        state.configuration = AppConfiguration.default
+        state.lastProbeStatus = nil
+        configurationStore.save(state.configuration)
+        updateHotkeyRegistration()
+    }
+
     func triggerFixText() {
         guard canTriggerFixText else {
             return

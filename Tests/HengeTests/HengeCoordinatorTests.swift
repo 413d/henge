@@ -40,6 +40,50 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func coordinatorPersistsLaunchAtLoginChanges() {
+        let store = InMemoryConfigurationStore()
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+
+        coordinator.setLaunchAtLogin(false)
+
+        #expect(store.load().launchAtLogin == false)
+    }
+
+    @Test
+    func coordinatorResetToDefaultsRestoresCanonicalSettings() {
+        let store = InMemoryConfigurationStore()
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        store.save(AppConfiguration(
+            schemaVersion: 1,
+            isEnabled: false,
+            launchAtLogin: false,
+            shortcut: Shortcut(key: "Z", modifiers: [.option]),
+            excludedApplicationBundleIdentifiers: ["com.example.Editor", "com.example.Editor"]
+        ))
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+
+        coordinator.resetConfigurationToDefaults()
+
+        #expect(store.load() == AppConfiguration.default)
+        #expect(coordinator.state.configuration == AppConfiguration.default)
+        #expect(runtime.registeredShortcuts == [.defaultFixText])
+    }
+
+    @Test
     func exceptionChangesArePersistedImmediatelyAndDeduplicated() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
