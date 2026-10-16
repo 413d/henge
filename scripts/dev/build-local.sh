@@ -56,7 +56,9 @@ verify_bundle() {
     fi
 
     codesign --verify --deep --strict --verbose=2 "$app"
-    codesign -dv "$app" 2>&1 | grep -q 'Signature=adhoc' \
+    local sig_info
+    sig_info="$(codesign -dv "$app" 2>&1)"
+    grep -q 'Signature=adhoc' <<<"$sig_info" \
         || { echo "error: bundle is not ad-hoc signed" >&2; return 1; }
     echo "verify: ad-hoc signature OK"
 }
