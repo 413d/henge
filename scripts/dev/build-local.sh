@@ -28,7 +28,9 @@ verify_bundle() {
 
     [[ -x "$exe" ]] || { echo "error: missing or non-executable: $exe" >&2; return 1; }
     echo "verify: executable bit OK"
-    plutil -lint "$plist" >/dev/null
+    local lint_out
+    lint_out="$(plutil -lint "$plist")" \
+        || { echo "error: Info.plist lint failed: ${lint_out}" >&2; return 1; }
     echo "verify: Info.plist lint OK"
 
     local key actual
@@ -87,7 +89,8 @@ sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${BUNDLE_ID}/g" \
     -e "s/\$(CURRENT_PROJECT_VERSION)/${BUILD_NUMBER}/g" \
     -e "s/\$(EXECUTABLE_NAME)/${APP_NAME}/g" \
     App/Info.plist > "${PLIST}"
-plutil -lint "${PLIST}" >/dev/null
+lint_out="$(plutil -lint "${PLIST}")" \
+    || { echo "error: materialized Info.plist lint failed: ${lint_out}" >&2; exit 1; }
 
 echo "==> Ad-hoc codesign"
 codesign --force --deep --sign - "${APP_DIR}"
