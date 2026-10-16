@@ -61,8 +61,8 @@ struct SystemClipboardEventPoster: ClipboardEventPosting {
         down.flags = .maskCommand
         up.flags = .maskCommand
         if processIdentifier > 0 {
-            CGEventPostToPid(processIdentifier, down)
-            CGEventPostToPid(processIdentifier, up)
+            down.postToPid(processIdentifier)
+            up.postToPid(processIdentifier)
         } else {
             down.post(tap: .cghidEventTap)
             up.post(tap: .cghidEventTap)
