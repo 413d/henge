@@ -109,7 +109,15 @@ final class HengeCoordinator: ObservableObject {
     }
 
     var statusItemSymbolName: String {
-        state.configuration.isEnabled ? "keyboard" : "keyboard.badge.ellipsis"
+        guard state.configuration.isEnabled else {
+            return "cloud"
+        }
+
+        if !state.hotkeyRegistered || !state.accessibilityGranted {
+            return "exclamationmark.cloud"
+        }
+
+        return "cloud.fill"
     }
 
     func setEnabled(_ isEnabled: Bool) {
@@ -142,18 +150,11 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func resetConfigurationToDefaults() {
-        let defaults = AppConfiguration.default
-        do {
-            try registerHotkey(defaults.shortcut)
-        } catch {
-            state.hotkeyRegistrationError = error.localizedDescription
-            return
-        }
-        state.hotkeyRegistered = true
-        state.hotkeyRegistrationError = nil
-
-        state.configuration = defaults
-        syncLaunchAtLoginState()
+        state.configuration = AppConfiguration.default
+        // launchAtLogin mirrors the system login-item state, not the config default.
+        let systemLaunchAtLogin = currentLaunchAtLoginEnabled()
+        state.launchAtLoginEnabled = systemLaunchAtLogin
+        state.configuration.launchAtLogin = systemLaunchAtLogin
         state.lastProbeStatus = nil
         configurationStore.save(state.configuration)
         updateHotkeyRegistration()

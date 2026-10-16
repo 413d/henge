@@ -88,6 +88,85 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func resetMirrorsSystemLaunchAtLoginState() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true, shortcut: .defaultFixText))
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: FakeLoginItemManager(currentStatus: .disabled)
+            )
+        )
+
+        coordinator.resetConfigurationToDefaults()
+
+        #expect(store.load().launchAtLogin == false)
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(store.load().isEnabled == AppConfiguration.default.isEnabled)
+        #expect(store.load().shortcut == AppConfiguration.default.shortcut)
+    }
+
+    @Test
+    func statusItemSymbolShowsDisabledState() {
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true)
+            )
+        )
+
+        coordinator.setEnabled(false)
+
+        #expect(coordinator.statusItemSymbolName == "cloud")
+    }
+
+    @Test
+    func statusItemSymbolShowsHealthyState() {
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true)
+            )
+        )
+
+        #expect(coordinator.statusItemSymbolName == "cloud.fill")
+    }
+
+    @Test
+    func statusItemSymbolShowsDegradedStateWithoutAccessibility() {
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: false)
+            )
+        )
+
+        #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
+    }
+
+    @Test
+    func statusItemSymbolShowsDegradedStateWhenHotkeyFails() {
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(
+                    hasAccessibilityPermission: true,
+                    registrationError: HotkeyRegistrationError.unsupportedShortcut("X")
+                )
+            )
+        )
+
+        #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
+    }
+
+    @Test
     func exceptionChangesArePersistedImmediatelyAndDeduplicated() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
