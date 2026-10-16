@@ -34,6 +34,9 @@
 		8480A2192E00000000000001 /* ApplicationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21A2E00000000000001 /* ApplicationIdentity.swift */; };
 		8480A21B2E00000000000001 /* ActiveApplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */; };
 		8480A21D2E00000000000001 /* AppKitClipboardReplacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A21E2E00000000000001 /* AppKitClipboardReplacement.swift */; };
+		8480A2242E00000000000001 /* LoginItemManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2222E00000000000001 /* LoginItemManaging.swift */; };
+		8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */; };
+		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +70,9 @@
 		8480A21A2E00000000000001 /* ApplicationIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationIdentity.swift; sourceTree = "<group>"; };
 		8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveApplicationProvider.swift; sourceTree = "<group>"; };
 		8480A21E2E00000000000001 /* AppKitClipboardReplacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitClipboardReplacement.swift; sourceTree = "<group>"; };
+		8480A2222E00000000000001 /* LoginItemManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManaging.swift; sourceTree = "<group>"; };
+		8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMAppServiceLoginItemManager.swift; sourceTree = "<group>"; };
+		8480A2282E00000000000001 /* Henge.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Henge.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,9 +220,19 @@
 				8480A2202E00000000000001 /* Applications */,
 				8480A1362E00000000000001 /* Clipboard */,
 				8480A1372E00000000000001 /* Layout */,
+				8480A2262E00000000000001 /* Lifecycle */,
 				8480A1382E00000000000001 /* Probes */,
 			);
 			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		8480A2262E00000000000001 /* Lifecycle */ = {
+			isa = PBXGroup;
+			children = (
+				8480A2222E00000000000001 /* LoginItemManaging.swift */,
+				8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */,
+			);
+			path = Lifecycle;
 			sourceTree = "<group>";
 		};
 		8480A2202E00000000000001 /* Applications */ = {
@@ -256,6 +272,7 @@
 			isa = PBXGroup;
 			children = (
 				8480A1162E00000000000001 /* Info.plist */,
+				8480A2282E00000000000001 /* Henge.icns */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -317,6 +334,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8480A2272E00000000000001 /* Henge.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,6 +372,8 @@
 				8480A2192E00000000000001 /* ApplicationIdentity.swift in Sources */,
 				8480A21B2E00000000000001 /* ActiveApplicationProvider.swift in Sources */,
 				8480A21D2E00000000000001 /* AppKitClipboardReplacement.swift in Sources */,
+				8480A2242E00000000000001 /* LoginItemManaging.swift in Sources */,
+				8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
