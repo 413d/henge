@@ -39,6 +39,22 @@ The probes never print user text, passwords or clipboard contents; the clipboard
 
 ## 🚀 Installation
 
+### Local build (no signing identity required)
+
+For personal testing on your own machine:
+
+```bash
+./scripts/dev/build-local.sh --install   # release build → build/Henge.app (ad-hoc signed) → /Applications/Henge.app
+open /Applications/Henge.app             # launch from Finder
+```
+
+Then grant Accessibility: System Settings → Privacy & Security → Accessibility → enable Henge.
+
+Ad-hoc signatures are device-local: rebuilding and reinstalling the app resets the
+Accessibility grant — re-enable it after each reinstall.
+
+### Release (published)
+
 The M7 Release Candidate is not published yet. Once a release is available, download its `.dmg`, drag **Henge.app** into your `Applications` folder, then launch it. Henge requires Accessibility permission for text correction; it remains available in the menu bar if permission has not been granted.
 
 ## ⌨️ Default Hotkey
