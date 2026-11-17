@@ -1,7 +1,7 @@
 # App Packaging & GitHub Actions CI/CD Design
 
-**Date:** 2026-11-17  
-**Topic:** App Packaging and CI Workflow for Henge  
+**Date:** 2026-11-17
+**Topic:** App Packaging and CI Workflow for Henge
 
 ## 1. Intent & Context
 

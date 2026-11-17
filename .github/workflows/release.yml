@@ -57,14 +57,15 @@ jobs:
 
       - name: Derive release version and archive name
         id: meta
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          RAW_VERSION="${TAG#v}"
-          APP_VERSION="${RAW_VERSION%%-*}"
-          if [[ ! "${APP_VERSION}" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
-            echo "error: tag '${TAG}' does not yield a valid numeric version ('${APP_VERSION}')" >&2
+          if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+            echo "error: tag '${TAG}' must match SemVer format vMAJOR.MINOR.PATCH[-prerelease]" >&2
             exit 1
           fi
+          RAW_VERSION="${TAG#v}"
+          APP_VERSION="${RAW_VERSION%%-*}"
           ARCHIVE_NAME="Henge-${TAG}-universal.zip"
           PRERELEASE="false"
           if [[ "${TAG}" == *-* ]]; then
@@ -81,7 +82,8 @@ jobs:
         env:
           HENGE_VERSION: ${{ steps.meta.outputs.app_version }}
           HENGE_BUILD_NUMBER: ${{ github.run_number }}
-        run: ./scripts/package.sh --archive-name "${{ steps.meta.outputs.archive_name }}"
+          ARCHIVE_NAME: ${{ steps.meta.outputs.archive_name }}
+        run: ./scripts/package.sh --archive-name "${ARCHIVE_NAME}"
 
       - name: Verify archive checksums
         working-directory: dist
@@ -125,7 +127,7 @@ jobs:
           3. Unzip and move \`Henge.app\` to \`~/Applications/\` (or \`/Applications/\`).
           4. **Remove macOS Gatekeeper quarantine** before first launch (required on macOS 15 Sequoia and newer for non-notarized downloads):
              \`\`\`bash
-             xattr -cr ~/Applications/Henge.app
+             xattr -dr com.apple.quarantine ~/Applications/Henge.app
              \`\`\`
           5. Launch \`Henge.app\` and enable **Accessibility** access in **System Settings → Privacy & Security → Accessibility**.
 

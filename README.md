@@ -38,20 +38,20 @@ Instead of deleting everything and retyping, press **`⌥X`**. Henge converts th
 
 **Requires macOS 13 Ventura or later.** One Universal archive supports both Apple Silicon (M1 and newer) and Intel Macs. You do not need Xcode, Swift, or Homebrew to run the pre-built app.
 
-1. Download **`Henge-vX.Y.Z-universal.zip`** from the latest [GitHub Release](https://github.com/413d/henge/releases/latest).  
-   *(Pick the `Henge-v*.zip` asset — GitHub's automatic `Source code` archives only contain source files.)*
+1. Download **`Henge-vX.Y.Z-universal.zip`** from the latest [GitHub Release](https://github.com/413d/henge/releases/latest)
+   *(pick the `Henge-v*.zip` asset — GitHub's automatic `Source code` archives only contain source files).*
 2. Double-click the zip to extract **`Henge.app`**, then move it to **`~/Applications`** (or **`/Applications`**).
 3. **Clear Gatekeeper quarantine once before launching** *(required because public builds are ad-hoc signed without an Apple Developer ID)*:
 
    ```bash
-   xattr -cr ~/Applications/Henge.app
+   xattr -dr com.apple.quarantine ~/Applications/Henge.app
    ```
 
    *(If you placed it in `/Applications`, adjust the path accordingly.)*
 4. Open **`Henge.app`**.
 5. Grant **Accessibility** permission when prompted (or in **System Settings → Privacy & Security → Accessibility**).
 
-### Why `xattr -cr` is needed
+### Why `xattr -dr com.apple.quarantine` is needed
 
 Open-source releases of Henge are built on GitHub Actions with an **ad-hoc signature** and are not notarized by Apple. On macOS (especially macOS 15 Sequoia, which removed the Finder Control-Click bypass), browser downloads carry a quarantine attribute that causes macOS to block non-notarized apps.
 
@@ -96,7 +96,7 @@ Henge replaces the text in place. You can also click the menu bar icon to:
 
 ## Updating & Uninstalling
 
-**Update:** Choose **Quit Henge** from the menu bar, download the new release archive, replace `Henge.app` in `~/Applications` (or `/Applications`), clear quarantine with `xattr -cr`, and re-enable Accessibility if prompted.
+**Update:** Choose **Quit Henge** from the menu bar, download the new release archive, replace `Henge.app` in `~/Applications` (or `/Applications`), clear quarantine with `xattr -dr com.apple.quarantine`, and re-enable Accessibility if prompted.
 
 **Uninstall:**
 
