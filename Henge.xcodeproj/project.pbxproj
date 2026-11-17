@@ -37,6 +37,7 @@
 		8480A2242E00000000000001 /* LoginItemManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2222E00000000000001 /* LoginItemManaging.swift */; };
 		8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
+		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +74,7 @@
 		8480A2222E00000000000001 /* LoginItemManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManaging.swift; sourceTree = "<group>"; };
 		8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMAppServiceLoginItemManager.swift; sourceTree = "<group>"; };
 		8480A2282E00000000000001 /* Henge.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Henge.icns; sourceTree = "<group>"; };
+		8480A22A2E00000000000001 /* HengeMenuBar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = HengeMenuBar.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -273,6 +275,7 @@
 			children = (
 				8480A1162E00000000000001 /* Info.plist */,
 				8480A2282E00000000000001 /* Henge.icns */,
+				8480A22A2E00000000000001 /* HengeMenuBar.png */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -335,6 +338,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8480A2272E00000000000001 /* Henge.icns in Resources */,
+				8480A2292E00000000000001 /* HengeMenuBar.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

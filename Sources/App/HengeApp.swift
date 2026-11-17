@@ -16,9 +16,12 @@ struct HengeApp: App {
     @StateObject private var coordinator = HengeCoordinator(environment: .live())
 
     var body: some Scene {
-        MenuBarExtra("Henge", systemImage: coordinator.statusItemSymbolName) {
+        MenuBarExtra {
             MenuBarView()
                 .environmentObject(coordinator)
+        } label: {
+            Image("HengeMenuBar")
+                .renderingMode(.template)
         }
 
         Settings {
