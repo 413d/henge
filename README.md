@@ -59,6 +59,7 @@ open ~/Applications/Henge.app            # launch
 
 # Package universal zip archive with SHA-256 sums:
 ./scripts/package.sh                     # creates dist/Henge-universal.zip + dist/SHA256SUMS.txt
+./scripts/package.sh --archive-name Henge-v0.1.0-universal.zip  # custom archive name
 ```
 
 Then grant Accessibility: System Settings → Privacy & Security → Accessibility → enable Henge.
@@ -72,19 +73,36 @@ Accessibility grant — re-enable it after each reinstall.
 > HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
 > ```
 
-### GitHub Actions artifacts (testing builds)
+### GitHub Releases (pre-built ad-hoc downloads)
 
-CI artifacts (`Henge-universal.zip`) are ad-hoc signed and intended for testing only. Full releases will be signed with a Developer ID certificate and notarized.
+Tagged releases (`v*`) are built automatically by `.github/workflows/release.yml` and published to the **GitHub Releases** tab as universal (`arm64` + `x86_64`) `.zip` archives with SHA-256 checksums.
 
-Because downloaded archives are flagged with Gatekeeper quarantine and ad-hoc builds are not notarized, macOS will prevent launching the app (particularly on macOS 15 Sequoia, which removed the Finder Control-Click bypass). After moving **Henge.app** to `~/Applications/`, remove the quarantine attribute before opening it:
+Because these open-source builds are **ad-hoc signed** without a paid Apple Developer ID / notarization, macOS flags browser downloads with Gatekeeper quarantine (and macOS 15 Sequoia removed the Finder Control-Click bypass). To install from GitHub Releases:
+
+1. Download `Henge-vX.Y.Z-universal.zip` (and optionally `SHA256SUMS.txt`) from [Releases](../../releases).
+2. *(Optional)* Verify the archive checksum:
+   ```bash
+   shasum -a 256 -c SHA256SUMS.txt
+   ```
+3. Unzip the archive and move **Henge.app** to `~/Applications/` (or `/Applications/`).
+4. Remove the Gatekeeper quarantine attribute before launching:
+   ```bash
+   xattr -cr ~/Applications/Henge.app
+   ```
+5. Launch **Henge.app** and enable **Accessibility** access in **System Settings → Privacy & Security → Accessibility**.
+
+To publish a new GitHub Release, push a version tag:
 
 ```bash
-xattr -cr ~/Applications/Henge.app
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-### Release (published)
+> **Note on Notarized Releases:** A separate Developer ID + notarized `.dmg` release path (`scripts/release/create-rc.sh`) exists for signed distribution when Apple Developer credentials are available.
 
-The M7 Release Candidate is not published yet. Once a release is available, download its `.dmg`, drag **Henge.app** into your `Applications` folder, then launch it. Henge requires Accessibility permission for text correction; it remains available in the menu bar if permission has not been granted.
+### GitHub Actions CI artifacts (development builds)
+
+Every push to `main` also uploads an ad-hoc `henge-macos-universal` artifact (retained for 14 days) on the workflow run summary for development testing. The same `xattr -cr` quarantine removal step applies after downloading.
 
 ## ⌨️ Default Hotkey
 

@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test and validate
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Validate scripts and Info.plist
+        run: |
+          bash -n scripts/build.sh scripts/package.sh scripts/dev/build-local.sh
+          test -x scripts/build.sh
+          test -x scripts/package.sh
+          plutil -lint App/Info.plist
+
+      - name: Run tests (arm64)
+        run: swift test
+
+      - name: Run tests (x86_64 via Rosetta)
+        run: |
+          if [[ "$(uname -m)" == "arm64" ]]; then
+            arch -x86_64 swift test
+          else
+            swift test
+          fi
+
+  release:
+    name: Build and publish GitHub Release
+    needs: test
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Derive release version and archive name
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          RAW_VERSION="${TAG#v}"
+          APP_VERSION="${RAW_VERSION%%-*}"
+          if [[ ! "${APP_VERSION}" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "error: tag '${TAG}' does not yield a valid numeric version ('${APP_VERSION}')" >&2
+            exit 1
+          fi
+          ARCHIVE_NAME="Henge-${TAG}-universal.zip"
+          PRERELEASE="false"
+          if [[ "${TAG}" == *-* ]]; then
+            PRERELEASE="true"
+          fi
+          {
+            echo "tag=${TAG}"
+            echo "app_version=${APP_VERSION}"
+            echo "archive_name=${ARCHIVE_NAME}"
+            echo "prerelease=${PRERELEASE}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build universal app and package
+        env:
+          HENGE_VERSION: ${{ steps.meta.outputs.app_version }}
+          HENGE_BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/package.sh --archive-name "${{ steps.meta.outputs.archive_name }}"
+
+      - name: Verify archive checksums
+        working-directory: dist
+        run: shasum -a 256 -c SHA256SUMS.txt
+
+      - name: Verify extracted archive bundle
+        env:
+          ARCHIVE_NAME: ${{ steps.meta.outputs.archive_name }}
+          EXPECTED_VERSION: ${{ steps.meta.outputs.app_version }}
+        run: |
+          TMP_DIR="$(mktemp -d /tmp/henge-release-verify.XXXXXX)"
+          ditto -x -k "dist/${ARCHIVE_NAME}" "${TMP_DIR}/"
+          codesign --verify --deep --strict --verbose=2 "${TMP_DIR}/Henge.app"
+          lipo "${TMP_DIR}/Henge.app/Contents/MacOS/Henge" -verify_arch arm64 x86_64
+          ACTUAL_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${TMP_DIR}/Henge.app/Contents/Info.plist")"
+          ACTUAL_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${TMP_DIR}/Henge.app/Contents/Info.plist")"
+          test "${ACTUAL_BUNDLE_ID}" = "io.github.henge.Henge"
+          test "${ACTUAL_VERSION}" = "${EXPECTED_VERSION}"
+          test -f "${TMP_DIR}/Henge.app/Contents/Resources/HengeMenuBar.png"
+          rm -rf "${TMP_DIR}"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          ARCHIVE_NAME: ${{ steps.meta.outputs.archive_name }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          NOTES="$(cat <<EOF
+          ## Henge ${TAG} (macOS Universal: Apple Silicon + Intel)
+
+          ### Installation (Open-Source Ad-Hoc Build)
+
+          This release is built via GitHub Actions and **ad-hoc signed** (not notarized with a paid Apple Developer ID). On macOS 13+:
+
+          1. Download \`${ARCHIVE_NAME}\` (and optionally \`SHA256SUMS.txt\`).
+          2. *(Optional)* Verify checksum:
+             \`\`\`bash
+             shasum -a 256 -c SHA256SUMS.txt
+             \`\`\`
+          3. Unzip and move \`Henge.app\` to \`~/Applications/\` (or \`/Applications/\`).
+          4. **Remove macOS Gatekeeper quarantine** before first launch (required on macOS 15 Sequoia and newer for non-notarized downloads):
+             \`\`\`bash
+             xattr -cr ~/Applications/Henge.app
+             \`\`\`
+          5. Launch \`Henge.app\` and enable **Accessibility** access in **System Settings → Privacy & Security → Accessibility**.
+
+          ---
+          EOF
+          )"
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" \
+              "dist/${ARCHIVE_NAME}" \
+              "dist/SHA256SUMS.txt" \
+              "dist/LICENSE.txt" \
+              --clobber
+          else
+            EXTRA_ARGS=()
+            if [[ "${PRERELEASE}" == "true" ]]; then
+              EXTRA_ARGS+=(--prerelease)
+            fi
+            gh release create "${TAG}" \
+              "dist/${ARCHIVE_NAME}" \
+              "dist/SHA256SUMS.txt" \
+              "dist/LICENSE.txt" \
+              --verify-tag \
+              --title "Henge ${TAG}" \
+              --notes "${NOTES}" \
+              --generate-notes \
+              "${EXTRA_ARGS[@]}"
+          fi
