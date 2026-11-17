@@ -5,9 +5,25 @@
 #   scripts/package.sh
 set -euo pipefail
 
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
+
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        -h|--help)
+            echo "Usage: $0"
+            exit 0
+            ;;
+        *)
+            echo "error: unknown argument '$1'" >&2
+            echo "Usage: $0" >&2
+            exit 2
+            ;;
+    esac
+fi
 
 APP_NAME="Henge"
 UNIVERSAL_APP="build/universal/${APP_NAME}.app"
@@ -28,6 +44,12 @@ mkdir -p "${DIST_DIR}"
 
 ditto -c -k --norsrc --noextattr --noacl --keepParent "${UNIVERSAL_APP}" "${DIST_DIR}/${ARCHIVE_NAME}"
 
+if [[ -f "${REPO_ROOT}/LICENSE" ]]; then
+    cp "${REPO_ROOT}/LICENSE" "${DIST_DIR}/LICENSE.txt"
+elif [[ -f "${REPO_ROOT}/LICENSE.txt" ]]; then
+    cp "${REPO_ROOT}/LICENSE.txt" "${DIST_DIR}/LICENSE.txt"
+fi
+
 echo "==> Generating SHA256 checksums"
 (
     cd "${DIST_DIR}"
@@ -37,5 +59,5 @@ echo "==> Generating SHA256 checksums"
 
 echo
 echo "==> Package ready:"
-ls -lh "${DIST_DIR}/${ARCHIVE_NAME}" "${DIST_DIR}/SHA256SUMS.txt"
+ls -lh "${DIST_DIR}"
 cat "${DIST_DIR}/SHA256SUMS.txt"
