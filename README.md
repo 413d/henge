@@ -1,121 +1,145 @@
-# 🍥 Henge
+<div align="center">
 
-> **Transform your mistyped text with a single hotkey.**
+<h1>🍥 Henge</h1>
 
-Henge is a lightweight, privacy-first macOS utility that instantly fixes text typed in the wrong keyboard layout. One keystroke turns `ghbdtn` into `привет` — just like a ninja transformation jutsu.
+**Fix mistyped keyboard layout text with a single shortcut.**
 
-## Current Status
+A lightweight, privacy-first macOS menu bar utility that turns `ghbdtn` into `привет` (and `руддщ` into `hello`) in one keystroke.
 
-The repository contains the Henge MVP implementation, including the RU ↔ EN text correction flow, configuration and menu bar lifecycle. The current unit suite passes with `swift test` (105 tests).
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-171b23?style=flat-square&logo=apple&logoColor=white)](https://github.com/413d/henge/releases/latest)
+[![Universal](https://img.shields.io/badge/Apple_Silicon_%2B_Intel-Universal-24c8ec?style=flat-square&labelColor=171b23)](https://github.com/413d/henge/releases/latest)
+[![MIT](https://img.shields.io/badge/license-MIT-171b23?style=flat-square)](LICENSE)
 
-Henge M7 is being prepared as a Release Candidate. Live security/performance validation in real applications, Developer ID signing, notarization and clean-machine installation are still required before an RC is available. There is no stable MVP release yet.
+### [Download Henge ↓](https://github.com/413d/henge/releases/latest)
 
-### Native API probe harness
+[Installation](#installation) · [How to Use](#how-to-use) · [Privacy & Safety](#privacy--safety) · [Limitations](#honest-limitations) · [Report an Issue](https://github.com/413d/henge/issues/new)
 
-Native spikes can be validated from a GUI terminal (not over SSH) without launching the menu bar UI:
+</div>
 
-```bash
-swift run Henge --probe help       # list probe commands
-swift run Henge --probe layout     # HEN-011: RU <-> EN mapping
-swift run Henge --probe clipboard  # HEN-016: snapshot -> marker -> restore
-swift run Henge --probe ax         # HEN-012/013/015: focused element, selection, secure flag
-swift run Henge --probe hotkey     # HEN-010: register <Option>X and wait up to 10s for a key event
-```
+## Why Henge
 
-The probes never print user text, passwords or clipboard contents; the clipboard probe restores the original pasteboard contents. Accessibility permission is required for `--probe ax` and `--probe hotkey`.
+Everyone who switches between Russian and English keyboards knows the feeling: you type a full word or sentence, look up at the screen, and see `ghbdtn` instead of `привет` — or `руддщ` instead of `hello`.
 
-## ✨ Features
+Instead of deleting everything and retyping, press **`⌥X`**. Henge converts the selected text — or the word under your cursor — without requiring you to switch layouts first.
 
-- **One-hotkey fix** — correct the last typed word or selected text (`ru` ↔ `en`).
-- **Runs in the menu bar** — no main window, just a tray icon with a context menu.
-- **App exceptions** — exclude specific apps (e.g., terminal, IDE) from being modified.
-- **Secure-field guard** — secure fields are stopped before text operations; live app validation remains an RC gate.
-- **100% offline** — no network, no telemetry, no data leaves your Mac.
-- **Auto-start** — optional launch at login.
+## What It Does
 
-## 🖥 Requirements
+| Feature | How it helps |
+| --- | --- |
+| **Selection or word at cursor** | Fixes your current selection, or automatically grabs the word around the caret when nothing is selected |
+| **Automatic RU ↔ EN detection** | Detects layout direction from the typed characters themselves, not your active macOS input source |
+| **Preserves formatting** | Keeps uppercase/lowercase letters, digits, punctuation, and `_` intact |
+| **Menu bar utility** | Lives quietly in the macOS menu bar with no Dock icon or clutter |
+| **Custom shortcut** | Defaults to `⌥X`; remap to any shortcut with modifiers in **Settings → General** |
+| **App exceptions** | Exclude terminals, IDEs, or specific apps in **Settings → Exceptions** |
+| **Launch at login** | Can start automatically when you log in (**Settings → General**) |
 
-- macOS 13.0 (Ventura) or later
+## Installation
 
-## 🚀 Installation
+**Requires macOS 13 Ventura or later.** One Universal archive supports both Apple Silicon (M1 and newer) and Intel Macs. You do not need Xcode, Swift, or Homebrew to run the pre-built app.
 
-### Local build (no signing identity required)
+1. Download **`Henge-vX.Y.Z-universal.zip`** from the latest [GitHub Release](https://github.com/413d/henge/releases/latest).  
+   *(Pick the `Henge-v*.zip` asset — GitHub's automatic `Source code` archives only contain source files.)*
+2. Double-click the zip to extract **`Henge.app`**, then move it to **`~/Applications`** (or **`/Applications`**).
+3. **Clear Gatekeeper quarantine once before launching** *(required because public builds are ad-hoc signed without an Apple Developer ID)*:
 
-For personal testing on your own machine (built with Swift CLI, Xcode not required):
-
-```bash
-# Build native bundle for current Mac:
-./scripts/build.sh                       # creates build/Henge.app (ad-hoc signed)
-
-# Build and install to ~/Applications (recommended):
-./scripts/build.sh --install             # installs to ~/Applications/Henge.app
-open ~/Applications/Henge.app            # launch
-
-# Or install to system /Applications:
-./scripts/build.sh --install /Applications
-
-# Build universal bundle (Apple Silicon arm64 + Intel x86_64):
-./scripts/build.sh universal             # creates build/universal/Henge.app
-
-# Package universal zip archive with SHA-256 sums:
-./scripts/package.sh                     # creates dist/Henge-universal.zip + dist/SHA256SUMS.txt
-./scripts/package.sh --archive-name Henge-v0.1.0-universal.zip  # custom archive name
-```
-
-Then grant Accessibility: System Settings → Privacy & Security → Accessibility → enable Henge.
-
-Ad-hoc signatures are device-local: rebuilding and reinstalling the app resets the
-Accessibility grant — re-enable it after each reinstall.
-
-> **Tip (`HENGE_SIGNING_IDENTITY`):** To preserve Accessibility permissions in TCC across rebuilds, create a local Code Signing certificate in Keychain Access (e.g., `"Henge Local"`) and specify it via `HENGE_SIGNING_IDENTITY`:
->
-> ```bash
-> HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
-> ```
-
-### GitHub Releases (pre-built ad-hoc downloads)
-
-Tagged releases (`v*`) are built automatically by `.github/workflows/release.yml` and published to the **GitHub Releases** tab as universal (`arm64` + `x86_64`) `.zip` archives with SHA-256 checksums.
-
-Because these open-source builds are **ad-hoc signed** without a paid Apple Developer ID / notarization, macOS flags browser downloads with Gatekeeper quarantine (and macOS 15 Sequoia removed the Finder Control-Click bypass). To install from GitHub Releases:
-
-1. Download `Henge-vX.Y.Z-universal.zip` (and optionally `SHA256SUMS.txt`) from [Releases](../../releases).
-2. *(Optional)* Verify the archive checksum:
-   ```bash
-   shasum -a 256 -c SHA256SUMS.txt
-   ```
-3. Unzip the archive and move **Henge.app** to `~/Applications/` (or `/Applications/`).
-4. Remove the Gatekeeper quarantine attribute before launching:
    ```bash
    xattr -cr ~/Applications/Henge.app
    ```
-5. Launch **Henge.app** and enable **Accessibility** access in **System Settings → Privacy & Security → Accessibility**.
 
-To publish a new GitHub Release, push a version tag:
+   *(If you placed it in `/Applications`, adjust the path accordingly.)*
+4. Open **`Henge.app`**.
+5. Grant **Accessibility** permission when prompted (or in **System Settings → Privacy & Security → Accessibility**).
+
+### Why `xattr -cr` is needed
+
+Open-source releases of Henge are built on GitHub Actions with an **ad-hoc signature** and are not notarized by Apple. On macOS (especially macOS 15 Sequoia, which removed the Finder Control-Click bypass), browser downloads carry a quarantine attribute that causes macOS to block non-notarized apps.
+
+If you prefer not to run Terminal commands on downloaded apps, you can [verify the SHA-256 checksum](#verifying-your-download) or [build from source](#build-from-source) directly on your Mac.
+
+### Verifying your download
+
+Download `SHA256SUMS.txt` from the same release into the folder with the zip archive and run:
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+This verifies archive integrity against the CI build output.
+
+## How to Use
+
+1. Type text in the wrong keyboard layout (for example, `ghbdtn` or `Ghbdtn, vbh!`).
+2. Either **select the text** or leave your **cursor inside / at the end of the word**.
+3. Press **`⌥X`** (Option + X).
+
+Henge replaces the text in place. You can also click the menu bar icon to:
+
+- Toggle Henge **Enabled / Disabled**
+- Trigger **Fix Text** manually
+- Check **Accessibility** and shortcut registration status
+- Open **Settings…** to change the shortcut, manage **Exceptions**, or toggle **Launch at Login**
+
+## Privacy & Safety
+
+- **100% offline.** Henge makes no network requests, sends no telemetry or analytics, and requires no account.
+- **Password & secure-field protection.** Henge checks for secure text fields and refuses to read, copy, transform, or replace their contents.
+- **Accessibility first, clipboard restored.** Henge reads and writes text via macOS Accessibility APIs. For apps that do not support direct Accessibility text replacement, Henge falls back to copy/paste and restores your previous clipboard contents immediately afterward.
+- **Local configuration.** Settings are stored locally at `~/Library/Application Support/Henge/config.json`.
+
+## Honest Limitations
+
+- **RU ↔ EN only.** Only Russian and English keyboard layout mapping is supported.
+- **No automatic background correction.** Henge only transforms text when you press your shortcut (or click **Fix Text**).
+- **Ad-hoc signature & permissions.** Because release builds are ad-hoc signed without a Developer ID certificate, macOS resets the Accessibility grant whenever you replace `Henge.app` with a new version — re-enable Henge in **System Settings → Privacy & Security → Accessibility** after updating.
+- **App compatibility varies.** Some custom UI frameworks, sandboxed apps, or remote desktop windows restrict Accessibility access; Henge fails safely as a no-op if a target field cannot be inspected or edited safely.
+
+## Updating & Uninstalling
+
+**Update:** Choose **Quit Henge** from the menu bar, download the new release archive, replace `Henge.app` in `~/Applications` (or `/Applications`), clear quarantine with `xattr -cr`, and re-enable Accessibility if prompted.
+
+**Uninstall:**
+
+1. Disable **Launch at Login** in **Settings → General**, then click **Quit Henge**.
+2. Delete `Henge.app` and its local config folder:
+
+   ```bash
+   rm -rf ~/Applications/Henge.app "$HOME/Library/Application Support/Henge"
+   ```
+
+## Build from Source
+
+Requires macOS 13+ and Swift / Xcode Command Line Tools (`xcode-select --install`).
+
+```bash
+git clone https://github.com/413d/henge.git
+cd henge
+./scripts/build.sh --install
+open ~/Applications/Henge.app
+```
+
+Useful commands for contributors:
+
+```bash
+swift test                        # run the unit test suite
+./scripts/build.sh universal      # build a universal arm64 + x86_64 bundle
+./scripts/package.sh              # package dist/Henge-universal.zip + SHA256SUMS.txt
+swift run Henge --probe help      # inspect native API probes (layout, ax, clipboard, hotkey)
+```
+
+To preserve macOS Accessibility permissions across local rebuilds, sign with a local Keychain certificate:
+
+```bash
+HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
+```
+
+Maintainers can publish a new tagged release to GitHub Releases with:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-> **Note on Notarized Releases:** A separate Developer ID + notarized `.dmg` release path (`scripts/release/create-rc.sh`) exists for signed distribution when Apple Developer credentials are available.
-
-### GitHub Actions CI artifacts (development builds)
-
-Every push to `main` also uploads an ad-hoc `henge-macos-universal` artifact (retained for 14 days) on the workflow run summary for development testing. The same `xattr -cr` quarantine removal step applies after downloading.
-
-## ⌨️ Default Hotkey
-
-| Action | Shortcut |
-|---|---|
-| Fix selected text or the word around the caret | `⌥X` |
-
-You can remap it in **Settings → Hotkeys**.
-
-## 🔒 Privacy
-
-Henge works entirely offline. It never reads your clipboard for anything other than the correction operation, never sends data anywhere, and stores its config locally at `~/Library/Application Support/Henge/config.json`.
-
-## 📄 License
+## License
 
 [MIT](LICENSE)
