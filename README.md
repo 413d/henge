@@ -66,6 +66,22 @@ Then grant Accessibility: System Settings → Privacy & Security → Accessibili
 Ad-hoc signatures are device-local: rebuilding and reinstalling the app resets the
 Accessibility grant — re-enable it after each reinstall.
 
+> **Tip (`HENGE_SIGNING_IDENTITY`):** To preserve Accessibility permissions in TCC across rebuilds, create a local Code Signing certificate in Keychain Access (e.g., `"Henge Local"`) and specify it via `HENGE_SIGNING_IDENTITY`:
+>
+> ```bash
+> HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
+> ```
+
+### GitHub Actions artifacts (testing builds)
+
+CI artifacts (`Henge-universal.zip`) are ad-hoc signed and intended for testing only. Full releases will be signed with a Developer ID certificate and notarized.
+
+Because downloaded archives are flagged with Gatekeeper quarantine and ad-hoc builds are not notarized, macOS will prevent launching the app (particularly on macOS 15 Sequoia, which removed the Finder Control-Click bypass). After moving **Henge.app** to `~/Applications/`, remove the quarantine attribute before opening it:
+
+```bash
+xattr -cr ~/Applications/Henge.app
+```
+
 ### Release (published)
 
 The M7 Release Candidate is not published yet. Once a release is available, download its `.dmg`, drag **Henge.app** into your `Applications` folder, then launch it. Henge requires Accessibility permission for text correction; it remains available in the menu bar if permission has not been granted.
