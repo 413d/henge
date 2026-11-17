@@ -17,6 +17,7 @@ APP_NAME="Henge"
 APP_VERSION="${HENGE_VERSION:-0.1.0}"
 BUILD_NUMBER="${HENGE_BUILD_NUMBER:-2}"
 MIN_MACOS="13.0"
+SIGN_IDENTITY="${HENGE_SIGNING_IDENTITY:--}"
 
 TARGET="native"
 CONFIGURATION="release"
@@ -40,7 +41,7 @@ while [[ $# -gt 0 ]]; do
         --install)
             INSTALL=true
             shift
-            if [[ $# -gt 0 && ! "$1" =~ ^-- ]]; then
+            if [[ $# -gt 0 && ! "$1" =~ ^-- && "$1" != "native" && "$1" != "universal" ]]; then
                 INSTALL_DIR="$1"
                 shift
             fi
@@ -100,6 +101,12 @@ verify_bundle() {
         echo "verify: icon present OK"
     fi
 
+    if [[ -f "App/HengeMenuBar.png" ]]; then
+        [[ -f "${app}/Contents/Resources/HengeMenuBar.png" ]] \
+            || { echo "error: missing menu bar icon: ${app}/Contents/Resources/HengeMenuBar.png" >&2; return 1; }
+        echo "verify: menu bar icon OK"
+    fi
+
     if [[ "${TARGET}" == "universal" ]]; then
         lipo "$exe" -verify_arch arm64 x86_64 \
             || { echo "error: executable is not universal arm64 + x86_64" >&2; return 1; }
@@ -107,25 +114,29 @@ verify_bundle() {
     fi
 
     codesign --verify --deep --strict --verbose=2 "$app"
-    local sig_info
-    sig_info="$(codesign -dv "$app" 2>&1)"
-    grep -q 'Signature=adhoc' <<<"$sig_info" \
-        || { echo "error: bundle is not ad-hoc signed" >&2; return 1; }
-    echo "verify: ad-hoc signature OK"
+    if [[ "${SIGN_IDENTITY}" == "-" ]]; then
+        local sig_info
+        sig_info="$(codesign -dv "$app" 2>&1)"
+        grep -q 'Signature=adhoc' <<<"$sig_info" \
+            || { echo "error: bundle is not ad-hoc signed" >&2; return 1; }
+        echo "verify: ad-hoc signature OK"
+    else
+        echo "verify: custom signature OK (${SIGN_IDENTITY})"
+    fi
 }
 
 BINARIES=()
 if [[ "${TARGET}" == "universal" ]]; then
     for arch in "${ARCHITECTURES[@]}"; do
+        bin_dir="$(swift build -c "${CONFIGURATION}" --triple "${arch}-apple-macosx${MIN_MACOS}" --show-bin-path)"
         echo "==> swift build -c ${CONFIGURATION} --triple ${arch}-apple-macosx${MIN_MACOS}"
         swift build -c "${CONFIGURATION}" --triple "${arch}-apple-macosx${MIN_MACOS}"
-        bin_dir="$(swift build -c "${CONFIGURATION}" --triple "${arch}-apple-macosx${MIN_MACOS}" --show-bin-path)"
         BINARIES+=("${bin_dir}/${APP_NAME}")
     done
 else
+    bin_dir="$(swift build -c "${CONFIGURATION}" --show-bin-path)"
     echo "==> swift build -c ${CONFIGURATION}"
     swift build -c "${CONFIGURATION}"
-    bin_dir="$(swift build -c "${CONFIGURATION}" --show-bin-path)"
     BINARIES+=("${bin_dir}/${APP_NAME}")
 fi
 
@@ -154,17 +165,24 @@ else
     echo "warning: App/${APP_NAME}.icns not found — skipping icon" >&2
 fi
 
-PLIST="${APP_DIR}/Contents/Info.plist"
-sed -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${BUNDLE_ID}/g" \
-    -e "s/\$(MARKETING_VERSION)/${APP_VERSION}/g" \
-    -e "s/\$(CURRENT_PROJECT_VERSION)/${BUILD_NUMBER}/g" \
-    -e "s/\$(EXECUTABLE_NAME)/${APP_NAME}/g" \
-    App/Info.plist > "${PLIST}"
-lint_out="$(plutil -lint "${PLIST}")" \
-    || { echo "error: materialized Info.plist lint failed: ${lint_out}" >&2; exit 1; }
+if [[ -f "App/HengeMenuBar.png" ]]; then
+    cp "App/HengeMenuBar.png" "${APP_DIR}/Contents/Resources/HengeMenuBar.png"
+fi
 
-echo "==> Ad-hoc codesign"
-codesign --force --deep --sign - "${APP_DIR}"
+PLIST="${APP_DIR}/Contents/Info.plist"
+cp App/Info.plist "${PLIST}"
+plutil -replace CFBundleIdentifier -string "${BUNDLE_ID}" "${PLIST}"
+plutil -replace CFBundleShortVersionString -string "${APP_VERSION}" "${PLIST}"
+plutil -replace CFBundleVersion -string "${BUILD_NUMBER}" "${PLIST}"
+plutil -replace CFBundleExecutable -string "${APP_NAME}" "${PLIST}"
+plutil -lint "${PLIST}" >/dev/null
+
+if [[ "${SIGN_IDENTITY}" == "-" ]]; then
+    echo "==> Ad-hoc codesign"
+else
+    echo "==> Codesign with identity '${SIGN_IDENTITY}'"
+fi
+codesign --force --deep --sign "${SIGN_IDENTITY}" "${APP_DIR}"
 
 echo "==> Verify"
 verify_bundle "${APP_DIR}"
@@ -175,7 +193,17 @@ lipo -info "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 if [[ "${INSTALL}" == true ]]; then
     echo "==> Installing to ${INSTALL_DIR}/${APP_NAME}.app"
     mkdir -p "${INSTALL_DIR}"
-    pkill -x "${APP_NAME}" 2>/dev/null || true
+    if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+        echo "==> Stopping running instance of ${APP_NAME}..."
+        pkill -x "${APP_NAME}" 2>/dev/null || true
+        for _ in {1..20}; do
+            pgrep -x "${APP_NAME}" >/dev/null 2>&1 || break
+            sleep 0.1
+        done
+        if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+            pkill -9 -x "${APP_NAME}" 2>/dev/null || true
+        fi
+    fi
     rm -rf "${INSTALL_DIR}/${APP_NAME}.app"
     ditto "${APP_DIR}" "${INSTALL_DIR}/${APP_NAME}.app"
     echo "Installed to ${INSTALL_DIR}/${APP_NAME}.app."
