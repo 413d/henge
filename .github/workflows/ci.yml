@@ -33,8 +33,16 @@ jobs:
           test -x scripts/package.sh
           plutil -lint App/Info.plist
 
-      - name: Run tests
+      - name: Run tests (arm64)
         run: swift test
+
+      - name: Run tests (x86_64 via Rosetta)
+        run: |
+          if [[ "$(uname -m)" == "arm64" ]]; then
+            arch -x86_64 swift test
+          else
+            swift test
+          fi
 
   package:
     name: Universal app bundle
@@ -53,11 +61,15 @@ jobs:
         working-directory: dist
         run: shasum -a 256 -c SHA256SUMS.txt
 
-      - name: Verify bundle signature and architecture
+      - name: Verify extracted archive bundle
         run: |
-          codesign --verify --deep --strict --verbose=2 "build/universal/Henge.app"
-          lipo "build/universal/Henge.app/Contents/MacOS/Henge" -verify_arch arm64 x86_64
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "build/universal/Henge.app/Contents/Info.plist"
+          TMP_DIR="$(mktemp -d /tmp/henge-verify.XXXXXX)"
+          ditto -x -k dist/Henge-universal.zip "${TMP_DIR}/"
+          codesign --verify --deep --strict --verbose=2 "${TMP_DIR}/Henge.app"
+          lipo "${TMP_DIR}/Henge.app/Contents/MacOS/Henge" -verify_arch arm64 x86_64
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${TMP_DIR}/Henge.app/Contents/Info.plist"
+          test -f "${TMP_DIR}/Henge.app/Contents/Resources/HengeMenuBar.png"
+          rm -rf "${TMP_DIR}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -65,5 +77,6 @@ jobs:
           path: |
             dist/Henge-universal.zip
             dist/SHA256SUMS.txt
+            dist/LICENSE.txt
           if-no-files-found: error
           retention-days: 14
