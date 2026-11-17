@@ -41,11 +41,24 @@ The probes never print user text, passwords or clipboard contents; the clipboard
 
 ### Local build (no signing identity required)
 
-For personal testing on your own machine:
+For personal testing on your own machine (built with Swift CLI, Xcode not required):
 
 ```bash
-./scripts/dev/build-local.sh --install   # release build → build/Henge.app (ad-hoc signed) → /Applications/Henge.app
-open /Applications/Henge.app             # launch from Finder
+# Build native bundle for current Mac:
+./scripts/build.sh                       # creates build/Henge.app (ad-hoc signed)
+
+# Build and install to ~/Applications (recommended):
+./scripts/build.sh --install             # installs to ~/Applications/Henge.app
+open ~/Applications/Henge.app            # launch
+
+# Or install to system /Applications:
+./scripts/build.sh --install /Applications
+
+# Build universal bundle (Apple Silicon arm64 + Intel x86_64):
+./scripts/build.sh universal             # creates build/universal/Henge.app
+
+# Package universal zip archive with SHA-256 sums:
+./scripts/package.sh                     # creates dist/Henge-universal.zip + dist/SHA256SUMS.txt
 ```
 
 Then grant Accessibility: System Settings → Privacy & Security → Accessibility → enable Henge.
