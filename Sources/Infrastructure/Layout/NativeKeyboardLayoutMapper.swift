@@ -113,7 +113,7 @@ public final class NativeKeyboardLayoutMapper: LayoutMapping, @unchecked Sendabl
         for i in 0..<chars.count {
             let ch = chars[i]
 
-            // Always preserve whitespace, digits, and underscores per DL-011 and PRD:
+            // Always preserve whitespace, digits, and underscores during layout mapping:
             if ch.isNumber || ch == "_" || ch.isWhitespace {
                 result.append(ch)
                 continue

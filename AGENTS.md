@@ -59,22 +59,8 @@ Prefer protocols around macOS-specific infrastructure.
 
 ## Documentation
 
-Project documentation is stored in GBrain.
+Project documentation is maintained in the repository:
 
-When working on tasks, update and create documentation in GBrain as well, not in the current repository.
-
-Docs root (`<DOCS_ROOT>`): GBrain/Projects/henge (`~/brain/Projects/henge`)
-
-```
-PRD
- ↓
-Decision Log
- ↓
-MVP Scope
- ↓
-Architecture
- ↓
-Implementation Specification
- ↓
-Engineering Backlog
-```
+- `README.md` — Project overview, installation, and usage
+- `docs/architecture.md` — System architecture and safety invariants
+- `CONTRIBUTING.md` — Contribution guidelines and development workflow

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Command-line probe harness used to validate the native macOS API spikes
-/// (HEN-010 … HEN-016) in an interactive GUI session.
+/// in an interactive GUI session.
 ///
 /// The probes are intentionally read-only with respect to user data: the
 /// clipboard probe restores the original pasteboard contents, and the
@@ -143,7 +143,7 @@ enum HengeProbeRunner {
         case let .unavailable(reason):
             lines.append("Focused element: unavailable — \(reason.description)")
         case let .available(snapshot) where snapshot.isSecure:
-            // DL-016 / safety invariant: a secure field is a complete no-op.
+            // Safety invariant: a secure field is a complete no-op.
             // Report only the non-sensitive role markers and stop; never touch the selection.
             lines.append("Focused element role: \(snapshot.role ?? "<none>")")
             lines.append("Focused element subrole: \(snapshot.subrole ?? "<none>")")
@@ -212,10 +212,10 @@ enum HengeProbeRunner {
         Henge native API probe harness
 
         Usage:
-          swift run Henge --probe layout      Validate RU <-> EN layout mapping (HEN-011)
-          swift run Henge --probe clipboard   Validate full-fidelity pasteboard preservation (HEN-016)
-          swift run Henge --probe ax          Inspect Accessibility focused element and selection (HEN-012/013/015)
-          swift run Henge --probe hotkey      Register ⌥X and wait up to 10s for a key event (HEN-010)
+          swift run Henge --probe layout      Validate RU <-> EN layout mapping
+          swift run Henge --probe clipboard   Validate full-fidelity pasteboard preservation
+          swift run Henge --probe ax          Inspect Accessibility focused element and selection
+          swift run Henge --probe hotkey      Register ⌥X and wait up to 10s for a key event
           swift run Henge --probe all         Run layout, clipboard, and ax probes
           swift run Henge --probe help        Show this message
 

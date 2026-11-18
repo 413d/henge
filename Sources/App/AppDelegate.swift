@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Shows the system Accessibility consent prompt once on launch when permission
     /// is missing. macOS remembers a denied prompt and does not repeat it, so this
-    /// cannot loop (DL-027).
+    /// cannot loop.
     private func requestAccessibilityPromptIfNeeded() {
         guard !AXIsProcessTrusted() else { return }
         // kAXTrustedCheckOptionPrompt is the literal "AXTrustedCheckOptionPrompt"
