@@ -100,7 +100,7 @@ jobs:
           lipo "${TMP_DIR}/Henge.app/Contents/MacOS/Henge" -verify_arch arm64 x86_64
           ACTUAL_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${TMP_DIR}/Henge.app/Contents/Info.plist")"
           ACTUAL_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${TMP_DIR}/Henge.app/Contents/Info.plist")"
-          test "${ACTUAL_BUNDLE_ID}" = "io.github.henge.Henge"
+          test "${ACTUAL_BUNDLE_ID}" = "io.github.413d.Henge"
           test "${ACTUAL_VERSION}" = "${EXPECTED_VERSION}"
           test -f "${TMP_DIR}/Henge.app/Contents/Resources/HengeMenuBar.png"
           rm -rf "${TMP_DIR}"

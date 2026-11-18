@@ -65,7 +65,7 @@ APP_EXECUTABLE="$APP_PATH/Contents/MacOS/Henge"
 [[ -f "$APP_EXECUTABLE" ]] || fail "Henge executable is missing from the archive."
 
 APP_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Contents/Info.plist")"
-[[ "$APP_BUNDLE_ID" == 'io.github.henge.Henge' ]] || fail "Unexpected bundle identifier: $APP_BUNDLE_ID"
+[[ "$APP_BUNDLE_ID" == 'io.github.413d.Henge' ]] || fail "Unexpected bundle identifier: $APP_BUNDLE_ID"
 lipo -verify_arch arm64 x86_64 "$APP_EXECUTABLE" || fail "The app is not a universal arm64 + x86_64 binary."
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 

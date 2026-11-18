@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-BUNDLE_ID="io.github.henge.Henge"
+BUNDLE_ID="io.github.413d.Henge"
 APP_NAME="Henge"
 APP_VERSION="${HENGE_VERSION:-0.1.0}"
 BUILD_NUMBER="${HENGE_BUILD_NUMBER:-2}"
