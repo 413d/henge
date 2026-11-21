@@ -23,6 +23,7 @@ test('required static assets exist with valid dimensions', () => {
     { path: 'site/assets/favicon-32.png', w: 32, h: 32 },
     { path: 'site/assets/apple-touch-icon.png', w: 180, h: 180 },
     { path: 'site/assets/menubar-icon.png', w: 44, h: 44 },
+    { path: 'site/assets/logo.png', w: 512, h: 512 },
     { path: 'site/assets/og-card.png', w: 1200, h: 630 }
   ];
   for (const f of files) {

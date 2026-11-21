@@ -74,8 +74,8 @@ test('Canonical URL, html lang, theme-color, and robots metadata are valid', () 
 
   assert.equal(
     getMetaContent('name', 'theme-color'),
-    '#141722',
-    'theme-color must match canvas background #141722'
+    '#11121D',
+    'theme-color must match canvas background #11121D'
   );
 
   const robots = getMetaContent('name', 'robots');

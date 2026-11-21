@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs';
 
 const css = readFileSync('site/styles.css', 'utf8');
 
-test('CSS adheres to anti-slop rules: single gray family, locked accent, shape lock', () => {
-  // Accent color locked to narutomaki coral #F08C70
-  assert.match(css, /--accent:\s*#F08C70/i);
-  assert.match(css, /--bg-canvas:\s*#141722/i);
-  assert.match(css, /--bg-surface:\s*#1B1F2E/i);
-  assert.match(css, /--bg-elevated:\s*#23283B/i);
+test('CSS adheres to anti-slop rules: single surface family, locked accent, shape lock', () => {
+  // Accent color locked to Henge orchid violet #C78BFF
+  assert.match(css, /--accent:\s*#C78BFF/i);
+  assert.match(css, /--bg-canvas:\s*#11121D/i);
+  assert.match(css, /--bg-surface:\s*#181A2A/i);
+  assert.match(css, /--bg-elevated:\s*#212438/i);
 
   // Shape lock: 999px (pills), 16px (cards/containers), 8px (controls)
   assert.match(css, /--radius-full:\s*999px/);

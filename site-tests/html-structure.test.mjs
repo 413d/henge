@@ -37,12 +37,13 @@ test('HTML contains valid head metadata and relative asset paths', () => {
   assert.match(html, /<meta property="og:image:width" content="1200"/);
   assert.match(html, /<meta property="og:image:height" content="630"/);
   assert.match(html, /<meta name="twitter:card" content="summary_large_image"/);
-  assert.match(html, /<meta name="theme-color" content="#141722"/);
+  assert.match(html, /<meta name="theme-color" content="#11121D"/);
   assert.match(html, /href="\.\/styles\.css"/, 'CSS path must be relative');
   assert.match(html, /src="\.\/app\.js"/, 'JS path must be relative');
   assert.match(html, /href="\.\/assets\/favicon-32\.png"/);
   assert.match(html, /href="\.\/assets\/apple-touch-icon\.png"/);
   assert.match(html, /src="\.\/assets\/icon-128\.png"/);
+  assert.match(html, /src="\.\/assets\/logo\.png"/);
   assert.match(html, /src="\.\/assets\/menubar-icon\.png"/);
   assert.doesNotMatch(html, /(?:href|src)="\/(?:styles\.css|app\.js|assets\/)/, 'Asset paths must not be root-relative');
   assert.match(html, /application\/ld\+json/);
