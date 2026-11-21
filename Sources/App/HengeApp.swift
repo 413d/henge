@@ -13,7 +13,23 @@ enum HengeMain {
 
 struct HengeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var coordinator = HengeCoordinator(environment: .live())
+    @StateObject private var coordinator: HengeCoordinator
+    private let menuBarLifecycleObserver: MenuBarLifecycleObserver
+
+    init() {
+        let settingsWindowController = SettingsWindowController()
+        let lifecycleObserver = MenuBarLifecycleObserver()
+        let coordinator = HengeCoordinator(
+            environment: .live(),
+            presentSettings: {
+                settingsWindowController.showWindow()
+            }
+        )
+        settingsWindowController.bind(coordinator: coordinator)
+        lifecycleObserver.bind(coordinator: coordinator)
+        menuBarLifecycleObserver = lifecycleObserver
+        _coordinator = StateObject(wrappedValue: coordinator)
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -21,11 +37,6 @@ struct HengeApp: App {
                 .environmentObject(coordinator)
         } label: {
             MenuBarIconLabel(symbolName: coordinator.statusItemSymbolName)
-        }
-
-        Settings {
-            SettingsView()
-                .environmentObject(coordinator)
         }
     }
 }

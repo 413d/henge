@@ -218,3 +218,76 @@ private final class ShortcutCaptureView: NSView {
         onCapture?(Shortcut(key: key, modifiers: modifiers))
     }
 }
+
+@MainActor
+final class SettingsWindowController {
+    private weak var coordinator: HengeCoordinator?
+    private var window: NSWindow?
+    private let activateApplication: @MainActor () -> Void
+    private let presentWindow: @MainActor (NSWindow) -> Void
+
+    init(
+        coordinator: HengeCoordinator? = nil,
+        activateApplication: (@MainActor () -> Void)? = nil,
+        presentWindow: (@MainActor (NSWindow) -> Void)? = nil
+    ) {
+        self.coordinator = coordinator
+        self.activateApplication = activateApplication ?? {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+        self.presentWindow = presentWindow ?? { window in
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        }
+    }
+
+    func bind(coordinator: HengeCoordinator) {
+        self.coordinator = coordinator
+    }
+
+    @discardableResult
+    func showWindow() -> NSWindow? {
+        guard let coordinator else {
+            return nil
+        }
+
+        let targetWindow: NSWindow
+        if let existingWindow = window {
+            targetWindow = existingWindow
+        } else {
+            let hostingController = NSHostingController(
+                rootView: SettingsView().environmentObject(coordinator)
+            )
+            let createdWindow = NSWindow(contentViewController: hostingController)
+            createdWindow.title = "Henge Settings"
+            createdWindow.styleMask = [.titled, .closable, .miniaturizable]
+            createdWindow.isReleasedWhenClosed = false
+            createdWindow.setContentSize(NSSize(width: 520, height: 460))
+            createdWindow.center()
+            window = createdWindow
+            targetWindow = createdWindow
+        }
+
+        bringCurrentWindowToFront()
+
+        if RunLoop.main.currentMode == .eventTracking {
+            RunLoop.main.perform(inModes: [.default]) { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.bringCurrentWindowToFront()
+                }
+            }
+        }
+
+        return targetWindow
+    }
+
+    private func bringCurrentWindowToFront() {
+        guard let window else {
+            return
+        }
+
+        activateApplication()
+        presentWindow(window)
+    }
+}
+

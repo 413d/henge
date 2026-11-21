@@ -9,19 +9,25 @@ final class HengeCoordinator: ObservableObject {
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
     private let loginItemManager: LoginItemManaging
-    private let terminateApplication: () -> Void
+    private let presentSettings: @MainActor () -> Void
+    private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
     private let exceptionMatcher = ExceptionMatcher()
+    private var isExecutingFixText = false
 
     init(
         environment: AppEnvironment,
-        terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
+        presentSettings: (@MainActor () -> Void)? = nil,
+        terminateApplication: (@MainActor () -> Void)? = nil
     ) {
         configurationStore = environment.configurationStore
         fixTextUseCase = environment.fixTextUseCase
         runtime = environment.runtime
         loginItemManager = environment.loginItemManager
-        self.terminateApplication = terminateApplication
+        self.presentSettings = presentSettings ?? {}
+        self.terminateApplication = terminateApplication ?? {
+            NSApplication.shared.terminate(nil)
+        }
 
         let loadedConfiguration = environment.configurationStore.load()
         let systemLaunchAtLogin = environment.loginItemManager.status == .enabled
@@ -179,12 +185,43 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func triggerFixText() {
+        guard state.configuration.isEnabled, !isExecutingFixText else {
+            return
+        }
+
+        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
+        guard let application = runtime.activeApplication else {
+            state.lastProbeStatus = "Henge could not identify the active application and left the text untouched."
+            return
+        }
+        guard !exceptionMatcher.contains(application, in: excluded) else {
+            return
+        }
+
+        let accessibilityGranted = runtime.hasAccessibilityPermission
+        state.accessibilityGranted = accessibilityGranted
+        guard accessibilityGranted else {
+            state.lastProbeStatus = FocusedElementProbeFailure.missingPermission.description
+            return
+        }
+
         guard canTriggerFixText else {
             return
         }
 
-        state.lastProbeStatus = "Correction attempted."
-        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: Set(state.configuration.excludedApplicationBundleIdentifiers))
+        isExecutingFixText = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isExecutingFixText = false }
+
+            let prepared = await self.runtime.prepareTargetApplicationForFixText(application)
+            guard prepared else {
+                self.state.lastProbeStatus = "Henge could not restore focus to \(application.displayName) and left the text untouched."
+                return
+            }
+
+            self.executeFixTextWithPreflight()
+        }
     }
 
     func addApplicationException(_ application: ApplicationIdentity) {
@@ -210,6 +247,11 @@ final class HengeCoordinator: ObservableObject {
 
     func openAccessibilitySettings() {
         runtime.openAccessibilitySettings()
+    }
+
+    func openSettings() {
+        refreshPermissions()
+        presentSettings()
     }
 
     func quitApplication() {
@@ -260,15 +302,24 @@ final class HengeCoordinator: ObservableObject {
     }
 
     private func handleFixTextHotkey() {
+        guard !isExecutingFixText else {
+            return
+        }
+
+        executeFixTextWithPreflight()
+    }
+
+    private func executeFixTextWithPreflight() {
         guard state.configuration.isEnabled else {
             return
         }
 
+        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
             state.lastProbeStatus = "Henge could not identify the active application and left the text untouched."
             return
         }
-        guard !exceptionMatcher.contains(application, in: Set(state.configuration.excludedApplicationBundleIdentifiers)) else {
+        guard !exceptionMatcher.contains(application, in: excluded) else {
             return
         }
 
@@ -296,6 +347,6 @@ final class HengeCoordinator: ObservableObject {
         }
 
         state.lastProbeStatus = "Correction attempted."
-        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: Set(state.configuration.excludedApplicationBundleIdentifiers))
+        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: excluded)
     }
 }

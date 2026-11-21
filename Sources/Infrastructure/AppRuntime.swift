@@ -135,6 +135,8 @@ protocol AppRuntime {
     var clipboardManager: ClipboardManaging { get }
 
     func openAccessibilitySettings()
+    @MainActor
+    func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws
     func unregisterFixTextHotkey()
     func inspectFocusedElement() -> FocusedElementProbe
@@ -148,6 +150,11 @@ protocol AppRuntime {
 }
 
 extension AppRuntime {
+    @MainActor
+    func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool {
+        true
+    }
+
     func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity? {
         ApplicationIdentity(bundleIdentifier: bundleIdentifier, displayName: bundleIdentifier)
     }
@@ -231,7 +238,52 @@ final class LiveAppRuntime: AppRuntime {
             return
         }
 
-        NSWorkspace.shared.open(url)
+        let openURL: @Sendable () -> Void = {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            NSWorkspace.shared.open(url, configuration: configuration)
+        }
+
+        if Thread.isMainThread, RunLoop.main.currentMode == .eventTracking {
+            RunLoop.main.perform(inModes: [.default]) {
+                openURL()
+            }
+        } else {
+            openURL()
+        }
+    }
+
+    @MainActor
+    func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool {
+        if RunLoop.main.currentMode == .eventTracking {
+            await withCheckedContinuation { continuation in
+                RunLoop.main.perform(inModes: [.default]) {
+                    continuation.resume()
+                }
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        if applicationProvider.isFrontmost(application),
+           NSApplication.shared.isActive == false,
+           case .success = resolveFocusedElement() {
+            return true
+        }
+
+        guard applicationProvider.activateApplication(application) else {
+            return false
+        }
+
+        for _ in 0..<15 {
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            if applicationProvider.isFrontmost(application),
+               case .success = resolveFocusedElement() {
+                return true
+            }
+        }
+
+        return applicationProvider.isFrontmost(application)
     }
 
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws {
@@ -431,8 +483,16 @@ final class LiveAppRuntime: AppRuntime {
         guard activeApplication?.bundleIdentifier == application.bundleIdentifier else { return nil }
         var targetPID: pid_t = 0
         guard AXUIElementGetPid(element, &targetPID) == .success,
-              NSRunningApplication(processIdentifier: targetPID)?.bundleIdentifier == application.bundleIdentifier else { return nil }
-        return targetPID
+              targetPID != ProcessInfo.processInfo.processIdentifier else {
+            return nil
+        }
+        if NSRunningApplication(processIdentifier: targetPID)?.bundleIdentifier == application.bundleIdentifier {
+            return targetPID
+        }
+        if applicationProvider.activeProcessIdentifier(for: application) == targetPID {
+            return targetPID
+        }
+        return nil
     }
 
     private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
@@ -446,11 +506,27 @@ final class LiveAppRuntime: AppRuntime {
         return value as? String
     }
 
+    private func makeResolvedFocusedElement(from focusedElement: AXUIElement) -> ResolvedFocusedElement {
+        let role = copyStringAttribute(kAXRoleAttribute as CFString, from: focusedElement)
+        let subrole = copyStringAttribute(kAXSubroleAttribute as CFString, from: focusedElement)
+        let isSecure = role == "AXSecureTextField" || subrole == "AXSecureTextField"
+
+        return ResolvedFocusedElement(
+            element: focusedElement,
+            snapshot: FocusedElementSnapshot(
+                role: role,
+                subrole: subrole,
+                isSecure: isSecure
+            )
+        )
+    }
+
     private func resolveFocusedElement() -> Result<ResolvedFocusedElement, FocusedElementProbeFailure> {
         guard hasAccessibilityPermission else {
             return .failure(.missingPermission)
         }
 
+        let ownPID = ProcessInfo.processInfo.processIdentifier
         let systemWideElement = AXUIElementCreateSystemWide()
         var focusedElementValue: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(
@@ -459,34 +535,40 @@ final class LiveAppRuntime: AppRuntime {
             &focusedElementValue
         )
 
-        guard status == .success else {
-            switch status {
-            case .noValue, .attributeUnsupported:
-                return .failure(.noFocusedElement)
-            default:
-                return .failure(.accessibilityError(status))
+        if status == .success,
+           let focusedElementValue,
+           CFGetTypeID(focusedElementValue) == AXUIElementGetTypeID() {
+            let focusedElement = unsafeDowncast(focusedElementValue, to: AXUIElement.self)
+            var elementPID: pid_t = 0
+            if AXUIElementGetPid(focusedElement, &elementPID) == .success, elementPID != ownPID {
+                return .success(makeResolvedFocusedElement(from: focusedElement))
             }
         }
 
-        guard let focusedElementValue, CFGetTypeID(focusedElementValue) == AXUIElementGetTypeID() else {
-            return .failure(.noFocusedElement)
+        if let targetApplication = activeApplication,
+           let targetPID = applicationProvider.activeProcessIdentifier(for: targetApplication),
+           targetPID != ownPID {
+            let appElement = AXUIElementCreateApplication(targetPID)
+            var appFocusedValue: CFTypeRef?
+            let appStatus = AXUIElementCopyAttributeValue(
+                appElement,
+                kAXFocusedUIElementAttribute as CFString,
+                &appFocusedValue
+            )
+            if appStatus == .success,
+               let appFocusedValue,
+               CFGetTypeID(appFocusedValue) == AXUIElementGetTypeID() {
+                let focusedElement = unsafeDowncast(appFocusedValue, to: AXUIElement.self)
+                return .success(makeResolvedFocusedElement(from: focusedElement))
+            }
         }
 
-        let focusedElement = unsafeDowncast(focusedElementValue, to: AXUIElement.self)
-        let role = copyStringAttribute(kAXRoleAttribute as CFString, from: focusedElement)
-        let subrole = copyStringAttribute(kAXSubroleAttribute as CFString, from: focusedElement)
-        let isSecure = role == "AXSecureTextField" || subrole == "AXSecureTextField"
-
-        return .success(
-            ResolvedFocusedElement(
-                element: focusedElement,
-                snapshot: FocusedElementSnapshot(
-                    role: role,
-                    subrole: subrole,
-                    isSecure: isSecure
-                )
-            )
-        )
+        switch status {
+        case .success, .noValue, .attributeUnsupported:
+            return .failure(.noFocusedElement)
+        default:
+            return .failure(.accessibilityError(status))
+        }
     }
 
     private func readSelection(from element: AXUIElement) -> SelectionProbe {

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MenuBarView: View {
@@ -59,7 +60,7 @@ struct MenuBarView: View {
             .disabled(!coordinator.canTriggerFixText)
 
             Button("Settings…") {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                coordinator.openSettings()
             }
 
             Button("Quit Henge") {
@@ -86,6 +87,62 @@ struct MenuBarView: View {
             return "Ready to run with the current focused text context."
         case let .deferred(message):
             return message
+        }
+    }
+}
+
+@MainActor
+final class MenuBarLifecycleObserver {
+    private let menuNotificationCenter: NotificationCenter
+    private let workspaceNotificationCenter: NotificationCenter
+    private weak var coordinator: HengeCoordinator?
+    nonisolated(unsafe) private var menuToken: NSObjectProtocol?
+    nonisolated(unsafe) private var workspaceToken: NSObjectProtocol?
+
+    init(
+        menuNotificationCenter: NotificationCenter = .default,
+        workspaceNotificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter
+    ) {
+        self.menuNotificationCenter = menuNotificationCenter
+        self.workspaceNotificationCenter = workspaceNotificationCenter
+    }
+
+    deinit {
+        if let menuToken {
+            menuNotificationCenter.removeObserver(menuToken)
+        }
+        if let workspaceToken {
+            workspaceNotificationCenter.removeObserver(workspaceToken)
+        }
+    }
+
+    func bind(coordinator: HengeCoordinator) {
+        self.coordinator = coordinator
+        if let menuToken {
+            menuNotificationCenter.removeObserver(menuToken)
+        }
+        if let workspaceToken {
+            workspaceNotificationCenter.removeObserver(workspaceToken)
+        }
+
+        menuToken = menuNotificationCenter.addObserver(
+            forName: NSMenu.didBeginTrackingNotification,
+            object: nil,
+            queue: nil
+        ) { [weak coordinator] _ in
+            Task { @MainActor in
+                coordinator?.refreshPermissions()
+            }
+        }
+
+        workspaceToken = workspaceNotificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: nil
+        ) { [weak coordinator] _ in
+            Task { @MainActor in
+                coordinator?.refreshPermissions()
+            }
         }
     }
 }
