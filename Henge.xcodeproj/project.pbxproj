@@ -19,6 +19,7 @@
 		8480A2082E00000000000001 /* Shortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1282E00000000000001 /* Shortcut.swift */; };
 		8480A2092E00000000000001 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1292E00000000000001 /* AppRuntime.swift */; };
 		8480A20A2E00000000000001 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12A2E00000000000001 /* MenuBarView.swift */; };
+		8480A22B2E00000000000001 /* MenuBarIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A22C2E00000000000001 /* MenuBarIcon.swift */; };
 		8480A20B2E00000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12B2E00000000000001 /* SettingsView.swift */; };
 		8480A20E2E00000000000001 /* Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A12F2E00000000000001 /* Layout.swift */; };
 		8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1302E00000000000001 /* LayoutMapping.swift */; };
@@ -56,6 +57,7 @@
 		8480A1282E00000000000001 /* Shortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shortcut.swift; sourceTree = "<group>"; };
 		8480A1292E00000000000001 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		8480A12A2E00000000000001 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		8480A22C2E00000000000001 /* MenuBarIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIcon.swift; sourceTree = "<group>"; };
 		8480A12B2E00000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8480A12C2E00000000000001 /* LayoutDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDetector.swift; sourceTree = "<group>"; };
 		8480A12D2E00000000000001 /* TextTransformer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTransformer.swift; sourceTree = "<group>"; };
@@ -257,6 +259,7 @@
 		8480A1122E00000000000001 /* MenuBar */ = {
 			isa = PBXGroup;
 			children = (
+				8480A22C2E00000000000001 /* MenuBarIcon.swift */,
 				8480A12A2E00000000000001 /* MenuBarView.swift */,
 			);
 			path = MenuBar;
@@ -361,6 +364,7 @@
 				8480A2082E00000000000001 /* Shortcut.swift in Sources */,
 				8480A2092E00000000000001 /* AppRuntime.swift in Sources */,
 				8480A20A2E00000000000001 /* MenuBarView.swift in Sources */,
+				8480A22B2E00000000000001 /* MenuBarIcon.swift in Sources */,
 				8480A20B2E00000000000001 /* SettingsView.swift in Sources */,
 				8480A20E2E00000000000001 /* Layout.swift in Sources */,
 				8480A20F2E00000000000001 /* LayoutMapping.swift in Sources */,

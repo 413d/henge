@@ -20,8 +20,7 @@ struct HengeApp: App {
             MenuBarView()
                 .environmentObject(coordinator)
         } label: {
-            Image("HengeMenuBar")
-                .renderingMode(.template)
+            MenuBarIconLabel(symbolName: coordinator.statusItemSymbolName)
         }
 
         Settings {
