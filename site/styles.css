@@ -641,6 +641,7 @@ a {
 .demo-input {
   width: 100%;
   min-height: 98px;
+  max-height: 240px;
   padding: 14px 16px;
   border-radius: var(--radius-control);
   border: 1px solid var(--border-active);
@@ -649,7 +650,7 @@ a {
   font-family: var(--font-mono);
   font-size: 1rem;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
   transition:
     border-color 140ms var(--ease-out-quart),
     box-shadow 180ms var(--ease-out-quart),
@@ -1158,6 +1159,10 @@ a {
 @media (max-width: 540px) {
   .container {
     padding-inline: 16px;
+  }
+
+  .hero-title {
+    font-size: clamp(1.85rem, 7.5vw, 2.25rem);
   }
 
   .header-inner {

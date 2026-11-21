@@ -362,7 +362,7 @@
         'Henge lives quietly in your macOS menu bar and turns ghbdtn into привет or руддщ into hello when you press ⌥X — without switching input sources first.',
       'hero.ctaDownload': 'Download for macOS',
       'hero.ctaGithub': 'View on GitHub',
-      'hero.meta': 'macOS 13+ · Universal (Apple Silicon & Intel) · Free & MIT',
+      'hero.meta': 'macOS 13+ · Universal (Apple Silicon & Intel) · Free\u00a0&\u00a0MIT',
 
       'demo.windowTitle': 'Live Playground',
       'demo.menubarEnabled': 'Enabled',
