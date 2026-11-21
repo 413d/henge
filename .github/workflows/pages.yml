@@ -18,11 +18,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  check:
     runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check_pages.outputs.enabled }}
     steps:
       - name: Check GitHub Pages configuration
         id: check_pages
@@ -30,17 +29,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          RESPONSE_FILE="$(mktemp)"
+          trap 'rm -f "$RESPONSE_FILE"' EXIT
+          HTTP_STATUS=$(curl -sS --max-time 15 -o "$RESPONSE_FILE" -w "%{http_code}" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GH_REPO}/pages" || true)
+          HTTP_STATUS="${HTTP_STATUS:-000}"
+          BUILD_TYPE=""
           if [ "$HTTP_STATUS" = "200" ]; then
+            BUILD_TYPE=$(jq -r '.build_type // empty' "$RESPONSE_FILE" 2>/dev/null || true)
+          fi
+          if [ "$HTTP_STATUS" = "200" ] && [ "$BUILD_TYPE" = "workflow" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "GitHub Pages is enabled." >> "$GITHUB_STEP_SUMMARY"
+            echo "GitHub Pages is enabled (HTTP ${HTTP_STATUS}, build_type=${BUILD_TYPE})." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             {
-              echo "### ⚠️ GitHub Pages is not yet enabled"
+              echo "### ⚠️ GitHub Pages is not yet ready for Actions deployment"
+              echo ""
+              echo "- HTTP status: \`${HTTP_STATUS}\`"
+              echo "- Build type: \`${BUILD_TYPE:-none}\`"
               echo ""
               echo "To deploy the landing page:"
               echo "1. If this repository is private, ensure Pages is allowed or make the repository public."
@@ -50,23 +59,27 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  deploy:
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout repository
-        if: steps.check_pages.outputs.enabled == 'true'
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Configure GitHub Pages
-        if: steps.check_pages.outputs.enabled == 'true'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: steps.check_pages.outputs.enabled == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: './site'
 
       - name: Deploy to GitHub Pages
-        if: steps.check_pages.outputs.enabled == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
