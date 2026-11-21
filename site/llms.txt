@@ -1,0 +1,24 @@
+# Henge
+
+> Henge is a free, open-source (MIT), 100% offline macOS 13+ Universal menu bar utility that fixes text typed in the wrong Russian or English keyboard layout (`ghbdtn` → `привет`, `руддщ` → `hello`) when you press `⌥X`.
+
+Henge is built natively in Swift (AppKit + SwiftUI) as a privacy-first, manual-trigger alternative to automatic keyboard layout switchers on macOS. It never monitors typing in the background, never sends data over the network, and strictly blocks reading or modifying password and secure text fields (`AXSecureTextField`).
+
+## Quick Facts
+
+- **Platform**: macOS 13 Ventura or later (Universal binary for Apple Silicon arm64 and Intel x86_64)
+- **Trigger**: Manual hotkey `⌥X` (Option+X) — converts selected text or the word around the caret
+- **Supported layouts**: Russian ↔ English (`RU ↔ EN`) via physical ANSI key mapping
+- **Privacy & Security**: Zero network calls, zero telemetry, zero keylogging; `AXSecureTextField` immunity; Accessibility API primary path with automatic clipboard snapshot restoration on fallback
+- **License & Price**: Free & open-source under the MIT License
+- **Install caveat**: Public releases are ad-hoc signed (not Apple-notarized); run `xattr -dr com.apple.quarantine ~/Applications/Henge.app` once after downloading
+
+## Documentation & Links
+
+- [Henge Website](https://413d.github.io/henge/): Interactive browser demo, feature overview, and installation guide (EN / RU)
+- [Full LLM Reference](https://413d.github.io/henge/llms-full.txt): Detailed technical facts, Punto Switcher comparison, troubleshooting, and bilingual EN/RU FAQ
+- [Latest GitHub Releases](https://github.com/413d/henge/releases): Universal macOS downloads (`Henge-v*-universal.zip`) and `SHA256SUMS.txt`
+- [GitHub Repository](https://github.com/413d/henge): Swift source code, build scripts, and issue tracker
+- [Architecture & Safety Invariants](https://github.com/413d/henge/blob/main/docs/architecture.md): Layered design (`UI → Application → Domain → Infrastructure`) and security rules
+- [Security Policy](https://github.com/413d/henge/blob/main/SECURITY.md): Threat model and vulnerability reporting
+- [Changelog](https://github.com/413d/henge/blob/main/CHANGELOG.md): Release history

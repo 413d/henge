@@ -354,6 +354,7 @@
       'nav.features': 'Features',
       'nav.privacy': 'Privacy',
       'nav.install': 'Install',
+      'nav.faq': 'FAQ',
       'nav.github': 'GitHub',
       'nav.langLabel': 'Language switch',
 
@@ -438,6 +439,26 @@
       'install.copyBtn': 'Copy',
       'install.copiedBtn': 'Copied!',
 
+      'faq.eyebrow': 'FAQ',
+      'faq.title': 'Common questions',
+      'faq.subtitle':
+        'Clear answers on how Henge differs from automatic layout switchers, password safety, and Gatekeeper setup.',
+      'faq.q1': 'How is Henge different from automatic switchers like Punto Switcher?',
+      'faq.a1':
+        'Henge only transforms text when you press ⌥X. It never monitors keystrokes in the background, never auto-switches mid-sentence while coding or messaging, and is 100% open-source (MIT) and offline.',
+      'faq.q2': 'Is Henge safe for passwords and completely offline?',
+      'faq.a2':
+        'Yes. Henge makes zero network requests, logs no user text or clipboard contents, and strictly skips password and secure input fields (AXSecureTextField).',
+      'faq.q3': 'Does Henge work on Apple Silicon and Intel Macs?',
+      'faq.a3':
+        'Yes. Every release ships as a Universal macOS binary supporting both Apple Silicon (M1–M4) and Intel Macs on macOS 13 Ventura and later.',
+      'faq.q4': 'Why do I need to run xattr -dr com.apple.quarantine after downloading?',
+      'faq.a4':
+        'Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app.',
+      'faq.q5': 'Which languages and shortcuts does Henge support?',
+      'faq.a5':
+        'Henge focuses exclusively on bidirectional Russian ↔ English (RU ↔ EN) keyboard layout conversion. The default shortcut is ⌥X and can be customized in Settings.',
+
       'footer.license': 'MIT License',
       'footer.releases': 'Releases',
       'footer.issues': 'Report an Issue',
@@ -454,6 +475,7 @@
       'nav.features': 'Возможности',
       'nav.privacy': 'Приватность',
       'nav.install': 'Установка',
+      'nav.faq': 'FAQ',
       'nav.github': 'GitHub',
       'nav.langLabel': 'Переключение языка',
 
@@ -537,6 +559,26 @@
         'Откройте Henge.app и включите переключатель в «Системные настройки → Конфиденциальность и безопасность → Универсальный доступ».',
       'install.copyBtn': 'Скопировать',
       'install.copiedBtn': 'Скопировано!',
+
+      'faq.eyebrow': 'Частые вопросы',
+      'faq.title': 'Ответы на популярные вопросы',
+      'faq.subtitle':
+        'Чем Henge отличается от автоматических переключателей, как защищены пароли и зачем снимать атрибут карантина.',
+      'faq.q1': 'Чем Henge отличается от автопереключателей вроде Punto Switcher?',
+      'faq.a1':
+        'Henge меняет текст только по нажатию ⌥X. Приложение не перехватывает ввод в фоне, не меняет раскладку посреди слова в коде или терминале и полностью открыто (MIT) и офлайн.',
+      'faq.q2': 'Безопасен ли Henge для паролей и работает ли офлайн?',
+      'faq.a2':
+        'Да. Henge не делает сетевых запросов, не логирует введённый текст или буфер и на уровне Accessibility API полностью игнорирует поля паролей (AXSecureTextField).',
+      'faq.q3': 'Работает ли Henge на Apple Silicon и Intel Mac?',
+      'faq.a3':
+        'Да. Каждый релиз собирается как Universal binary для Apple Silicon (M1–M4) и Intel Mac на macOS 13 Ventura и новее.',
+      'faq.q4': 'Зачем выполнять xattr -dr com.apple.quarantine после скачивания?',
+      'faq.a4':
+        'Публичные сборки на GitHub подписаны ad-hoc без платного сертификата Apple Developer ID. Команда xattr -dr com.apple.quarantine ~/Applications/Henge.app снимает браузерный карантин, чтобы Gatekeeper разрешил запуск.',
+      'faq.q5': 'Какие языки и сочетания клавиш поддерживаются?',
+      'faq.a5':
+        'Henge сфокусирован исключительно на двунаправленной конвертации между русской и английской раскладками (RU ↔ EN). Стандартное сочетание — ⌥X, его можно изменить в настройках.',
 
       'footer.license': 'Лицензия MIT',
       'footer.releases': 'Релизы',

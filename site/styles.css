@@ -1016,6 +1016,47 @@ a {
 }
 
 /* --------------------------------------------------------------------------
+   FAQ
+   -------------------------------------------------------------------------- */
+
+.faq-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.faq-card {
+  padding: 22px 24px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  transition: border-color 140ms var(--ease-out-quart);
+}
+
+.faq-card:hover {
+  border-color: var(--border-active);
+}
+
+.faq-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.faq-question {
+  margin: 0 0 8px;
+  font-size: 1.03125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.faq-answer {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
    Footer
    -------------------------------------------------------------------------- */
 
@@ -1153,6 +1194,10 @@ a {
   /* Keep brand + GitHub + RU|EN switcher clearly visible before RU nav links clip */
   .site-nav a[href^="#"] {
     display: none;
+  }
+
+  .faq-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

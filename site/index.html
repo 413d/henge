@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#141722">
 
   <link rel="canonical" href="https://413d.github.io/henge/">
+  <link rel="alternate" type="text/markdown" title="Henge LLM Summary (llms.txt)" href="./llms.txt">
+  <link rel="alternate" type="text/markdown" title="Henge Full LLM Reference (llms-full.txt)" href="./llms-full.txt">
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
 
@@ -75,21 +77,83 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Henge",
+    "alternateName": ["Henge macOS", "Henge RU/EN Layout Switcher"],
     "description": "Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text in one keystroke.",
     "operatingSystem": "macOS 13+",
+    "softwareRequirements": "macOS 13.0 Ventura or later",
     "inLanguage": ["en", "ru"],
     "applicationCategory": "UtilitiesApplication",
     "processorRequirements": "Universal (Apple Silicon & Intel)",
+    "isAccessibleForFree": true,
     "license": "https://opensource.org/licenses/MIT",
     "url": "https://413d.github.io/henge/",
     "downloadUrl": "https://github.com/413d/henge/releases/latest",
     "softwareHelp": "https://github.com/413d/henge#readme",
+    "sameAs": ["https://github.com/413d/henge"],
     "image": "https://413d.github.io/henge/assets/og-card.png",
+    "featureList": [
+      "Fix mistyped Russian and English keyboard layout text with Option+X",
+      "Automatic direction detection from text characters (ghbdtn to привет, руддщ to hello)",
+      "Selection priority with smart word-at-caret fallback",
+      "Preserves uppercase, title case, digits, underscores, and delimiter punctuation",
+      "100% offline with zero telemetry, zero keylogging, and AXSecureTextField password protection",
+      "Accessibility API primary replacement with full clipboard snapshot restoration"
+    ],
+    "keywords": "macOS, keyboard layout fixer, Russian English switcher, ghbdtn привет, Punto Switcher alternative macOS, offline, open source, Swift, Option+X, исправить раскладку macOS",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
     }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How is Henge different from automatic switchers like Punto Switcher?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Henge only transforms text when you press Option+X (⌥X). It never monitors keystrokes in the background, never auto-switches mid-sentence while coding or messaging, and is 100% open-source (MIT) and offline."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Henge safe for passwords and completely offline?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Henge makes zero network requests, logs no user text or clipboard contents, and strictly skips password and secure input fields (AXSecureTextField)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Henge work on Apple Silicon and Intel Macs?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Every release ships as a Universal macOS binary supporting both Apple Silicon (M1–M4) and Intel Macs on macOS 13 Ventura and later."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why do I need to run xattr -dr com.apple.quarantine after downloading?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which languages and shortcuts does Henge support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Henge focuses exclusively on bidirectional Russian ↔ English (RU ↔ EN) keyboard layout conversion. The default shortcut is Option+X (⌥X) and can be customized in Settings."
+        }
+      }
+    ]
   }
   </script>
 </head>
@@ -106,6 +170,7 @@
         <a href="#features" data-i18n="nav.features">Features</a>
         <a href="#privacy" data-i18n="nav.privacy">Privacy</a>
         <a href="#install" data-i18n="nav.install">Install</a>
+        <a href="#faq" data-i18n="nav.faq">FAQ</a>
         <a href="https://github.com/413d/henge" target="_blank" rel="noopener noreferrer" data-i18n="nav.github">GitHub</a>
       </nav>
 
@@ -413,6 +478,43 @@
         </ol>
       </div>
     </section>
+
+    <section id="faq" class="section">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow" data-i18n="faq.eyebrow">FAQ</p>
+          <h2 class="section-title" data-i18n="faq.title">Common questions</h2>
+          <p class="section-subtitle" data-i18n="faq.subtitle">Clear answers on how Henge differs from automatic layout switchers, password safety, and Gatekeeper setup.</p>
+        </div>
+
+        <div class="faq-list">
+          <article class="faq-card">
+            <h3 class="faq-question" data-i18n="faq.q1">How is Henge different from automatic switchers like Punto Switcher?</h3>
+            <p class="faq-answer" data-i18n="faq.a1">Henge only transforms text when you press ⌥X. It never monitors keystrokes in the background, never auto-switches mid-sentence while coding or messaging, and is 100% open-source (MIT) and offline.</p>
+          </article>
+
+          <article class="faq-card">
+            <h3 class="faq-question" data-i18n="faq.q2">Is Henge safe for passwords and completely offline?</h3>
+            <p class="faq-answer" data-i18n="faq.a2">Yes. Henge makes zero network requests, logs no user text or clipboard contents, and strictly skips password and secure input fields (AXSecureTextField).</p>
+          </article>
+
+          <article class="faq-card">
+            <h3 class="faq-question" data-i18n="faq.q3">Does Henge work on Apple Silicon and Intel Macs?</h3>
+            <p class="faq-answer" data-i18n="faq.a3">Yes. Every release ships as a Universal macOS binary supporting both Apple Silicon (M1–M4) and Intel Macs on macOS 13 Ventura and later.</p>
+          </article>
+
+          <article class="faq-card">
+            <h3 class="faq-question" data-i18n="faq.q4">Why do I need to run xattr -dr com.apple.quarantine after downloading?</h3>
+            <p class="faq-answer" data-i18n="faq.a4">Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app.</p>
+          </article>
+
+          <article class="faq-card">
+            <h3 class="faq-question" data-i18n="faq.q5">Which languages and shortcuts does Henge support?</h3>
+            <p class="faq-answer" data-i18n="faq.a5">Henge focuses exclusively on bidirectional Russian ↔ English (RU ↔ EN) keyboard layout conversion. The default shortcut is ⌥X and can be customized in Settings.</p>
+          </article>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -429,6 +531,7 @@
         <a href="https://github.com/413d/henge/releases" target="_blank" rel="noopener noreferrer" data-i18n="footer.releases">Releases</a>
         <a href="https://github.com/413d/henge/issues/new" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Report an Issue</a>
         <a href="https://github.com/413d/henge/blob/main/docs/architecture.md" target="_blank" rel="noopener noreferrer" data-i18n="footer.architecture">Architecture</a>
+        <a href="./llms.txt">llms.txt</a>
       </div>
 
       <div class="footer-build">
