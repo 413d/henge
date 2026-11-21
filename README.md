@@ -12,6 +12,8 @@ A lightweight, privacy-first macOS menu bar utility that turns `ghbdtn` into `п
 
 ### [Download Henge ↓](https://github.com/413d/henge/releases/latest)
 
+**English** · [Русский](README.ru.md)
+
 [Website](https://413d.github.io/henge/) · [Installation](#installation) · [How to Use](#how-to-use) · [Privacy & Safety](#privacy--safety) · [Limitations](#honest-limitations) · [Report an Issue](https://github.com/413d/henge/issues/new)
 
 </div>
