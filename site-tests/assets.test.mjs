@@ -1,7 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+function readPngDimensions(filePath) {
+  const buf = fs.readFileSync(filePath);
+  assert.ok(buf.length >= 24, `${filePath} is too small to be a valid PNG`);
+  assert.deepEqual(buf.subarray(0, 8), PNG_SIGNATURE, `${filePath} does not have a valid PNG signature`);
+  assert.equal(buf.subarray(12, 16).toString('ascii'), 'IHDR', `${filePath} missing IHDR chunk`);
+  return {
+    width: buf.readUInt32BE(16),
+    height: buf.readUInt32BE(20)
+  };
+}
 
 test('required static assets exist with valid dimensions', () => {
   assert.ok(fs.existsSync('site/.nojekyll'), '.nojekyll must exist');
@@ -17,8 +29,8 @@ test('required static assets exist with valid dimensions', () => {
     assert.ok(fs.existsSync(f.path), `Missing ${f.path}`);
     const stat = fs.statSync(f.path);
     assert.ok(stat.size > 100, `${f.path} is too small (${stat.size} bytes)`);
-    const output = execFileSync('/usr/bin/sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', f.path], { encoding: 'utf8' });
-    assert.match(output, new RegExp(`pixelWidth: ${f.w}`));
-    assert.match(output, new RegExp(`pixelHeight: ${f.h}`));
+    const { width, height } = readPngDimensions(f.path);
+    assert.equal(width, f.w, `${f.path} width mismatch`);
+    assert.equal(height, f.h, `${f.path} height mismatch`);
   }
 });
