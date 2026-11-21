@@ -350,6 +350,7 @@
       'meta.description':
         'Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text (ghbdtn → привет) with ⌥X.',
 
+      'nav.skip': 'Skip to content',
       'nav.features': 'Features',
       'nav.privacy': 'Privacy',
       'nav.install': 'Install',
@@ -449,6 +450,7 @@
       'meta.description':
         'Лёгкая, полностью офлайн-утилита в строке меню macOS для исправления текста, набранного не в той раскладке (ghbdtn → привет), по нажатию ⌥X.',
 
+      'nav.skip': 'Перейти к содержимому',
       'nav.features': 'Возможности',
       'nav.privacy': 'Приватность',
       'nav.install': 'Установка',
