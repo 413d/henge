@@ -39,6 +39,17 @@ test('CSS styles interactive state classes, focus-visible, and semantic status t
 
 test('CSS includes responsive breakpoints and avoids unintended i18n pending opacity override', () => {
   assert.match(css, /@media\s*\(max-width:\s*920px\)|@media\s*\(max-width:\s*900px\)|@media\s*\(max-width:\s*860px\)/);
+  assert.match(css, /@media\s*\(max-width:\s*720px\)/);
   assert.match(css, /@media\s*\(max-width:\s*540px\)/);
   assert.doesNotMatch(css, /html\.is-i18n-pending\s+body\s*\{[^}]*opacity:\s*1/i);
+});
+
+test('CSS hides section anchor nav links by 720px instead of deferring to 540px', () => {
+  const match720 = css.match(/@media\s*\(max-width:\s*720px\)\s*\{[\s\S]*?^\}/m);
+  assert.ok(match720, 'Expected @media (max-width: 720px) block');
+  assert.match(match720[0], /\.site-nav\s+a\[href\^="#"\]\s*\{[^}]*display:\s*none/i);
+
+  const match540 = css.match(/@media\s*\(max-width:\s*540px\)\s*\{[\s\S]*?^\}/m);
+  assert.ok(match540, 'Expected @media (max-width: 540px) block');
+  assert.doesNotMatch(match540[0], /\.site-nav\s+a\[href\^="#"\]/);
 });

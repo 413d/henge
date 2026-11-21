@@ -1148,6 +1148,13 @@ a {
   }
 }
 
+@media (max-width: 720px) {
+  /* Keep brand + GitHub + RU|EN switcher clearly visible before RU nav links clip */
+  .site-nav a[href^="#"] {
+    display: none;
+  }
+}
+
 @media (max-width: 540px) {
   .container {
     padding-inline: 16px;
@@ -1156,11 +1163,6 @@ a {
   .header-inner {
     gap: 12px;
     min-height: 58px;
-  }
-
-  /* Keep brand + GitHub + RU|EN switcher clearly visible on narrow screens */
-  .site-nav a[href^="#"] {
-    display: none;
   }
 
   .hero {
