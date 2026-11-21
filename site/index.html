@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Henge — Fix mistyped RU/EN keyboard layout in one keystroke on macOS</title>
+  <meta name="description" content="Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text (ghbdtn → привет) with ⌥X.">
+  <meta name="theme-color" content="#141722">
+
+  <link rel="canonical" href="https://413d.github.io/henge/">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+
+  <meta property="og:url" content="https://413d.github.io/henge/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Henge">
+  <meta property="og:title" content="Henge — Fix mistyped RU ↔ EN text in one shortcut">
+  <meta property="og:description" content="Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text (ghbdtn → привет) with ⌥X.">
+  <meta property="og:image" content="https://413d.github.io/henge/assets/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Henge — Fix mistyped RU ↔ EN text in one shortcut">
+  <meta name="twitter:description" content="Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text (ghbdtn → привет) with ⌥X.">
+  <meta name="twitter:image" content="https://413d.github.io/henge/assets/og-card.png">
+
+  <style>html.is-i18n-pending body{opacity:0}</style>
+  <script>
+    (function () {
+      var lang = 'en';
+      try {
+        var m = location.search.match(/(?:^\?|&)lang=(ru|en)(?:&|$)/i);
+        if (m && m[1]) {
+          lang = m[1].toLowerCase();
+        } else {
+          var saved = localStorage.getItem('henge_lang');
+          if (saved === 'ru' || saved === 'en') {
+            lang = saved;
+          } else {
+            var list = Array.isArray(navigator.languages) && navigator.languages.length
+              ? navigator.languages
+              : (navigator.language ? [navigator.language] : []);
+            for (var i = 0; i < list.length; i += 1) {
+              var item = list[i];
+              if (typeof item === 'string' && item.toLowerCase().indexOf('ru') === 0) {
+                lang = 'ru';
+                break;
+              }
+              if (typeof item === 'string' && item.trim()) {
+                lang = 'en';
+                break;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+      document.documentElement.lang = lang;
+      if (lang === 'ru') {
+        document.documentElement.classList.add('is-i18n-pending');
+        setTimeout(function () {
+          document.documentElement.classList.remove('is-i18n-pending');
+        }, 300);
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="./styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Henge",
+    "description": "Lightweight, 100% offline macOS menu bar utility that fixes mistyped Russian and English keyboard layout text in one keystroke.",
+    "operatingSystem": "macOS 13+",
+    "applicationCategory": "UtilitiesApplication",
+    "processorRequirements": "Universal (Apple Silicon & Intel)",
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://413d.github.io/henge/",
+    "downloadUrl": "https://github.com/413d/henge/releases/latest",
+    "softwareHelp": "https://github.com/413d/henge#readme",
+    "image": "https://413d.github.io/henge/assets/og-card.png",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#hero">
+        <img class="brand-icon" src="./assets/icon-128.png" alt="Henge app icon" width="32" height="32">
+        <span class="brand-name">Henge</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#privacy" data-i18n="nav.privacy">Privacy</a>
+        <a href="#install" data-i18n="nav.install">Install</a>
+        <a href="https://github.com/413d/henge" target="_blank" rel="noopener noreferrer" data-i18n="nav.github">GitHub</a>
+      </nav>
+
+      <div class="lang-switch" role="group" data-i18n-aria="nav.langLabel" aria-label="Language switch">
+        <button type="button" class="lang-btn" data-lang-btn="ru" aria-pressed="false">RU</button>
+        <button type="button" class="lang-btn is-active" data-lang-btn="en" aria-pressed="true">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section id="hero" class="hero">
+      <div class="container hero-inner">
+        <p class="eyebrow" data-i18n="hero.eyebrow">macOS Menu Bar Utility</p>
+        <h1 class="hero-title" data-i18n="hero.title">Wrong keyboard layout, fixed in one keystroke.</h1>
+        <p class="hero-subtitle" data-i18n="hero.subtitle">Henge lives quietly in your macOS menu bar and turns ghbdtn into привет or руддщ into hello when you press ⌥X — without switching input sources first.</p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/413d/henge/releases/latest" target="_blank" rel="noopener noreferrer">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v12"></path>
+              <path d="M7 10l5 5 5-5"></path>
+              <path d="M5 19h14"></path>
+            </svg>
+            <span data-i18n="hero.ctaDownload">Download for macOS</span>
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/413d/henge" target="_blank" rel="noopener noreferrer" data-i18n="hero.ctaGithub">View on GitHub</a>
+        </div>
+
+        <p class="hero-meta" data-i18n="hero.meta">macOS 13+ · Universal (Apple Silicon &amp; Intel) · Free &amp; MIT</p>
+      </div>
+    </section>
+
+    <section id="demo" class="demo-section">
+      <div class="container demo-grid">
+        <aside class="menubar-stage" aria-label="macOS menu bar preview">
+          <div class="menubar-bar">
+            <div class="menubar-left" aria-hidden="true">
+              <span class="menubar-dot"></span>
+              <span class="menubar-app">Notes</span>
+            </div>
+            <div class="menubar-right">
+              <span class="menubar-item is-selected">
+                <img src="./assets/menubar-icon.png" alt="Henge menu bar icon" width="18" height="18">
+              </span>
+              <span class="menubar-clock" aria-hidden="true">EN</span>
+            </div>
+          </div>
+
+          <div class="menubar-popover">
+            <div class="popover-header">
+              <img class="popover-icon" src="./assets/icon-128.png" alt="" width="24" height="24" aria-hidden="true">
+              <div>
+                <div class="popover-title">Henge</div>
+                <div class="popover-status">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  <span data-i18n="demo.menubarEnabled">Enabled</span>
+                </div>
+              </div>
+            </div>
+            <div class="popover-divider" aria-hidden="true"></div>
+            <ul class="popover-rows">
+              <li class="popover-row">
+                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                  <path d="M7 10h2M11 10h2M15 10h2M8 14h8"></path>
+                </svg>
+                <span data-i18n="demo.menubarShortcut">Shortcut: ⌥X</span>
+              </li>
+              <li class="popover-row">
+                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+                <span data-i18n="demo.menubarAccessibility">Accessibility access granted</span>
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+        <div class="playground-window">
+          <div class="window-chrome">
+            <div class="traffic-lights" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span class="window-title" data-i18n="demo.windowTitle">Live Playground</span>
+            <span class="window-shortcut" aria-hidden="true">⌥X</span>
+          </div>
+
+          <div class="playground-body">
+            <div class="chip-bar">
+              <span class="chip-label" data-i18n="demo.chipLabel">Examples:</span>
+              <div class="chip-row">
+                <button type="button" class="chip is-active" data-chip="Ghbdtn, vbh!" aria-pressed="true">Ghbdtn, vbh!</button>
+                <button type="button" class="chip" data-chip="руддщ цщкдв" aria-pressed="false">руддщ цщкдв</button>
+                <button type="button" class="chip" data-chip="ghbdtn_2026" aria-pressed="false">ghbdtn_2026</button>
+                <button type="button" class="chip" data-chip=";bpym" aria-pressed="false">;bpym</button>
+                <button type="button" class="chip" data-chip="GhBdTn" aria-pressed="false">GhBdTn</button>
+              </div>
+            </div>
+
+            <label class="demo-label" for="demo-input" data-i18n="demo.label">Try typing or selecting text below</label>
+            <textarea
+              id="demo-input"
+              class="demo-input"
+              rows="3"
+              spellcheck="false"
+              autocomplete="off"
+              autocapitalize="off"
+              data-i18n-placeholder="demo.placeholder"
+              placeholder="Type ghbdtn, select text, or place your cursor inside a word and press ⌥X..."
+            >Ghbdtn, vbh!</textarea>
+
+            <div class="demo-controls">
+              <button type="button" id="demo-fix-btn" class="btn btn-primary demo-fix-btn">
+                <span data-i18n="demo.fixBtn">Fix Text</span>
+                <kbd>⌥X</kbd>
+              </button>
+              <p id="demo-status" class="demo-status" role="status" aria-live="polite" data-i18n="demo.statusReady" data-status-key="demo.statusReady">Ready — pick an example or press ⌥X</p>
+            </div>
+
+            <p class="demo-hint" data-i18n="demo.hint">Press ⌥X (Alt+X) on your keyboard or click Fix Text. Converts your selection, or the word around your cursor.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow" data-i18n="features.eyebrow">Capabilities</p>
+          <h2 class="section-title" data-i18n="features.title">Built to stay out of your way</h2>
+          <p class="section-subtitle" data-i18n="features.subtitle">Deterministic layout conversion modeled after macOS native keymaps — no AI guessing, no background interference.</p>
+        </div>
+
+        <div class="card-grid card-grid-2">
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 7V5h14v2"></path>
+                <path d="M12 5v14"></path>
+                <path d="M9 19h6"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="features.c1Title">Selection or word at cursor</h3>
+            <p class="card-desc" data-i18n="features.c1Desc">Converts your active selection first. When nothing is selected, Henge detects the word around or immediately before your caret.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 16l-4-4 4-4"></path>
+                <path d="M3 12h18"></path>
+                <path d="M17 8l4 4-4 4"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="features.c2Title">Detects direction from text</h3>
+            <p class="card-desc" data-i18n="features.c2Desc">Majority-letter detection inspects the typed characters themselves, so RU ↔ EN conversion works regardless of your current macOS input source.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 17l5-10 5 10"></path>
+                <path d="M6 13h6"></path>
+                <path d="M16 17h5"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="features.c3Title">Preserves case, digits, and _</h3>
+            <p class="card-desc" data-i18n="features.c3Desc">Keeps uppercase, lowercase, title case, digits, underscores, and trailing delimiter punctuation intact — ideal for both chat and code.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M15 6.5h3"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="features.c4Title">Quiet menu bar utility</h3>
+            <p class="card-desc" data-i18n="features.c4Desc">Runs with no Dock icon. Remap the shortcut, exclude terminals or IDEs, and toggle Launch at Login in Settings.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy" class="section">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow" data-i18n="privacy.eyebrow">Privacy &amp; Safety</p>
+          <h2 class="section-title" data-i18n="privacy.title">Zero network calls. Zero password access.</h2>
+          <p class="section-subtitle" data-i18n="privacy.subtitle">Every safety invariant is enforced in the open-source Swift codebase before a single character is read or replaced.</p>
+        </div>
+
+        <div class="card-grid card-grid-3">
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 2l20 20"></path>
+                <path d="M8.5 8.5a7 7 0 0 1 9.5 1.5"></path>
+                <path d="M5 5.5a12 12 0 0 1 16 2"></path>
+                <path d="M12 18h.01"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="privacy.c1Title">100% offline &amp; local</h3>
+            <p class="card-desc" data-i18n="privacy.c1Desc">Henge makes zero network requests, collects no telemetry, and stores preferences locally at ~/Library/Application Support/Henge/config.json.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="privacy.c2Title">Password field immunity</h3>
+            <p class="card-desc" data-i18n="privacy.c2Desc">Secure text fields (AXSecureTextField) are blocked at every layer — Henge never reads, copies, transforms, or logs their content.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"></path>
+                <path d="M9 12l2 2 4-4"></path>
+              </svg>
+            </div>
+            <h3 class="card-title" data-i18n="privacy.c3Title">Accessibility first, clipboard restored</h3>
+            <p class="card-desc" data-i18n="privacy.c3Desc">Reads and replaces text via macOS Accessibility APIs first. When an app requires clipboard fallback, Henge snapshots and immediately restores your pasteboard.</p>
+          </article>
+        </div>
+
+        <aside class="limits-banner" aria-labelledby="limits-heading">
+          <div class="limits-header">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 8v5"></path>
+              <path d="M12 16h.01"></path>
+            </svg>
+            <h3 id="limits-heading" class="limits-title" data-i18n="privacy.limitsTitle">Honest boundaries</h3>
+          </div>
+          <ul class="limits-list">
+            <li data-i18n="privacy.limitsItem1">RU ↔ EN only: Henge converts exclusively between Russian and English keyboard layouts.</li>
+            <li data-i18n="privacy.limitsItem2">Manual trigger only: text changes only when you press ⌥X (or click Fix Text), never silently in the background.</li>
+            <li data-i18n="privacy.limitsItem3">Ad-hoc signed builds: after updating Henge.app to a new version, macOS asks you to re-enable Accessibility access.</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="install" class="section">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow" data-i18n="install.eyebrow">Installation</p>
+          <h2 class="section-title" data-i18n="install.title">Up and running in 3 steps</h2>
+          <p class="section-subtitle" data-i18n="install.subtitle">Requires macOS 13 Ventura or later. One Universal archive supports both Apple Silicon and Intel Macs.</p>
+        </div>
+
+        <ol class="steps-list">
+          <li class="step-card">
+            <span class="step-number" aria-hidden="true">1</span>
+            <div class="step-body">
+              <h3 class="step-title" data-i18n="install.s1Title">Download and move to Applications</h3>
+              <p class="step-desc" data-i18n="install.s1Desc">Download Henge-v*-universal.zip from the latest GitHub Release, extract Henge.app, and move it to ~/Applications (or /Applications).</p>
+            </div>
+          </li>
+
+          <li class="step-card">
+            <span class="step-number" aria-hidden="true">2</span>
+            <div class="step-body">
+              <h3 class="step-title" data-i18n="install.s2Title">Clear Gatekeeper quarantine once</h3>
+              <p class="step-desc" data-i18n="install.s2Desc">Public releases are ad-hoc signed without an Apple Developer ID, so clear the quarantine attribute once before opening Henge.app:</p>
+
+              <div class="code-block">
+                <pre><code id="xattr-cmd">xattr -dr com.apple.quarantine ~/Applications/Henge.app</code></pre>
+                <button
+                  type="button"
+                  id="copy-xattr-btn"
+                  class="copy-btn"
+                  data-copy-target="#xattr-cmd"
+                  data-copy-text="xattr -dr com.apple.quarantine ~/Applications/Henge.app"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span data-i18n="install.copyBtn" data-copy-label>Copy</span>
+                </button>
+              </div>
+
+              <p class="step-note" data-i18n="install.s2Explain">Why this is needed: macOS 15 Sequoia blocks unnotarized browser downloads. You can also verify SHA-256 via shasum -a 256 -c SHA256SUMS.txt or build from source.</p>
+              <a class="step-link" href="https://github.com/413d/henge#verifying-your-download" target="_blank" rel="noopener noreferrer" data-i18n="install.s2Verify">Verify SHA-256 checksums</a>
+            </div>
+          </li>
+
+          <li class="step-card">
+            <span class="step-number" aria-hidden="true">3</span>
+            <div class="step-body">
+              <h3 class="step-title" data-i18n="install.s3Title">Launch &amp; grant Accessibility</h3>
+              <p class="step-desc" data-i18n="install.s3Desc">Open Henge.app and enable it under System Settings → Privacy &amp; Security → Accessibility so it can fix text in other apps.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img class="brand-icon" src="./assets/icon-128.png" alt="Henge app icon" width="28" height="28">
+        <div>
+          <div class="footer-name">Henge</div>
+          <a class="footer-license" href="https://github.com/413d/henge/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">MIT License</a>
+        </div>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/413d/henge/releases" target="_blank" rel="noopener noreferrer" data-i18n="footer.releases">Releases</a>
+        <a href="https://github.com/413d/henge/issues/new" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Report an Issue</a>
+        <a href="https://github.com/413d/henge/blob/main/docs/architecture.md" target="_blank" rel="noopener noreferrer" data-i18n="footer.architecture">Architecture</a>
+      </div>
+
+      <div class="footer-build">
+        <div class="footer-build-title" data-i18n="footer.buildFromSource">Build from source</div>
+        <p class="footer-build-hint" data-i18n="footer.buildHint">Requires Xcode Command Line Tools on macOS 13+:</p>
+        <pre class="footer-code"><code>git clone https://github.com/413d/henge.git &amp;&amp; cd henge &amp;&amp; ./scripts/build.sh --install</code></pre>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./app.js"></script>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      if (window.HengeCore && root.lang === 'ru') {
+        window.HengeCore.setLanguage('ru', false);
+      }
+      root.classList.remove('is-i18n-pending');
+    })();
+  </script>
+</body>
+</html>
