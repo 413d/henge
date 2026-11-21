@@ -88,10 +88,19 @@ test('HTML contains all required sections, semantics, and interactive elements',
   assert.match(html, /id="demo-status"/);
   assert.match(html, /data-chip=/);
 
-  // Install command copy button and target
+  // Quick-install (Homebrew + curl) and Gatekeeper xattr copy buttons and targets
+  assert.match(html, /id="copy-brew-btn"/);
+  assert.match(html, /id="brew-cmd"/);
+  assert.match(html, /brew tap 413d\/henge https:\/\/github\.com\/413d\/henge && brew install --cask 413d\/henge\/henge/);
+
+  assert.match(html, /id="copy-curl-btn"/);
+  assert.match(html, /id="curl-cmd"/);
+  assert.match(html, /curl -fsSL https:\/\/raw\.githubusercontent\.com\/413d\/henge\/main\/scripts\/install\.sh \| bash/);
+
   assert.match(html, /id="copy-xattr-btn"/);
   assert.match(html, /id="xattr-cmd"/);
   assert.match(html, /xattr -dr com\.apple\.quarantine/);
+  assert.match(html, /Open Anyway/);
 
   // Language switch
   assert.match(html, /data-lang-btn="ru"/);

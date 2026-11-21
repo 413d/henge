@@ -11,7 +11,10 @@ Henge is built natively in Swift (AppKit + SwiftUI) as a privacy-first, manual-t
 - **Supported layouts**: Russian ↔ English (`RU ↔ EN`) via physical ANSI key mapping
 - **Privacy & Security**: Zero network calls, zero telemetry, zero keylogging; `AXSecureTextField` immunity; Accessibility API primary path with automatic clipboard snapshot restoration on fallback
 - **License & Price**: Free & open-source under the MIT License
-- **Install caveat**: Public releases are ad-hoc signed (not Apple-notarized); run `xattr -dr com.apple.quarantine ~/Applications/Henge.app` once after downloading
+- **Installation**:
+  - Homebrew (clears quarantine automatically): `brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge`
+  - One-command installer (verifies SHA-256 + `codesign`, clears quarantine): `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash`
+  - Manual `.zip` caveat: Public releases are ad-hoc signed (not Apple-notarized); on first launch either use Apple's official GUI flow (**System Settings → Privacy & Security → Open Anyway**) or run `xattr -dr com.apple.quarantine ~/Applications/Henge.app` once
 
 ## Documentation & Links
 

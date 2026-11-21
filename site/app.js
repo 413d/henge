@@ -421,17 +421,30 @@
         'Ad-hoc signed builds: after updating Henge.app to a new version, macOS asks you to re-enable Accessibility access.',
 
       'install.eyebrow': 'Installation',
-      'install.title': 'Up and running in 3 steps',
+      'install.title': 'Up and running in seconds',
       'install.subtitle':
-        'Requires macOS 13 Ventura or later. One Universal archive supports both Apple Silicon and Intel Macs.',
+        'Requires macOS 13 Ventura or later. One Universal build supports both Apple Silicon and Intel Macs.',
+      'install.brewBadge': 'Recommended',
+      'install.brewTitle': 'Homebrew (no Gatekeeper prompt)',
+      'install.brewDesc':
+        'Verifies SHA-256, installs Henge.app, and clears the macOS quarantine attribute automatically:',
+      'install.curlBadge': 'No Homebrew needed',
+      'install.curlTitle': 'One-command installer',
+      'install.curlDesc':
+        'Verifies SHA256SUMS.txt before extraction, checks codesign, clears quarantine, and installs to /Applications or ~/Applications:',
+      'install.manualTitle': 'Or install manually from the GitHub Release .zip archive:',
       'install.s1Title': 'Download and move to Applications',
       'install.s1Desc':
-        'Download Henge-v*-universal.zip from the latest GitHub Release, extract Henge.app, and move it to ~/Applications (or /Applications).',
-      'install.s2Title': 'Clear Gatekeeper quarantine once',
+        'Download Henge-v*-universal.zip from the latest GitHub Release, extract Henge.app, and move it to /Applications or ~/Applications.',
+      'install.s2Title': 'Allow first launch in macOS Gatekeeper',
       'install.s2Desc':
-        'Public releases are ad-hoc signed without an Apple Developer ID, so clear the quarantine attribute once before opening Henge.app:',
+        'Public releases are ad-hoc signed without a paid Apple Developer ID. Choose either way to approve Henge.app on first launch:',
+      'install.s2GuiLabel': "Option 2A — GUI (Apple's official instruction, no Terminal needed)",
+      'install.s2GuiDesc':
+        'Try opening Henge.app once and click Done on the unverified-app prompt. Then open System Settings → Privacy & Security, scroll to Security, click Open Anyway next to Henge, and confirm.',
+      'install.s2CliLabel': 'Option 2B — Terminal (one command)',
       'install.s2Explain':
-        'Why this is needed: macOS 15 Sequoia blocks unnotarized browser downloads. You can also verify SHA-256 via shasum -a 256 -c SHA256SUMS.txt or build from source.',
+        'Why this is needed: macOS 15 Sequoia asks for confirmation on unnotarized browser downloads. You can also verify SHA-256 via shasum -a 256 -c SHA256SUMS.txt or build from source.',
       'install.s2Verify': 'Verify SHA-256 checksums',
       'install.s3Title': 'Launch & grant Accessibility',
       'install.s3Desc':
@@ -452,9 +465,9 @@
       'faq.q3': 'Does Henge work on Apple Silicon and Intel Macs?',
       'faq.a3':
         'Yes. Every release ships as a Universal macOS binary supporting both Apple Silicon (M1–M4) and Intel Macs on macOS 13 Ventura and later.',
-      'faq.q4': 'Why do I need to run xattr -dr com.apple.quarantine after downloading?',
+      'faq.q4': 'How do I open Henge.app on first launch if macOS Gatekeeper shows a warning?',
       'faq.a4':
-        'Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app.',
+        "Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. If you install via Homebrew (brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge) or the curl installer script, quarantine is cleared automatically. For manual .zip downloads, either follow Apple's official GUI flow (try opening Henge.app once, then go to System Settings → Privacy & Security → Open Anyway) or run xattr -dr com.apple.quarantine ~/Applications/Henge.app once in Terminal.",
       'faq.q5': 'Which languages and shortcuts does Henge support?',
       'faq.a5':
         'Henge focuses exclusively on bidirectional Russian ↔ English (RU ↔ EN) keyboard layout conversion. The default shortcut is ⌥X and can be customized in Settings.',
@@ -542,17 +555,30 @@
         'Ad-hoc подпись: после обновления Henge.app до новой версии macOS попросит заново отметить галочку Accessibility.',
 
       'install.eyebrow': 'Установка',
-      'install.title': 'Запуск за 3 шага',
+      'install.title': 'Запуск за пару секунд',
       'install.subtitle':
-        'Требуется macOS 13 Ventura или новее. Один Universal-архив работает на Apple Silicon и Intel.',
+        'Требуется macOS 13 Ventura или новее. Одна Universal-сборка работает на Apple Silicon и Intel.',
+      'install.brewBadge': 'Рекомендуется',
+      'install.brewTitle': 'Homebrew (без предупреждения Gatekeeper)',
+      'install.brewDesc':
+        'Проверяет SHA-256, устанавливает Henge.app и автоматически снимает атрибут карантина macOS:',
+      'install.curlBadge': 'Без Homebrew',
+      'install.curlTitle': 'Установка одной командой',
+      'install.curlDesc':
+        'Проверяет SHA256SUMS.txt до распаковки, проверяет codesign, снимает карантин и ставит в /Applications или ~/Applications:',
+      'install.manualTitle': 'Или установите вручную из .zip-архива GitHub Releases:',
       'install.s1Title': 'Скачайте и перенесите в «Программы»',
       'install.s1Desc':
-        'Скачайте архив Henge-v*-universal.zip из последнего релиза на GitHub, распакуйте Henge.app и перенесите в ~/Applications (или /Applications).',
-      'install.s2Title': 'Снимите карантин Gatekeeper один раз',
+        'Скачайте архив Henge-v*-universal.zip из последнего релиза на GitHub, распакуйте Henge.app и перенесите в /Applications или ~/Applications.',
+      'install.s2Title': 'Разрешите первый запуск в macOS Gatekeeper',
       'install.s2Desc':
-        'Публичные релизы подписаны ad-hoc без Apple Developer ID, поэтому перед первым запуском выполните команду в Терминале:',
+        'Публичные релизы подписаны ad-hoc без платного Apple Developer ID. Выберите любой из двух способов при первом открытии:',
+      'install.s2GuiLabel': 'Вариант 2A — Через интерфейс (официальная инструкция Apple, без Терминала)',
+      'install.s2GuiDesc':
+        'Попробуйте открыть Henge.app один раз и нажмите «Готово» в окне предупреждения. Затем откройте «Системные настройки → Конфиденциальность и безопасность», прокрутите до раздела «Безопасность», нажмите «Всё равно открыть» рядом с Henge и подтвердите запуск.',
+      'install.s2CliLabel': 'Вариант 2B — Через Терминал (одной командой)',
       'install.s2Explain':
-        'Зачем это нужно: macOS 15 Sequoia блокирует ненотаризованные загрузки из браузера. При желании проверьте SHA-256 через shasum -a 256 -c SHA256SUMS.txt или соберите из исходников.',
+        'Зачем это нужно: macOS 15 Sequoia запрашивает подтверждение для ненотаризованных загрузок из браузера. Также можно проверить SHA-256 через shasum -a 256 -c SHA256SUMS.txt или собрать из исходников.',
       'install.s2Verify': 'Проверить контрольную сумму SHA-256',
       'install.s3Title': 'Запустите и выдайте Accessibility',
       'install.s3Desc':
@@ -563,7 +589,7 @@
       'faq.eyebrow': 'Частые вопросы',
       'faq.title': 'Ответы на популярные вопросы',
       'faq.subtitle':
-        'Чем Henge отличается от автоматических переключателей, как защищены пароли и зачем снимать атрибут карантина.',
+        'Чем Henge отличается от автоматических переключателей, как защищены пароли и как открыть приложение при первом запуске.',
       'faq.q1': 'Чем Henge отличается от автопереключателей вроде Punto Switcher?',
       'faq.a1':
         'Henge меняет текст только по нажатию ⌥X. Приложение не перехватывает ввод в фоне, не меняет раскладку посреди слова в коде или терминале и полностью открыто (MIT) и офлайн.',
@@ -573,9 +599,9 @@
       'faq.q3': 'Работает ли Henge на Apple Silicon и Intel Mac?',
       'faq.a3':
         'Да. Каждый релиз собирается как Universal binary для Apple Silicon (M1–M4) и Intel Mac на macOS 13 Ventura и новее.',
-      'faq.q4': 'Зачем выполнять xattr -dr com.apple.quarantine после скачивания?',
+      'faq.q4': 'Как открыть Henge.app при первом запуске, если macOS Gatekeeper показывает предупреждение?',
       'faq.a4':
-        'Публичные сборки на GitHub подписаны ad-hoc без платного сертификата Apple Developer ID. Команда xattr -dr com.apple.quarantine ~/Applications/Henge.app снимает браузерный карантин, чтобы Gatekeeper разрешил запуск.',
+        'Публичные сборки на GitHub подписаны ad-hoc без платного сертификата Apple Developer ID. При установке через Homebrew (brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge) или скрипт curl карантин снимается автоматически. При ручном скачивании .zip можно либо воспользоваться официальной инструкцией Apple (попробовать открыть Henge.app, затем перейти в «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть»), либо выполнить в Терминале xattr -dr com.apple.quarantine ~/Applications/Henge.app.',
       'faq.q5': 'Какие языки и сочетания клавиш поддерживаются?',
       'faq.a5':
         'Henge сфокусирован исключительно на двунаправленной конвертации между русской и английской раскладками (RU ↔ EN). Стандартное сочетание — ⌥X, его можно изменить в настройках.',
@@ -893,8 +919,20 @@
       }
     }
 
-    const copyBtn = typeof document.querySelector === 'function' ? document.querySelector('#copy-xattr-btn') : null;
-    if (copyBtn && typeof copyBtn.addEventListener === 'function') {
+    const copyButtons = new Set(
+      typeof document.querySelectorAll === 'function'
+        ? document.querySelectorAll('[data-copy-text], [data-copy-target]')
+        : []
+    );
+    const legacyCopyBtn = typeof document.querySelector === 'function'
+      ? document.querySelector('#copy-xattr-btn')
+      : null;
+    if (legacyCopyBtn) {
+      copyButtons.add(legacyCopyBtn);
+    }
+
+    for (const copyBtn of copyButtons) {
+      if (!copyBtn || typeof copyBtn.addEventListener !== 'function') continue;
       let resetTimer = null;
       copyBtn.addEventListener('click', async () => {
         const targetSel = copyBtn.getAttribute('data-copy-target');

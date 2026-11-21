@@ -1,0 +1,89 @@
+================================================================================
+HENGE — INSTALLATION & FIRST LAUNCH (macOS 13 Ventura or later)
+================================================================================
+
+Henge is a free, open-source macOS menu-bar utility built on GitHub Actions and
+ad-hoc signed (without a paid Apple Developer ID certificate). Because the build
+is not notarized by Apple, macOS Gatekeeper asks for a one-time confirmation
+before the first launch.
+
+1. MOVE HENGE TO APPLICATIONS
+   Drag Henge.app into /Applications (or ~/Applications).
+
+2. ALLOW FIRST LAUNCH (CHOOSE EITHER OPTION)
+
+   Option A — Without Terminal (Apple's official method):
+   1) Double-click Henge.app to open it. When macOS shows the Gatekeeper dialog
+      ("Apple could not verify Henge..."), click Done.
+   2) Open System Settings → Privacy & Security, scroll down to the Security
+      section, and click Open Anyway next to Henge.app.
+   3) Click Open Anyway again and confirm with Touch ID or your macOS password.
+
+   Option B — Via Terminal:
+   Run once (adjust path if installed in /Applications):
+     xattr -dr com.apple.quarantine ~/Applications/Henge.app
+     # or, if moved to /Applications:
+     xattr -dr com.apple.quarantine /Applications/Henge.app
+
+3. GRANT ACCESSIBILITY PERMISSION
+   Open Henge.app, go to System Settings → Privacy & Security → Accessibility,
+   and enable the toggle next to Henge so it can read and replace text on ⌥X.
+
+--------------------------------------------------------------------------------
+ALTERNATIVE ONE-COMMAND INSTALLERS (SKIP MANUAL QUARANTINE STEPS)
+--------------------------------------------------------------------------------
+
+Homebrew:
+  brew tap 413d/henge https://github.com/413d/henge
+  brew install --cask 413d/henge/henge
+
+Direct install script (verifies SHA-256 checksum & code signature):
+  curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash
+
+
+================================================================================
+HENGE — УСТАНОВКА И ПЕРВЫЙ ЗАПУСК (macOS 13 Ventura и новее)
+================================================================================
+
+Henge — бесплатная open-source утилита для строки меню macOS. Релизы собираются
+в GitHub Actions и подписываются ad-hoc без платного сертификата Apple Developer
+ID, поэтому при первом запуске macOS Gatekeeper запрашивает разовое
+подтверждение.
+
+1. ПЕРЕНЕСИТЕ ПРИЛОЖЕНИЕ В ПРОГРАММЫ
+   Перетащите Henge.app в папку /Applications («Программы») или ~/Applications.
+
+2. РАЗРЕШИТЕ ПЕРВЫЙ ЗАПУСК (ВЫБЕРИТЕ ЛЮБОЙ СПОСОБ)
+
+   Способ А — Без Терминала (официальная инструкция Apple):
+   1) Дважды кликните Henge.app. В окне предупреждения macOS нажмите «Готово»
+      (Done).
+   2) Откройте Системные настройки → Конфиденциальность и безопасность,
+      прокрутите вниз до раздела «Безопасность» и нажмите «Подтвердить вход»
+      («Открыть в любом случае» / Open Anyway) рядом с Henge.app.
+   3) Подтвердите запуск в диалоговом окне через Touch ID или пароль macOS.
+
+   Способ Б — Через Терминал:
+   Выполните один раз (укажите свой путь, если установили в /Applications):
+     xattr -dr com.apple.quarantine ~/Applications/Henge.app
+     # или для /Applications:
+     xattr -dr com.apple.quarantine /Applications/Henge.app
+
+3. ВЫДАЙТЕ РАЗРЕШЕНИЕ «УНИВЕРСАЛЬНЫЙ ДОСТУП» (ACCESSIBILITY)
+   Запустите Henge.app, откройте Системные настройки → Конфиденциальность и
+   безопасность → Универсальный доступ и включите переключатель напротив Henge,
+   чтобы хоткей ⌥X мог исправлять текст в приложениях.
+
+--------------------------------------------------------------------------------
+АЛЬТЕРНАТИВНАЯ УСТАНОВКА ОДНОЙ КОМАНДОЙ (БЕЗ РУЧНОГО СНЯТИЯ КАРАНТИНА)
+--------------------------------------------------------------------------------
+
+Homebrew:
+  brew tap 413d/henge https://github.com/413d/henge
+  brew install --cask 413d/henge/henge
+
+Скрипт быстрой установки (проверяет SHA-256 и подпись пакета):
+  curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash
+
+GitHub:  https://github.com/413d/henge
+Website: https://413d.github.io/henge/

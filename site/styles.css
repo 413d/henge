@@ -875,6 +875,78 @@ a {
    Installation Steps & Command Block
    -------------------------------------------------------------------------- */
 
+.quick-install-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.quick-install-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+}
+
+.quick-install-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 6px;
+}
+
+.quick-install-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-tint);
+  border: 1px solid rgba(240, 140, 112, 0.28);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.install-subheading {
+  margin: 28px 0 14px;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+}
+
+.gatekeeper-options {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 12px;
+}
+
+.gatekeeper-option {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background-color: var(--bg-elevated);
+}
+
+.gatekeeper-option-label {
+  margin: 0 0 6px;
+  font-size: 0.84375rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.gatekeeper-option .code-block {
+  margin: 8px 0 0;
+}
+
 .steps-list {
   list-style: none;
   margin: 0;
@@ -1167,6 +1239,10 @@ a {
   }
 
   .card-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-install-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

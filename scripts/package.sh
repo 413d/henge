@@ -41,30 +41,61 @@ if [[ "${ARCHIVE_NAME}" == */* || "${ARCHIVE_NAME}" == *".."* || ! "${ARCHIVE_NA
     exit 2
 fi
 
-UNIVERSAL_APP="build/universal/${APP_NAME}.app"
-DIST_DIR="dist"
+UNIVERSAL_APP="${HENGE_PACKAGE_APP_PATH:-build/universal/${APP_NAME}.app}"
+DIST_DIR="${HENGE_DIST_DIR:-dist}"
+SKIP_BUILD="${HENGE_PACKAGE_SKIP_BUILD:-false}"
+INSTALL_GUIDE="${REPO_ROOT}/App/INSTALL.txt"
 
-echo "==> Building universal application bundle"
-"${REPO_ROOT}/scripts/build.sh" universal --release
+if [[ ! -f "${INSTALL_GUIDE}" ]]; then
+    echo "error: installation guide not found at ${INSTALL_GUIDE}" >&2
+    exit 1
+fi
+
+if [[ "${SKIP_BUILD}" != "true" ]]; then
+    echo "==> Building universal application bundle"
+    "${REPO_ROOT}/scripts/build.sh" universal --release
+fi
 
 if [[ ! -d "${UNIVERSAL_APP}" ]]; then
     echo "error: universal app bundle not found at ${UNIVERSAL_APP}" >&2
     exit 1
 fi
 
+STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/henge-package.XXXXXX")"
+cleanup() {
+    rm -rf "${STAGE_ROOT}"
+}
+trap cleanup EXIT
+
+STAGE_DIR="${STAGE_ROOT}/archive"
+VERIFY_DIR="${STAGE_ROOT}/verify"
+mkdir -p "${STAGE_DIR}" "${VERIFY_DIR}"
+
+ditto --norsrc --noextattr --noacl "${UNIVERSAL_APP}" "${STAGE_DIR}/${APP_NAME}.app"
+cp "${INSTALL_GUIDE}" "${STAGE_DIR}/INSTALL.txt"
+xattr -c "${STAGE_DIR}/INSTALL.txt" 2>/dev/null || true
+
 echo "==> Packaging into ${DIST_DIR}/${ARCHIVE_NAME}"
 mkdir -p "${DIST_DIR}"
 rm -f "${DIST_DIR}/${ARCHIVE_NAME}" \
       "${DIST_DIR}/SHA256SUMS.txt" \
-      "${DIST_DIR}/LICENSE.txt"
+      "${DIST_DIR}/LICENSE.txt" \
+      "${DIST_DIR}/INSTALL.txt"
 
-ditto -c -k --norsrc --noextattr --noacl --keepParent "${UNIVERSAL_APP}" "${DIST_DIR}/${ARCHIVE_NAME}"
+ditto -c -k --norsrc --noextattr --noacl "${STAGE_DIR}" "${DIST_DIR}/${ARCHIVE_NAME}"
+cp "${INSTALL_GUIDE}" "${DIST_DIR}/INSTALL.txt"
 
 if [[ -f "${REPO_ROOT}/LICENSE" ]]; then
     cp "${REPO_ROOT}/LICENSE" "${DIST_DIR}/LICENSE.txt"
 elif [[ -f "${REPO_ROOT}/LICENSE.txt" ]]; then
     cp "${REPO_ROOT}/LICENSE.txt" "${DIST_DIR}/LICENSE.txt"
 fi
+
+echo "==> Verifying staged archive contents"
+ditto -x -k "${DIST_DIR}/${ARCHIVE_NAME}" "${VERIFY_DIR}"
+[[ -d "${VERIFY_DIR}/${APP_NAME}.app" ]] || { echo "error: ${APP_NAME}.app missing at archive root" >&2; exit 1; }
+[[ -f "${VERIFY_DIR}/INSTALL.txt" ]] || { echo "error: INSTALL.txt missing at archive root" >&2; exit 1; }
+codesign --verify --deep --strict "${VERIFY_DIR}/${APP_NAME}.app"
 
 echo "==> Generating SHA256 checksums"
 (

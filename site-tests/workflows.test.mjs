@@ -45,3 +45,14 @@ test('README contains link to GitHub Pages website', () => {
   const readme = readFileSync('README.md', 'utf8');
   assert.match(readme, /\[Website\]\(https:\/\/413d\.github\.io\/henge\/\)/);
 });
+
+test('release workflow uploads INSTALL.txt and documents Homebrew, curl installer, official Apple Open Anyway flow, and xattr', () => {
+  const release = readFileSync('.github/workflows/release.yml', 'utf8');
+  assert.match(release, /dist\/INSTALL\.txt/);
+  assert.match(release, /brew tap 413d\/henge https:\/\/github\.com\/413d\/henge/);
+  assert.match(release, /brew install --cask 413d\/henge\/henge/);
+  assert.match(release, /raw\.githubusercontent\.com\/413d\/henge\/main\/scripts\/install\.sh/);
+  assert.match(release, /Open Anyway/);
+  assert.match(release, /System Settings\s*→\s*Privacy & Security/);
+  assert.match(release, /xattr -dr com\.apple\.quarantine/);
+});

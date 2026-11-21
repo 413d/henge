@@ -21,19 +21,26 @@ Henge is designed as a local-first, privacy-preserving macOS utility:
 
 Public release archives (`Henge-vX.Y.Z-universal.zip`) distributed via GitHub Releases are built in CI with an **ad-hoc code signature** and are not notarized with an Apple Developer ID certificate.
 
-1. **Verify download integrity** using the `SHA256SUMS.txt` file attached to the same release:
+1. **Automated checksum-verified installation (Homebrew or `install.sh`):**
+   - **Homebrew (`Casks/henge.rb`):** `brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge` verifies the pinned SHA-256 checksum and clears `com.apple.quarantine` during `postflight_steps`.
+   - **Installer script (`scripts/install.sh`):** `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash` verifies `SHA256SUMS.txt` *before* extraction, checks `codesign --verify --deep --strict` and `CFBundleIdentifier == io.github.413d.Henge`, and clears `com.apple.quarantine`.
 
-   ```bash
-   shasum -a 256 -c SHA256SUMS.txt
-   ```
+2. **Manual `.zip` verification & first-launch Gatekeeper approval:**
+   - Verify download integrity using `SHA256SUMS.txt` attached to the release:
 
-2. **Clear the macOS quarantine attribute** before launching `Henge.app` (adjust the path if installed in `/Applications`):
+     ```bash
+     shasum -a 256 -c SHA256SUMS.txt
+     ```
 
-   ```bash
-   xattr -dr com.apple.quarantine ~/Applications/Henge.app
-   ```
+   - Allow first launch using **either** method:
+     - **Apple's official GUI flow:** Attempt to open `Henge.app` once (click **Done** on the unverified-app prompt), then open **System Settings → Privacy & Security**, scroll to **Security**, click **Open Anyway** next to Henge, and confirm.
+     - **Terminal quarantine removal** (adjust path if installed in `/Applications`):
 
-3. **Build from source** if you prefer not to run Terminal commands on downloaded binaries — see [README.md](README.md#build-from-source) or [CONTRIBUTING.md](CONTRIBUTING.md).
+       ```bash
+       xattr -dr com.apple.quarantine ~/Applications/Henge.app
+       ```
+
+3. **Build from source** if you prefer compiling locally — see [README.md](README.md#build-from-source) or [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Note: Under ad-hoc signing, macOS resets the Accessibility grant whenever `Henge.app` is replaced by a newer build; re-enable Henge in **System Settings → Privacy & Security → Accessibility** after updating.
 

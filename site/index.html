@@ -139,10 +139,10 @@
       },
       {
         "@type": "Question",
-        "name": "Why do I need to run xattr -dr com.apple.quarantine after downloading?",
+        "name": "How do I open Henge.app on first launch if macOS Gatekeeper shows a warning?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app."
+          "text": "Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. If you install via Homebrew (brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge) or the curl installer script, quarantine is cleared automatically. For manual .zip downloads, either follow Apple's official GUI flow (try opening Henge.app once, then go to System Settings → Privacy & Security → Open Anyway) or run xattr -dr com.apple.quarantine ~/Applications/Henge.app once in Terminal."
         }
       },
       {
@@ -427,43 +427,105 @@
       <div class="container">
         <div class="section-header">
           <p class="eyebrow" data-i18n="install.eyebrow">Installation</p>
-          <h2 class="section-title" data-i18n="install.title">Up and running in 3 steps</h2>
-          <p class="section-subtitle" data-i18n="install.subtitle">Requires macOS 13 Ventura or later. One Universal archive supports both Apple Silicon and Intel Macs.</p>
+          <h2 class="section-title" data-i18n="install.title">Up and running in seconds</h2>
+          <p class="section-subtitle" data-i18n="install.subtitle">Requires macOS 13 Ventura or later. One Universal build supports both Apple Silicon and Intel Macs.</p>
         </div>
+
+        <div class="quick-install-grid">
+          <div class="quick-install-card">
+            <div class="quick-install-head">
+              <h3 class="step-title" data-i18n="install.brewTitle">Homebrew (no Gatekeeper prompt)</h3>
+              <span class="quick-install-badge" data-i18n="install.brewBadge">Recommended</span>
+            </div>
+            <p class="step-desc" data-i18n="install.brewDesc">Verifies SHA-256, installs Henge.app, and clears the macOS quarantine attribute automatically:</p>
+            <div class="code-block">
+              <pre><code id="brew-cmd">brew tap 413d/henge https://github.com/413d/henge &amp;&amp; brew install --cask 413d/henge/henge</code></pre>
+              <button
+                type="button"
+                id="copy-brew-btn"
+                class="copy-btn"
+                data-copy-target="#brew-cmd"
+                data-copy-text="brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span data-i18n="install.copyBtn" data-copy-label>Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quick-install-card">
+            <div class="quick-install-head">
+              <h3 class="step-title" data-i18n="install.curlTitle">One-command installer</h3>
+              <span class="quick-install-badge" data-i18n="install.curlBadge">No Homebrew needed</span>
+            </div>
+            <p class="step-desc" data-i18n="install.curlDesc">Verifies SHA256SUMS.txt before extraction, checks codesign, clears quarantine, and installs to /Applications or ~/Applications:</p>
+            <div class="code-block">
+              <pre><code id="curl-cmd">curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash</code></pre>
+              <button
+                type="button"
+                id="copy-curl-btn"
+                class="copy-btn"
+                data-copy-target="#curl-cmd"
+                data-copy-text="curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span data-i18n="install.copyBtn" data-copy-label>Copy</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="install-subheading" data-i18n="install.manualTitle">Or install manually from the GitHub Release .zip archive:</h3>
 
         <ol class="steps-list">
           <li class="step-card">
             <span class="step-number" aria-hidden="true">1</span>
             <div class="step-body">
               <h3 class="step-title" data-i18n="install.s1Title">Download and move to Applications</h3>
-              <p class="step-desc" data-i18n="install.s1Desc">Download Henge-v*-universal.zip from the latest GitHub Release, extract Henge.app, and move it to ~/Applications (or /Applications).</p>
+              <p class="step-desc" data-i18n="install.s1Desc">Download Henge-v*-universal.zip from the latest GitHub Release, extract Henge.app, and move it to /Applications or ~/Applications.</p>
             </div>
           </li>
 
           <li class="step-card">
             <span class="step-number" aria-hidden="true">2</span>
             <div class="step-body">
-              <h3 class="step-title" data-i18n="install.s2Title">Clear Gatekeeper quarantine once</h3>
-              <p class="step-desc" data-i18n="install.s2Desc">Public releases are ad-hoc signed without an Apple Developer ID, so clear the quarantine attribute once before opening Henge.app:</p>
+              <h3 class="step-title" data-i18n="install.s2Title">Allow first launch in macOS Gatekeeper</h3>
+              <p class="step-desc" data-i18n="install.s2Desc">Public releases are ad-hoc signed without a paid Apple Developer ID. Choose either way to approve Henge.app on first launch:</p>
 
-              <div class="code-block">
-                <pre><code id="xattr-cmd">xattr -dr com.apple.quarantine ~/Applications/Henge.app</code></pre>
-                <button
-                  type="button"
-                  id="copy-xattr-btn"
-                  class="copy-btn"
-                  data-copy-target="#xattr-cmd"
-                  data-copy-text="xattr -dr com.apple.quarantine ~/Applications/Henge.app"
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="9" y="9" width="11" height="11" rx="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  <span data-i18n="install.copyBtn" data-copy-label>Copy</span>
-                </button>
+              <div class="gatekeeper-options">
+                <div class="gatekeeper-option">
+                  <p class="gatekeeper-option-label" data-i18n="install.s2GuiLabel">Option 2A — GUI (Apple's official instruction, no Terminal needed)</p>
+                  <p class="step-desc" data-i18n="install.s2GuiDesc">Try opening Henge.app once and click Done on the unverified-app prompt. Then open System Settings → Privacy &amp; Security, scroll to Security, click Open Anyway next to Henge, and confirm.</p>
+                </div>
+
+                <div class="gatekeeper-option">
+                  <p class="gatekeeper-option-label" data-i18n="install.s2CliLabel">Option 2B — Terminal (one command)</p>
+                  <div class="code-block">
+                    <pre><code id="xattr-cmd">xattr -dr com.apple.quarantine ~/Applications/Henge.app</code></pre>
+                    <button
+                      type="button"
+                      id="copy-xattr-btn"
+                      class="copy-btn"
+                      data-copy-target="#xattr-cmd"
+                      data-copy-text="xattr -dr com.apple.quarantine ~/Applications/Henge.app"
+                    >
+                      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span data-i18n="install.copyBtn" data-copy-label>Copy</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <p class="step-note" data-i18n="install.s2Explain">Why this is needed: macOS 15 Sequoia blocks unnotarized browser downloads. You can also verify SHA-256 via shasum -a 256 -c SHA256SUMS.txt or build from source.</p>
+              <p class="step-note" data-i18n="install.s2Explain">Why this is needed: macOS 15 Sequoia asks for confirmation on unnotarized browser downloads. You can also verify SHA-256 via shasum -a 256 -c SHA256SUMS.txt or build from source.</p>
               <a class="step-link" href="https://github.com/413d/henge#verifying-your-download" target="_blank" rel="noopener noreferrer" data-i18n="install.s2Verify">Verify SHA-256 checksums</a>
             </div>
           </li>
@@ -504,8 +566,8 @@
           </article>
 
           <article class="faq-card">
-            <h3 class="faq-question" data-i18n="faq.q4">Why do I need to run xattr -dr com.apple.quarantine after downloading?</h3>
-            <p class="faq-answer" data-i18n="faq.a4">Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. Running xattr -dr com.apple.quarantine ~/Applications/Henge.app once clears the browser quarantine attribute so macOS Gatekeeper lets you launch the app.</p>
+            <h3 class="faq-question" data-i18n="faq.q4">How do I open Henge.app on first launch if macOS Gatekeeper shows a warning?</h3>
+            <p class="faq-answer" data-i18n="faq.a4">Public GitHub releases are ad-hoc signed without a paid Apple Developer ID certificate. If you install via Homebrew (brew tap 413d/henge https://github.com/413d/henge &amp;&amp; brew install --cask 413d/henge/henge) or the curl installer script, quarantine is cleared automatically. For manual .zip downloads, either follow Apple's official GUI flow (try opening Henge.app once, then go to System Settings → Privacy &amp; Security → Open Anyway) or run xattr -dr com.apple.quarantine ~/Applications/Henge.app once in Terminal.</p>
           </article>
 
           <article class="faq-card">

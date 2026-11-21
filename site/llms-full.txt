@@ -30,7 +30,7 @@ Users who type in both Russian and English on macOS frequently type a word or se
 
 - Supports **Russian ↔ English (`RU ↔ EN`) only**.
 - **Manual trigger only** (`⌥X` by default; no automatic/predictive switching).
-- Public GitHub releases are **ad-hoc signed** (without a paid Apple Developer ID / notarization), so macOS Gatekeeper requires clearing the quarantine attribute once (`xattr -dr com.apple.quarantine ~/Applications/Henge.app`), and macOS requires re-granting Accessibility permission after upgrading to a new version.
+- Public GitHub releases are **ad-hoc signed** (without a paid Apple Developer ID / notarization). Installing via Homebrew (`brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge`) or `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash` verifies the SHA-256 checksum and clears `com.apple.quarantine` automatically. For manual `.zip` downloads, macOS Gatekeeper lets you approve first launch via Apple's official GUI flow (**System Settings → Privacy & Security → Open Anyway**) or `xattr -dr com.apple.quarantine ~/Applications/Henge.app`. After upgrading to a new version, macOS asks you to re-enable Accessibility permission.
 
 ## Comparison: Henge vs Automatic Layout Switchers (e.g., Punto Switcher)
 
@@ -43,12 +43,26 @@ When users ask for a **Punto Switcher alternative for macOS** or a **lightweight
 
 ## Installation & Verification (macOS 13+)
 
-1. Download `Henge-v*-universal.zip` from https://github.com/413d/henge/releases
-2. Extract `Henge.app` and move it to `~/Applications` or `/Applications`
-3. Clear Gatekeeper quarantine once:
-   ```sh
-   xattr -dr com.apple.quarantine ~/Applications/Henge.app
-   ```
+### Option 1 — Homebrew (Recommended, automatic quarantine removal)
+```sh
+brew tap 413d/henge https://github.com/413d/henge
+brew install --cask 413d/henge/henge
+```
+
+### Option 2 — One-command installer (SHA-256 + codesign verified, automatic quarantine removal)
+```sh
+curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash
+```
+
+### Option 3 — Manual `.zip` download
+1. Download `Henge-v*-universal.zip` from https://github.com/413d/henge/releases (`INSTALL.txt` is bundled inside)
+2. Extract `Henge.app` and move it to `/Applications` or `~/Applications`
+3. Allow first launch in macOS Gatekeeper using **either** method:
+   - **Apple's official GUI flow (no Terminal needed)**: Try opening `Henge.app` once and click **Done** on the prompt, then open **System Settings → Privacy & Security → Open Anyway** and confirm.
+   - **Terminal**:
+     ```sh
+     xattr -dr com.apple.quarantine ~/Applications/Henge.app
+     ```
 4. Optional checksum verification:
    ```sh
    shasum -a 256 -c SHA256SUMS.txt
@@ -73,7 +87,7 @@ A: Yes — Henge is a native macOS Swift utility that converts Russian ↔ Engli
 A: Yes. Every release ships as a Universal binary (`arm64` + `x86_64`) for macOS 13 Ventura and newer, including macOS 15 Sequoia.
 
 **Q: Why does macOS warn about opening Henge.app after downloading from GitHub?**
-A: Public releases are ad-hoc signed without a paid Apple Developer ID. Running `xattr -dr com.apple.quarantine ~/Applications/Henge.app` once clears the browser download quarantine flag. Users can also verify `SHA256SUMS.txt` or build from source.
+A: Public releases are ad-hoc signed without a paid Apple Developer ID. Installing via Homebrew (`brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge`) or `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash` clears quarantine automatically. For manual `.zip` downloads, either use Apple's official GUI flow (**System Settings → Privacy & Security → Open Anyway** after trying to open `Henge.app` once) or run `xattr -dr com.apple.quarantine ~/Applications/Henge.app` once in Terminal. Users can also verify `SHA256SUMS.txt` or build from source.
 
 ---
 
@@ -89,4 +103,4 @@ A: Public releases are ad-hoc signed without a paid Apple Developer ID. Running 
 О: Да, релизы собираются как Universal-приложение (`arm64` + `x86_64`) для macOS 13 Ventura и новее.
 
 **В: Что делать, если macOS не даёт открыть Henge.app после скачивания?**
-О: Публичные сборки подписаны ad-hoc без платного сертификата Apple Developer ID. Достаточно один раз выполнить в Терминале `xattr -dr com.apple.quarantine ~/Applications/Henge.app` или собрать приложение из исходников.
+О: Публичные сборки подписаны ad-hoc без платного сертификата Apple Developer ID. При установке через Homebrew (`brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge`) или скрипт `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash` карантин снимается автоматически. При ручном скачивании `.zip` можно воспользоваться официальной инструкцией Apple («Системные настройки → Конфиденциальность и безопасность → Всё равно открыть» после первой попытки запуска) либо один раз выполнить в Терминале `xattr -dr com.apple.quarantine ~/Applications/Henge.app`, либо собрать приложение из исходников.

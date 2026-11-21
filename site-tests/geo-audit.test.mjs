@@ -81,6 +81,12 @@ test('llms.txt and llms-full.txt follow llmstxt structure with bilingual accurat
   assert.ok(llmsTxt.includes('https://github.com/413d/henge/releases'));
   assert.ok(llmsTxt.includes('AXSecureTextField'));
   assert.ok(llmsTxt.includes('xattr -dr com.apple.quarantine'));
+  assert.ok(llmsTxt.includes('Open Anyway'), 'llms.txt must mention Apple official Open Anyway flow');
+  assert.ok(llmsTxt.includes('brew tap 413d/henge'), 'llms.txt must mention Homebrew tap install');
+  assert.ok(
+    llmsTxt.includes('https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh'),
+    'llms.txt must mention curl install script'
+  );
 
   assert.match(llmsFull, /^# Henge\b/m);
   assert.ok(llmsFull.includes('Punto Switcher'), 'llms-full.txt should address automatic-switcher comparisons');
@@ -88,6 +94,9 @@ test('llms.txt and llms-full.txt follow llmstxt structure with bilingual accurat
   assert.ok(llmsFull.includes('руддщ') && llmsFull.includes('hello'));
   assert.ok(llmsFull.includes('Частые вопросы'), 'llms-full.txt must include Russian Q&A for Cyrillic prompts');
   assert.ok(llmsFull.includes('Frequently Asked Questions'), 'llms-full.txt must include English Q&A');
+  assert.ok(llmsFull.includes('Open Anyway') && llmsFull.includes('Всё равно открыть'));
+  assert.ok(llmsFull.includes('brew tap 413d/henge'));
+  assert.ok(llmsFull.includes('https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh'));
 });
 
 test('HTML exposes llms discovery links, SoftwareApplication features, and FAQPage JSON-LD', () => {
@@ -122,4 +131,27 @@ test('HTML exposes llms discovery links, SoftwareApplication features, and FAQPa
     assert.ok(typeof I18N.en[`faq.q${idx}`] === 'string' && typeof I18N.ru[`faq.q${idx}`] === 'string');
     assert.ok(typeof I18N.en[`faq.a${idx}`] === 'string' && typeof I18N.ru[`faq.a${idx}`] === 'string');
   }
+
+  assert.match(faqLd.mainEntity[3].acceptedAnswer.text, /Open Anyway/);
+  assert.match(faqLd.mainEntity[3].acceptedAnswer.text, /xattr -dr com\.apple\.quarantine/);
+  assert.match(I18N.en['faq.a4'], /Open Anyway/);
+  assert.match(I18N.en['faq.a4'], /xattr -dr com\.apple\.quarantine/);
+  assert.match(I18N.ru['faq.a4'], /Всё равно открыть/);
+  assert.match(I18N.ru['faq.a4'], /xattr -dr com\.apple\.quarantine/);
+});
+
+test('README.md and SECURITY.md document Homebrew, curl installer, Apple Open Anyway, and xattr', () => {
+  const readme = readFileSync('README.md', 'utf8');
+  const security = readFileSync('SECURITY.md', 'utf8');
+
+  assert.match(readme, /brew tap 413d\/henge https:\/\/github\.com\/413d\/henge/);
+  assert.match(readme, /brew install --cask 413d\/henge\/henge/);
+  assert.match(readme, /curl -fsSL https:\/\/raw\.githubusercontent\.com\/413d\/henge\/main\/scripts\/install\.sh \| bash/);
+  assert.match(readme, /Privacy & Security → Open Anyway|Privacy &amp; Security → Open Anyway/);
+  assert.match(readme, /official|Apple/i);
+  assert.match(readme, /xattr -dr com\.apple\.quarantine/);
+
+  assert.match(security, /Open Anyway/);
+  assert.match(security, /xattr -dr com\.apple\.quarantine/);
+  assert.match(security, /brew install --cask 413d\/henge\/henge/);
 });

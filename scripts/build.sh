@@ -182,6 +182,7 @@ if [[ "${SIGN_IDENTITY}" == "-" ]]; then
 else
     echo "==> Codesign with identity '${SIGN_IDENTITY}'"
 fi
+xattr -cr "${APP_DIR}"
 codesign --force --deep --sign "${SIGN_IDENTITY}" "${APP_DIR}"
 
 echo "==> Verify"

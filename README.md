@@ -36,26 +36,44 @@ Instead of deleting everything and retyping, press **`⌥X`**. Henge converts th
 
 ## Installation
 
-**Requires macOS 13 Ventura or later.** One Universal archive supports both Apple Silicon (M1 and newer) and Intel Macs. You do not need Xcode, Swift, or Homebrew to run the pre-built app.
+**Requires macOS 13 Ventura or later.** One Universal archive supports both Apple Silicon (M1 and newer) and Intel Macs.
+
+### Option 1 — Homebrew (Recommended, no quarantine prompt)
+
+```bash
+brew tap 413d/henge https://github.com/413d/henge
+brew install --cask 413d/henge/henge
+```
+
+Homebrew verifies the release SHA-256 checksum, installs `Henge.app`, and strips `com.apple.quarantine` automatically during `postflight_steps`.
+
+### Option 2 — One-command installer (no Homebrew needed)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash
+```
+
+Verifies the GitHub Release `SHA256SUMS.txt` **before** unpacking, checks the `codesign` signature and bundle identifier, clears `com.apple.quarantine`, and installs to `/Applications` (or `~/Applications` if `/Applications` is not writable — no `sudo` required).
+
+### Option 3 — Manual `.zip` download
 
 1. Download **`Henge-vX.Y.Z-universal.zip`** from the latest [GitHub Release](https://github.com/413d/henge/releases/latest)
-   *(pick the `Henge-v*.zip` asset — GitHub's automatic `Source code` archives only contain source files).*
-2. Double-click the zip to extract **`Henge.app`**, then move it to **`~/Applications`** (or **`/Applications`**).
-3. **Clear Gatekeeper quarantine once before launching** *(required because public builds are ad-hoc signed without an Apple Developer ID)*:
+   *(pick the `Henge-v*.zip` asset — GitHub's automatic `Source code` archives only contain source files; `INSTALL.txt` is bundled inside).*
+2. Double-click the zip to extract **`Henge.app`**, then move it to **`/Applications`** or **`~/Applications`**.
+3. **Allow first launch through macOS Gatekeeper** *(public builds are ad-hoc signed without a paid Apple Developer ID)* — choose **either** method:
+   - **GUI (Apple's official instruction — no Terminal needed):** Double-click `Henge.app` once and click **Done** (or **OK**) on the unverified-app prompt, then open **System Settings → Privacy & Security**, scroll to the **Security** section, click **Open Anyway** next to Henge, and confirm.
+   - **Terminal:** Clear the quarantine attribute once before opening:
 
-   ```bash
-   xattr -dr com.apple.quarantine ~/Applications/Henge.app
-   ```
+     ```bash
+     xattr -dr com.apple.quarantine ~/Applications/Henge.app
+     ```
 
-   *(If you placed it in `/Applications`, adjust the path accordingly.)*
-4. Open **`Henge.app`**.
-5. Grant **Accessibility** permission when prompted (or in **System Settings → Privacy & Security → Accessibility**).
+     *(Adjust to `/Applications/Henge.app` if installed system-wide.)*
+4. Open **`Henge.app`** and grant **Accessibility** permission when prompted (or in **System Settings → Privacy & Security → Accessibility**).
 
-### Why `xattr -dr com.apple.quarantine` is needed
+### Why Gatekeeper prompts on manual `.zip` downloads
 
-Open-source releases of Henge are built on GitHub Actions with an **ad-hoc signature** and are not notarized by Apple. On macOS (especially macOS 15 Sequoia, which removed the Finder Control-Click bypass), browser downloads carry a quarantine attribute that causes macOS to block non-notarized apps.
-
-If you prefer not to run Terminal commands on downloaded apps, you can [verify the SHA-256 checksum](#verifying-your-download) or [build from source](#build-from-source) directly on your Mac.
+Open-source releases of Henge are built transparently on GitHub Actions with an **ad-hoc signature** and are not notarized with a paid Apple Developer ID. Browser downloads carry `com.apple.quarantine`, which causes macOS (especially macOS 15 Sequoia) to ask for explicit confirmation on first launch via **System Settings → Privacy & Security → Open Anyway** or `xattr -dr com.apple.quarantine`. Homebrew and `install.sh` verify the release checksum and clear quarantine automatically, or you can [build from source](#build-from-source) directly on your Mac.
 
 ### Verifying your download
 
@@ -96,15 +114,18 @@ Henge replaces the text in place. You can also click the menu bar icon to:
 
 ## Updating & Uninstalling
 
-**Update:** Choose **Quit Henge** from the menu bar, download the new release archive, replace `Henge.app` in `~/Applications` (or `/Applications`), clear quarantine with `xattr -dr com.apple.quarantine`, and re-enable Accessibility if prompted.
+**Update:**
+- **Homebrew:** `brew upgrade --cask 413d/henge/henge`
+- **Installer script:** re-run `curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash`
+- **Manual `.zip`:** Choose **Quit Henge** from the menu bar, replace `Henge.app` in `/Applications` or `~/Applications`, allow first launch via **System Settings → Privacy & Security → Open Anyway** or `xattr -dr com.apple.quarantine`, and re-enable **Accessibility** if prompted.
 
 **Uninstall:**
 
 1. Disable **Launch at Login** in **Settings → General**, then click **Quit Henge**.
-2. Delete `Henge.app` and its local config folder:
+2. Remove Henge (`brew uninstall --cask 413d/henge/henge` if installed via Homebrew) and delete its local config folder:
 
    ```bash
-   rm -rf ~/Applications/Henge.app "$HOME/Library/Application Support/Henge"
+   rm -rf /Applications/Henge.app ~/Applications/Henge.app "$HOME/Library/Application Support/Henge"
    ```
 
 ## Build from Source
@@ -133,11 +154,13 @@ To preserve macOS Accessibility permissions across local rebuilds, sign with a l
 HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
 ```
 
-Maintainers can publish a new tagged release to GitHub Releases with:
+Maintainers can publish a new tagged release to GitHub Releases and bump the in-repo Homebrew cask with:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.2
+git push origin v0.1.2
+# After the Release workflow publishes SHA256SUMS.txt:
+./scripts/release/update-cask.sh 0.1.2 <sha256>
 ```
 
 ## License

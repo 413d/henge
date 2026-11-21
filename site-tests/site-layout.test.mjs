@@ -135,7 +135,11 @@ test('HengeCore i18n dictionary covers all required keys in RU and EN symmetrica
     'privacy.c1Title', 'privacy.c1Desc', 'privacy.c2Title', 'privacy.c2Desc', 'privacy.c3Title', 'privacy.c3Desc',
     'privacy.limitsTitle', 'privacy.limitsItem1', 'privacy.limitsItem2', 'privacy.limitsItem3',
     'install.eyebrow', 'install.title', 'install.subtitle',
+    'install.brewBadge', 'install.brewTitle', 'install.brewDesc',
+    'install.curlBadge', 'install.curlTitle', 'install.curlDesc',
+    'install.manualTitle',
     'install.s1Title', 'install.s1Desc', 'install.s2Title', 'install.s2Desc',
+    'install.s2GuiLabel', 'install.s2GuiDesc', 'install.s2CliLabel',
     'install.s2Explain', 'install.s2Verify', 'install.s3Title', 'install.s3Desc',
     'install.copyBtn', 'install.copiedBtn',
     'footer.license', 'footer.releases', 'footer.issues', 'footer.architecture',
@@ -418,4 +422,88 @@ test('HengeCore DOMContentLoaded wires demo input, Opt+X shortcut, sample chips,
   await copyBtn.dispatch('click');
   assert.equal(clipboardCopied, 'xattr -dr com.apple.quarantine ~/Applications/Henge.app');
   assert.equal(copyBtn.classes.has('is-copied'), true);
+});
+
+test('HengeCore wires multiple [data-copy-text]/[data-copy-target] buttons independently (brew, curl, xattr)', async () => {
+  const docListeners = new Map();
+  function makeCopyBtn(attrs) {
+    const el = {
+      attrs,
+      classes: new Set(),
+      listeners: new Map(),
+      textContent: '',
+      getAttribute(k) {
+        return this.attrs[k] ?? null;
+      },
+      addEventListener(type, fn) {
+        this.listeners.set(type, fn);
+      },
+      dispatch(type, event = {}) {
+        const fn = this.listeners.get(type);
+        if (fn) return fn(event);
+      },
+      querySelector() {
+        return null;
+      }
+    };
+    el.classList = {
+      add(c) { el.classes.add(c); },
+      remove(c) { el.classes.delete(c); }
+    };
+    return el;
+  }
+
+  const brewBtn = makeCopyBtn({
+    'data-copy-text': 'brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge'
+  });
+  const curlBtn = makeCopyBtn({
+    'data-copy-text': 'curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash'
+  });
+  const xattrBtn = makeCopyBtn({
+    'data-copy-text': 'xattr -dr com.apple.quarantine ~/Applications/Henge.app'
+  });
+
+  const copiedHistory = [];
+  const doc = {
+    documentElement: { lang: 'en' },
+    title: '',
+    addEventListener(type, fn) {
+      docListeners.set(type, fn);
+    },
+    querySelector(sel) {
+      if (sel === '#copy-xattr-btn') return xattrBtn;
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel.includes('data-copy-text')) return [brewBtn, curlBtn, xattrBtn];
+      return [];
+    }
+  };
+
+  loadHengeCore({
+    document: doc,
+    navigator: {
+      languages: ['en-US'],
+      language: 'en-US',
+      clipboard: {
+        writeText: async (text) => {
+          copiedHistory.push(text);
+        }
+      }
+    }
+  });
+
+  docListeners.get('DOMContentLoaded')();
+  await brewBtn.dispatch('click');
+  await curlBtn.dispatch('click');
+  await xattrBtn.dispatch('click');
+
+  assert.deepEqual(copiedHistory, [
+    'brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge',
+    'curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash',
+    'xattr -dr com.apple.quarantine ~/Applications/Henge.app'
+  ]);
+  assert.equal(brewBtn.classes.has('is-copied'), true);
+  assert.equal(curlBtn.classes.has('is-copied'), true);
+  assert.equal(xattrBtn.classes.has('is-copied'), true);
 });
