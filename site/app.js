@@ -465,7 +465,7 @@
 
       'demo.windowTitle': 'Интерактивное демо',
       'demo.menubarEnabled': 'Включено',
-      'demo.menubarShortcut': 'Шорткод: ⌥X',
+      'demo.menubarShortcut': 'Сочетание: ⌥X',
       'demo.menubarAccessibility': 'Доступ Accessibility выдан',
       'demo.label': 'Попробуйте ввести или выделить текст ниже',
       'demo.placeholder':
@@ -494,7 +494,7 @@
         'Бережно сохраняет заглавные и строчные буквы, цифры, подчёркивания _ и конечную пунктуацию — удобно и в переписке, и в коде.',
       'features.c4Title': 'Тихая жизнь в строке меню',
       'features.c4Desc':
-        'Работает без иконки в Dock. В настройках можно переназначить шорткод, исключить терминалы или IDE и включить автозапуск.',
+        'Работает без иконки в Dock. В настройках можно переназначить сочетание клавиш, исключить терминалы или IDE и включить автозапуск.',
 
       'privacy.eyebrow': 'Приватность и безопасность',
       'privacy.title': 'Никакой сети. Никакого доступа к паролям.',
@@ -594,7 +594,7 @@
 
   let activeLanguage = 'en';
 
-  function setLanguage(lang) {
+  function setLanguage(lang, persist = true) {
     const normalized = lang === 'ru' ? 'ru' : 'en';
     activeLanguage = normalized;
     const dict = I18N[normalized];
@@ -653,12 +653,14 @@
       }
     }
 
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.setItem === 'function') {
-        localStorage.setItem('henge_lang', normalized);
+    if (persist) {
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.setItem === 'function') {
+          localStorage.setItem('henge_lang', normalized);
+        }
+      } catch (_) {
+        // Ignore storage access errors
       }
-    } catch (_) {
-      // Ignore storage access errors
     }
 
     return normalized;
@@ -726,7 +728,7 @@
   function initInteractiveUI() {
     if (typeof document === 'undefined' || !document) return;
 
-    setLanguage(resolveInitialLanguage());
+    setLanguage(resolveInitialLanguage(), false);
 
     if (typeof document.querySelectorAll === 'function') {
       for (const btn of document.querySelectorAll('[data-lang-btn]')) {
@@ -734,7 +736,7 @@
           btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-lang-btn');
             if (target === 'ru' || target === 'en') {
-              setLanguage(target);
+              setLanguage(target, true);
             }
           });
         }
