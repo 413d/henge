@@ -1,6 +1,8 @@
 <div align="center">
 
-<h1>🍥 Henge</h1>
+<img src="site/assets/icon-256.png" width="128" height="128" alt="Иконка приложения Henge">
+
+<h1>Henge</h1>
 
 **Исправление текста, набранного не в той раскладке, одним сочетанием клавиш.**
 

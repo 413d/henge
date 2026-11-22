@@ -1,6 +1,8 @@
 <div align="center">
 
-<h1>🍥 Henge</h1>
+<img src="site/assets/icon-256.png" width="128" height="128" alt="Henge app icon">
+
+<h1>Henge</h1>
 
 **Fix mistyped keyboard layout text with a single shortcut.**
 
