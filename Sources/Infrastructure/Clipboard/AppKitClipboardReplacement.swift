@@ -133,17 +133,38 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         validateTarget: () -> Bool,
         verifyReplacement: () -> Bool
     ) -> ClipboardReplacementResult {
-        let originalClipboard = clipboardManager.snapshot()
-        guard originalClipboard.isRestorable else {
-            let typeNames = Diagnostics.pasteboardTypeNames(originalClipboard.oversizedTypes)?.joined(separator: ",") ?? "redacted"
+        let original = clipboardManager.snapshot()
+        guard original.isRestorable else {
+            let typeNames = Diagnostics.pasteboardTypeNames(original.oversizedTypes)?.joined(separator: ",") ?? "redacted"
             logger.warning("\(DiagnosticsLabel.snapshotSkippedOversized.rawValue, privacy: .public) types=\(typeNames, privacy: .public)")
             return .failed
         }
-        var didAttemptRestore = false
-        defer {
-            if !didAttemptRestore { _ = clipboardManager.restore(originalClipboard) }
-        }
 
+        let outcome = performReplacement(
+            expectedText: expectedText,
+            with: replacement,
+            processIdentifier: processIdentifier,
+            validateTarget: validateTarget,
+            verifyReplacement: verifyReplacement
+        )
+        guard outcome != .superseded else {
+            logger.info("\(DiagnosticsLabel.replacementSuperseded.rawValue, privacy: .public)")
+            return .superseded
+        }
+        guard clipboardManager.restore(original) else {
+            logger.error("\(DiagnosticsLabel.restoreFailed.rawValue, privacy: .public)")
+            return .restoreFailed
+        }
+        return outcome
+    }
+
+    private func performReplacement(
+        expectedText: String,
+        with replacement: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool
+    ) -> ClipboardReplacementResult {
         let beforeCopyChangeCount = pasteboard.changeCount
         guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier), waitForClipboardChange(after: beforeCopyChangeCount),
               validateTarget(), pasteboard.string() == expectedText else {
@@ -156,26 +177,21 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=write")
             return .failed
         }
-        let replacementWriteChangeCount = pasteboard.changeCount
+        let ownedChangeCount = pasteboard.changeCount
+
         guard validateTarget(), postCommandKey(virtualKey: 9, processIdentifier: processIdentifier) else {
+            if pasteboard.changeCount != ownedChangeCount {
+                return .superseded
+            }
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=paste")
             return .failed
         }
 
-        let replacementCompleted = waitForReplacement(verifyReplacement)
-        if pasteboard.changeCount != replacementWriteChangeCount {
-            didAttemptRestore = true
-            logger.info("\(DiagnosticsLabel.replacementSuperseded.rawValue, privacy: .public)")
+        let verified = waitForReplacement(verifyReplacement)
+        guard pasteboard.changeCount == ownedChangeCount else {
             return .superseded
         }
-
-        didAttemptRestore = true
-        let clipboardRestored = clipboardManager.restore(originalClipboard)
-        if !clipboardRestored {
-            logger.error("\(DiagnosticsLabel.restoreFailed.rawValue, privacy: .public)")
-            return .restoreFailed
-        }
-        if !replacementCompleted {
+        if !verified {
             logger.warning("\(DiagnosticsLabel.pasteUnverified.rawValue, privacy: .public)")
             return .pasteUnverified
         }

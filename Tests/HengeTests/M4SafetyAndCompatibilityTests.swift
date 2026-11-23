@@ -255,6 +255,73 @@ struct M4SafetyAndCompatibilityTests {
         #expect(pasteboard.string() == "user copied something else")
     }
 
+    @Test
+    func clipboardRestoreIsSkippedWhenUserCopiedNewerContent() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn") {
+            _ = pasteboard.setString("new")
+        }
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+
+        #expect(result == .superseded)
+        #expect(poster.pastedText == "привет")
+        #expect(manager.restoredSnapshot == nil)
+        #expect(pasteboard.string() == "new")
+    }
+
+    @Test
+    func clipboardRestoreRunsWhenPasteboardWasNotTouched() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+
+        #expect(result == .success)
+        #expect(poster.pastedText == "привет")
+        #expect(manager.restoredSnapshot == original)
+    }
+
+    @Test
+    func clipboardRestoreIsSkippedWhenTargetChangesAfterUserCopiedNewerContent() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+        var validationCalls = 0
+
+        let result = replacement.replaceSelection(
+            expectedText: "ghbdtn",
+            with: "привет",
+            validateTarget: {
+                validationCalls += 1
+                if validationCalls == 3 {
+                    _ = pasteboard.setString("new")
+                    return false
+                }
+                return true
+            },
+            verifyReplacement: { true }
+        )
+
+        #expect(result == .superseded)
+        #expect(manager.restoredSnapshot == nil)
+        #expect(pasteboard.string() == "new")
+    }
+
     private func makeUseCase(_ runtime: M4RuntimeStub) -> LiveFixTextUseCase {
         LiveFixTextUseCase(
             runtime: runtime,
@@ -266,12 +333,14 @@ struct M4SafetyAndCompatibilityTests {
 private final class TestClipboardEventPoster: ClipboardEventPosting {
     private let pasteboard: TestReplacementPasteboard
     private let copiedText: String
+    private let afterPaste: (() -> Void)?
     private(set) var pastedText: String?
     private(set) var copySucceeded = false
 
-    init(pasteboard: TestReplacementPasteboard, copiedText: String) {
+    init(pasteboard: TestReplacementPasteboard, copiedText: String, afterPaste: (() -> Void)? = nil) {
         self.pasteboard = pasteboard
         self.copiedText = copiedText
+        self.afterPaste = afterPaste
     }
 
     func postCommandKey(virtualKey: CGKeyCode) -> Bool {
@@ -282,6 +351,7 @@ private final class TestClipboardEventPoster: ClipboardEventPosting {
         }
         if virtualKey == 9 {
             pastedText = pasteboard.string()
+            afterPaste?()
             return true
         }
         return false
