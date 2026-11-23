@@ -45,6 +45,20 @@
 "settings.reset.confirm" = "Сбросить настройки";
 "settings.reset.dialog_message" = "Будет восстановлено сочетание клавиш по умолчанию и удалены исключения для приложений.";
 
+/* Onboarding View */
+"onboarding.window.title" = "Добро пожаловать в Henge";
+"onboarding.title" = "Добро пожаловать в Henge";
+"onboarding.subtitle" = "Исправляйте текст, набранный не в той раскладке RU ↔ EN, одним сочетанием клавиш.";
+"onboarding.feature.shortcut" = "Нажмите %@, чтобы исправить выделенный текст или слово под курсором (например, ghbdtn → привет).";
+"onboarding.feature.privacy" = "Работает полностью офлайн. Henge никогда не записывает ваш текст, пароли или буфер обмена.";
+"onboarding.permissions.title" = "Доступ к Универсальному доступу";
+"onboarding.permissions.description" = "macOS требует разрешение Универсального доступа, чтобы Henge мог читать и заменять ошибочно набранный текст в других приложениях.";
+"onboarding.permissions.granted" = "Доступ к Универсальному доступу предоставлен.";
+"onboarding.permissions.pending" = "Доступ к Универсальному доступу ещё не предоставлен.";
+"onboarding.action.grant_accessibility" = "Предоставить доступ";
+"onboarding.action.continue" = "Продолжить";
+"onboarding.action.get_started" = "Начать работу";
+
 /* Hotkey & Launch at Login Status / Errors */
 "hotkey.status.error_with_active_fallback" = "%@ Текущее сочетание клавиш остаётся активным.";
 "hotkey.status.registered_accessibility_required" = "Глобальное сочетание клавиш зарегистрировано, но для работы с текстом по-прежнему требуется доступ к Универсальному доступу.";

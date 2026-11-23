@@ -14,6 +14,8 @@ final class HengeCoordinator: ObservableObject {
     private let loginItemManager: LoginItemManaging
     private let selfBundleIdentifier: String?
     private let presentSettings: @MainActor () -> Void
+    private let presentOnboarding: @MainActor () -> Void
+    private let dismissOnboarding: @MainActor () -> Void
     private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
     private let exceptionMatcher = ExceptionMatcher()
@@ -25,6 +27,8 @@ final class HengeCoordinator: ObservableObject {
         environment: AppEnvironment,
         selfBundleIdentifier: String? = Bundle.main.bundleIdentifier,
         presentSettings: (@MainActor () -> Void)? = nil,
+        presentOnboarding: (@MainActor () -> Void)? = nil,
+        dismissOnboarding: (@MainActor () -> Void)? = nil,
         terminateApplication: (@MainActor () -> Void)? = nil
     ) {
         configurationStore = environment.configurationStore
@@ -33,6 +37,8 @@ final class HengeCoordinator: ObservableObject {
         loginItemManager = environment.loginItemManager
         self.selfBundleIdentifier = selfBundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.presentSettings = presentSettings ?? {}
+        self.presentOnboarding = presentOnboarding ?? {}
+        self.dismissOnboarding = dismissOnboarding ?? {}
         self.terminateApplication = terminateApplication ?? {
             NSApplication.shared.terminate(nil)
         }
@@ -53,7 +59,8 @@ final class HengeCoordinator: ObservableObject {
             isEnabled: loadedConfiguration.isEnabled,
             launchAtLogin: resolvedConfigurationLaunchAtLogin,
             shortcut: loadedConfiguration.shortcut,
-            excludedApplicationBundleIdentifiers: loadedConfiguration.excludedApplicationBundleIdentifiers
+            excludedApplicationBundleIdentifiers: loadedConfiguration.excludedApplicationBundleIdentifiers,
+            hasCompletedOnboarding: loadedConfiguration.hasCompletedOnboarding
         )
 
         if normalizedConfiguration != loadedConfiguration {
@@ -330,7 +337,9 @@ final class HengeCoordinator: ObservableObject {
 
     func resetConfigurationToDefaults() {
         let previousConfiguration = state.configuration
-        state.configuration = AppConfiguration.default
+        var resetConfiguration = AppConfiguration.default
+        resetConfiguration.hasCompletedOnboarding = previousConfiguration.hasCompletedOnboarding
+        state.configuration = resetConfiguration
         // launchAtLogin mirrors the system login-item state, not the config default.
         let systemStatus = loginItemManager.status
         state.launchAtLoginStatus = systemStatus
@@ -461,6 +470,39 @@ final class HengeCoordinator: ObservableObject {
 
     func openAccessibilitySettings() {
         runtime.openAccessibilitySettings()
+    }
+
+    func requestAccessibilityPermission() {
+        runtime.requestAccessibilityPermission()
+    }
+
+    func startOnboardingIfNeeded() {
+        let accessibilityGranted = runtime.hasAccessibilityPermission
+        if state.accessibilityGranted != accessibilityGranted {
+            state.accessibilityGranted = accessibilityGranted
+        }
+
+        if state.configuration.hasCompletedOnboarding {
+            return
+        }
+
+        if accessibilityGranted {
+            let previousConfiguration = state.configuration
+            state.configuration.hasCompletedOnboarding = true
+            saveConfigurationIfChanged(from: previousConfiguration)
+            return
+        }
+
+        presentOnboarding()
+    }
+
+    func completeOnboarding() {
+        let previousConfiguration = state.configuration
+        if !state.configuration.hasCompletedOnboarding {
+            state.configuration.hasCompletedOnboarding = true
+        }
+        saveConfigurationIfChanged(from: previousConfiguration)
+        dismissOnboarding()
     }
 
     func openLoginItemSettings() {

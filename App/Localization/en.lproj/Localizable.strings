@@ -45,6 +45,20 @@
 "settings.reset.confirm" = "Reset Settings";
 "settings.reset.dialog_message" = "This restores the default shortcut and removes application exceptions.";
 
+/* Onboarding View */
+"onboarding.window.title" = "Welcome to Henge";
+"onboarding.title" = "Welcome to Henge";
+"onboarding.subtitle" = "Fix text typed in the wrong RU ↔ EN keyboard layout with a single shortcut.";
+"onboarding.feature.shortcut" = "Press %@ to convert the selection or word at the cursor (for example, ghbdtn → привет).";
+"onboarding.feature.privacy" = "Runs 100% offline. Henge never logs your text, passwords, or clipboard contents.";
+"onboarding.permissions.title" = "Accessibility Access";
+"onboarding.permissions.description" = "macOS requires Accessibility permission so Henge can read and replace mistyped text in other apps.";
+"onboarding.permissions.granted" = "Accessibility access is granted.";
+"onboarding.permissions.pending" = "Accessibility access is not granted yet.";
+"onboarding.action.grant_accessibility" = "Grant Accessibility Access";
+"onboarding.action.continue" = "Continue";
+"onboarding.action.get_started" = "Get Started";
+
 /* Hotkey & Launch at Login Status / Errors */
 "hotkey.status.error_with_active_fallback" = "%@ The current shortcut remains active.";
 "hotkey.status.registered_accessibility_required" = "Global shortcut is registered, but Accessibility access is still required for text operations.";

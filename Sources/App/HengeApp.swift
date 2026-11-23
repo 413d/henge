@@ -22,17 +22,29 @@ struct HengeApp: App {
 
     init() {
         let settingsWindowController = SettingsWindowController()
+        let onboardingWindowController = OnboardingWindowController()
         let lifecycleObserver = MenuBarLifecycleObserver()
         let coordinator = HengeCoordinator(
             environment: .live(),
             presentSettings: {
                 settingsWindowController.showWindow()
+            },
+            presentOnboarding: {
+                onboardingWindowController.showWindow()
+            },
+            dismissOnboarding: {
+                onboardingWindowController.closeWindow()
             }
         )
         settingsWindowController.bind(coordinator: coordinator)
+        onboardingWindowController.bind(coordinator: coordinator)
         lifecycleObserver.bind(coordinator: coordinator)
         menuBarLifecycleObserver = lifecycleObserver
         _coordinator = StateObject(wrappedValue: coordinator)
+
+        Task { @MainActor in
+            coordinator.startOnboardingIfNeeded()
+        }
     }
 
     var body: some Scene {

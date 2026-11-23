@@ -41,6 +41,7 @@
 		8480A2242E00000000000001 /* LoginItemManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2222E00000000000001 /* LoginItemManaging.swift */; };
 		8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */; };
 		8480A2302E00000000000001 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2312E00000000000001 /* Diagnostics.swift */; };
+		8480A23D2E00000000000001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A23E2E00000000000001 /* OnboardingView.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
 		8480A2392E00000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8480A23A2E00000000000001 /* Localizable.strings */; };
@@ -88,6 +89,7 @@
 		8480A22A2E00000000000001 /* HengeMenuBar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = HengeMenuBar.png; sourceTree = "<group>"; };
 		8480A23B2E00000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Localization/en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8480A23C2E00000000000001 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = Localization/ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8480A23E2E00000000000001 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -274,9 +276,18 @@
 			isa = PBXGroup;
 			children = (
 				8480A1122E00000000000001 /* MenuBar */,
+				8480A23F2E00000000000001 /* Onboarding */,
 				8480A1132E00000000000001 /* Settings */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		8480A23F2E00000000000001 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				8480A23E2E00000000000001 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		8480A1122E00000000000001 /* MenuBar */ = {
@@ -412,6 +423,7 @@
 				8480A2242E00000000000001 /* LoginItemManaging.swift in Sources */,
 				8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */,
 				8480A2302E00000000000001 /* Diagnostics.swift in Sources */,
+				8480A23D2E00000000000001 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

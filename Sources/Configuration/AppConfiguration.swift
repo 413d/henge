@@ -4,7 +4,8 @@ struct AppConfiguration: Codable, Equatable {
         isEnabled: true,
         launchAtLogin: true,
         shortcut: .defaultFixText,
-        excludedApplicationBundleIdentifiers: []
+        excludedApplicationBundleIdentifiers: [],
+        hasCompletedOnboarding: false
     )
 
     var schemaVersion: Int
@@ -12,6 +13,7 @@ struct AppConfiguration: Codable, Equatable {
     var launchAtLogin: Bool
     var shortcut: Shortcut
     var excludedApplicationBundleIdentifiers: [String]
+    var hasCompletedOnboarding: Bool
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -19,6 +21,7 @@ struct AppConfiguration: Codable, Equatable {
         case launchAtLogin
         case shortcut
         case excludedApplicationBundleIdentifiers
+        case hasCompletedOnboarding
     }
 
     init(
@@ -26,13 +29,15 @@ struct AppConfiguration: Codable, Equatable {
         isEnabled: Bool = true,
         launchAtLogin: Bool = true,
         shortcut: Shortcut = .defaultFixText,
-        excludedApplicationBundleIdentifiers: [String] = []
+        excludedApplicationBundleIdentifiers: [String] = [],
+        hasCompletedOnboarding: Bool = false
     ) {
         self.schemaVersion = schemaVersion
         self.isEnabled = isEnabled
         self.launchAtLogin = launchAtLogin
         self.shortcut = shortcut
         self.excludedApplicationBundleIdentifiers = Array(Set(excludedApplicationBundleIdentifiers)).sorted()
+        self.hasCompletedOnboarding = hasCompletedOnboarding
     }
 
     init(from decoder: Decoder) throws {
@@ -44,5 +49,6 @@ struct AppConfiguration: Codable, Equatable {
         excludedApplicationBundleIdentifiers = Array(
             Set(try values.decodeIfPresent([String].self, forKey: .excludedApplicationBundleIdentifiers) ?? [])
         ).sorted()
+        hasCompletedOnboarding = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
     }
 }

@@ -204,6 +204,7 @@ protocol AppRuntime {
     var clipboardManager: ClipboardManaging { get }
 
     func openAccessibilitySettings()
+    func requestAccessibilityPermission()
     func setActivationHandler(_ handler: (@Sendable () -> Void)?)
     @MainActor
     func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool
@@ -220,6 +221,10 @@ protocol AppRuntime {
 }
 
 extension AppRuntime {
+    func requestAccessibilityPermission() {
+        openAccessibilitySettings()
+    }
+
     func setActivationHandler(_ handler: (@Sendable () -> Void)?) {}
 
     @MainActor
@@ -339,6 +344,16 @@ final class LiveAppRuntime: AppRuntime {
         } else {
             openURL()
         }
+    }
+
+    func requestAccessibilityPermission() {
+        if !AXIsProcessTrusted() {
+            // kAXTrustedCheckOptionPrompt is the literal "AXTrustedCheckOptionPrompt"
+            // (Swift 6 concurrency: the exported var is not sendable-safe).
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+        }
+        openAccessibilitySettings()
     }
 
     @MainActor
