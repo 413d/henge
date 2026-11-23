@@ -131,11 +131,168 @@ struct ClipboardManagerTests {
         #expect(manager.restore(snapshot) == false)
         #expect(backing.changeCount == 7)
     }
+
+    @Test
+    func restoreFallsBackToPlainTextWhenWriteFails() {
+        let backing = FakePasteboardBacking(changeCount: 10, pasteboardItems: nil)
+        backing.writeObjectsResult = false
+        backing.writePlainTextFallbackResult = true
+        let manager = AppKitClipboardManager(pasteboard: backing)
+
+        let snapshot = ClipboardSnapshot(
+            changeCount: 10,
+            items: [
+                PasteboardItemSnapshot(representations: [
+                    "public.png": Data([0x89, 0x50, 0x4E, 0x47]),
+                    "public.utf8-plain-text": Data("fallback text".utf8)
+                ])
+            ]
+        )
+
+        let restored = manager.restore(snapshot)
+
+        #expect(restored == true)
+        #expect(backing.writeObjectsCallCount == 1)
+        #expect(backing.clearContentsCallCount == 2)
+        #expect(backing.writtenPlainTextFallbacks == ["fallback text"])
+        #expect(backing.pasteboardItems?.count == 1)
+        #expect(backing.pasteboardItems?.first?.string(forType: .string) == "fallback text")
+    }
+
+    @Test
+    func restoreReportsFailureWhenNoPlainTextRepresentation() {
+        let backing = FakePasteboardBacking(changeCount: 10, pasteboardItems: nil)
+        backing.writeObjectsResult = false
+        let manager = AppKitClipboardManager(pasteboard: backing)
+
+        let snapshot = ClipboardSnapshot(
+            changeCount: 10,
+            items: [
+                PasteboardItemSnapshot(representations: [
+                    "public.png": Data([0x89, 0x50, 0x4E, 0x47])
+                ])
+            ]
+        )
+
+        let restored = manager.restore(snapshot)
+
+        #expect(restored == false)
+        #expect(backing.writeObjectsCallCount == 1)
+        #expect(backing.writtenPlainTextFallbacks.isEmpty)
+    }
+
+    @Test
+    func restoreReportsFailureWhenPlainTextFallbackAlsoFails() {
+        let backing = FakePasteboardBacking(changeCount: 10, pasteboardItems: nil)
+        backing.writeObjectsResult = false
+        backing.writePlainTextFallbackResult = false
+        let manager = AppKitClipboardManager(pasteboard: backing)
+
+        let snapshot = ClipboardSnapshot(
+            changeCount: 10,
+            items: [
+                PasteboardItemSnapshot(representations: [
+                    "public.utf8-plain-text": Data("hello".utf8)
+                ])
+            ]
+        )
+
+        let restored = manager.restore(snapshot)
+
+        #expect(restored == false)
+        #expect(backing.writtenPlainTextFallbacks == ["hello"])
+    }
+
+    @Test
+    func restoreWritesAllRepresentationsOnSuccess() {
+        let backing = FakePasteboardBacking(changeCount: 1, pasteboardItems: nil)
+        let manager = AppKitClipboardManager(pasteboard: backing)
+
+        let utf8Data = Data("styled".utf8)
+        let htmlData = Data("<b>styled</b>".utf8)
+        let snapshot = ClipboardSnapshot(
+            changeCount: 1,
+            items: [
+                PasteboardItemSnapshot(representations: [
+                    "public.utf8-plain-text": utf8Data,
+                    "public.html": htmlData
+                ])
+            ]
+        )
+
+        let restored = manager.restore(snapshot)
+
+        #expect(restored == true)
+        #expect(backing.writtenPlainTextFallbacks.isEmpty)
+        #expect(backing.pasteboardItems?.count == 1)
+        let writtenItem = backing.pasteboardItems?.first
+        #expect(writtenItem?.data(forType: NSPasteboard.PasteboardType("public.utf8-plain-text")) == utf8Data)
+        #expect(writtenItem?.data(forType: NSPasteboard.PasteboardType("public.html")) == htmlData)
+    }
+
+    @Test
+    func snapshotReadsChangeCountFromBacking() {
+        let item = NSPasteboardItem()
+        item.setString("text", forType: .string)
+        let backing = FakePasteboardBacking(changeCount: 42, pasteboardItems: [item])
+        let manager = AppKitClipboardManager(pasteboard: backing)
+
+        let first = manager.snapshot()
+        #expect(first.changeCount == 42)
+
+        backing.changeCount = 99
+        let second = manager.snapshot()
+        #expect(second.changeCount == 99)
+    }
+
+    @Test
+    func plainTextFallbackFollowsPriorityAndRtfFallback() {
+        let rtfData = Data("{\\rtf1\\ansi RTF text}".utf8)
+        let utf16Data = "utf16 text".data(using: .utf16)!
+        let plainData = Data("plain text".utf8)
+        let utf8Data = Data("utf8 text".utf8)
+
+        let all = [PasteboardItemSnapshot(representations: [
+            "public.utf8-plain-text": utf8Data,
+            "public.utf16-plain-text": utf16Data,
+            "public.plain-text": plainData,
+            "public.rtf": rtfData
+        ])]
+        #expect(AppKitClipboardManager.plainTextFallback(in: all) == "utf8 text")
+
+        let noUtf8 = [PasteboardItemSnapshot(representations: [
+            "public.utf16-plain-text": utf16Data,
+            "public.plain-text": plainData,
+            "public.rtf": rtfData
+        ])]
+        #expect(AppKitClipboardManager.plainTextFallback(in: noUtf8) == "utf16 text")
+
+        let plainAndRtf = [PasteboardItemSnapshot(representations: [
+            "public.plain-text": plainData,
+            "public.rtf": rtfData
+        ])]
+        #expect(AppKitClipboardManager.plainTextFallback(in: plainAndRtf) == "plain text")
+
+        let rtfOnly = [PasteboardItemSnapshot(representations: [
+            "public.rtf": rtfData
+        ])]
+        #expect(AppKitClipboardManager.plainTextFallback(in: rtfOnly) == "RTF text")
+
+        let binaryOnly = [PasteboardItemSnapshot(representations: [
+            "public.png": Data([0x01, 0x02])
+        ])]
+        #expect(AppKitClipboardManager.plainTextFallback(in: binaryOnly) == nil)
+    }
 }
 
 private final class FakePasteboardBacking: PasteboardBacking {
     var changeCount: Int
     var pasteboardItems: [NSPasteboardItem]?
+    var writeObjectsResult: Bool = true
+    var writePlainTextFallbackResult: Bool = true
+    private(set) var clearContentsCallCount: Int = 0
+    private(set) var writeObjectsCallCount: Int = 0
+    private(set) var writtenPlainTextFallbacks: [String] = []
 
     init(changeCount: Int, pasteboardItems: [NSPasteboardItem]?) {
         self.changeCount = changeCount
@@ -144,14 +301,31 @@ private final class FakePasteboardBacking: PasteboardBacking {
 
     @discardableResult
     func clearContents() -> Int {
+        clearContentsCallCount += 1
         changeCount += 1
         pasteboardItems = nil
         return changeCount
     }
 
     func writeObjects(_ objects: [NSPasteboardWriting]) -> Bool {
+        writeObjectsCallCount += 1
+        guard writeObjectsResult else {
+            return false
+        }
         changeCount += 1
         pasteboardItems = objects.compactMap { $0 as? NSPasteboardItem }
+        return true
+    }
+
+    func writePlainTextFallback(_ string: String) -> Bool {
+        writtenPlainTextFallbacks.append(string)
+        guard writePlainTextFallbackResult else {
+            return false
+        }
+        changeCount += 1
+        let item = NSPasteboardItem()
+        item.setString(string, forType: .string)
+        pasteboardItems = [item]
         return true
     }
 }
