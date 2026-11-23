@@ -623,6 +623,65 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func coordinatorStatusRefreshDoesNotWriteWhenStateMatches() {
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true)
+        )
+        let loginItemManager = FakeLoginItemManager(currentStatus: .enabled)
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        #expect(store.saveCount == 0)
+
+        for _ in 0..<5 {
+            coordinator.refreshPermissions()
+        }
+
+        #expect(store.saveCount == 0)
+    }
+
+    @Test
+    func coordinatorStatusRefreshWritesOnceWhenStateMismatches() {
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true)
+        )
+        let loginItemManager = FakeLoginItemManager(currentStatus: .disabled)
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        // Initial mismatch is normalized once during init.
+        #expect(store.saveCount == 1)
+        #expect(store.load().launchAtLogin == false)
+
+        for _ in 0..<5 {
+            coordinator.refreshPermissions()
+        }
+        #expect(store.saveCount == 1)
+
+        // Subsequent system-state drift triggers a single corrective write.
+        loginItemManager.updateStatus(.enabled)
+        for _ in 0..<5 {
+            coordinator.refreshPermissions()
+        }
+        #expect(store.saveCount == 2)
+        #expect(store.load().launchAtLogin == true)
+    }
+
+    @Test
     func quitApplicationUnregistersHotkeyBeforeTermination() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
@@ -699,6 +758,24 @@ private extension AppEnvironment {
             runtime: runtime,
             loginItemManager: InMemoryLoginItemManager(initialEnabled: true)
         )
+    }
+}
+
+private final class CountingConfigurationStore: ConfigurationStore {
+    private var configuration: AppConfiguration
+    private(set) var saveCount = 0
+
+    init(initialConfiguration: AppConfiguration = .default) {
+        configuration = initialConfiguration
+    }
+
+    func load() -> AppConfiguration {
+        configuration
+    }
+
+    func save(_ configuration: AppConfiguration) {
+        saveCount += 1
+        self.configuration = configuration
     }
 }
 

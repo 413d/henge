@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ final class HengeCoordinator: ObservableObject {
     private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
     private let exceptionMatcher = ExceptionMatcher()
+    private let configLogger = Diagnostics.logger(.config)
     private var isExecutingFixText = false
 
     init(
@@ -43,6 +45,8 @@ final class HengeCoordinator: ObservableObject {
 
         if normalizedConfiguration != loadedConfiguration {
             environment.configurationStore.save(normalizedConfiguration)
+        } else {
+            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
         }
 
         state = ApplicationState(
@@ -129,13 +133,17 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func setEnabled(_ isEnabled: Bool) {
-        state.configuration.isEnabled = isEnabled
-        configurationStore.save(state.configuration)
+        let previousConfiguration = state.configuration
+        if state.configuration.isEnabled != isEnabled {
+            state.configuration.isEnabled = isEnabled
+        }
+        saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
     }
 
     func setLaunchAtLogin(_ launchAtLogin: Bool) {
         let previousState = state.launchAtLoginEnabled
+        let previousConfiguration = state.configuration
         state.launchAtLoginError = nil
 
         do {
@@ -148,28 +156,32 @@ final class HengeCoordinator: ObservableObject {
 
             state.launchAtLoginEnabled = actualState
             state.configuration.launchAtLogin = actualState
-            configurationStore.save(state.configuration)
+            saveConfigurationIfChanged(from: previousConfiguration)
         } catch {
             state.launchAtLoginEnabled = previousState
             state.configuration.launchAtLogin = previousState
             state.launchAtLoginError = error.localizedDescription
-            configurationStore.save(state.configuration)
+            saveConfigurationIfChanged(from: previousConfiguration)
         }
     }
 
     func resetConfigurationToDefaults() {
+        let previousConfiguration = state.configuration
         state.configuration = AppConfiguration.default
         // launchAtLogin mirrors the system login-item state, not the config default.
         let systemLaunchAtLogin = currentLaunchAtLoginEnabled()
         state.launchAtLoginEnabled = systemLaunchAtLogin
         state.configuration.launchAtLogin = systemLaunchAtLogin
         state.lastProbeStatus = nil
-        configurationStore.save(state.configuration)
+        saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
     }
 
     func setShortcut(_ shortcut: Shortcut) {
-        guard shortcut != state.configuration.shortcut else { return }
+        guard shortcut != state.configuration.shortcut else {
+            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
+            return
+        }
 
         if state.configuration.isEnabled {
             do {
@@ -227,23 +239,34 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func addApplicationException(_ application: ApplicationIdentity) {
-        state.configuration.excludedApplicationBundleIdentifiers = exceptionManager.add(
+        let previousConfiguration = state.configuration
+        let updated = exceptionManager.add(
             application,
             to: state.configuration.excludedApplicationBundleIdentifiers
         )
-        configurationStore.save(state.configuration)
+        if state.configuration.excludedApplicationBundleIdentifiers != updated {
+            state.configuration.excludedApplicationBundleIdentifiers = updated
+        }
+        saveConfigurationIfChanged(from: previousConfiguration)
     }
 
     func removeApplicationException(bundleIdentifier: String) {
-        state.configuration.excludedApplicationBundleIdentifiers = exceptionManager.remove(
+        let previousConfiguration = state.configuration
+        let updated = exceptionManager.remove(
             bundleIdentifier: bundleIdentifier,
             from: state.configuration.excludedApplicationBundleIdentifiers
         )
-        configurationStore.save(state.configuration)
+        if state.configuration.excludedApplicationBundleIdentifiers != updated {
+            state.configuration.excludedApplicationBundleIdentifiers = updated
+        }
+        saveConfigurationIfChanged(from: previousConfiguration)
     }
 
     func refreshPermissions() {
-        state.accessibilityGranted = runtime.hasAccessibilityPermission
+        let accessibilityGranted = runtime.hasAccessibilityPermission
+        if state.accessibilityGranted != accessibilityGranted {
+            state.accessibilityGranted = accessibilityGranted
+        }
         syncLaunchAtLoginState()
     }
 
@@ -264,10 +287,26 @@ final class HengeCoordinator: ObservableObject {
     }
 
     private func syncLaunchAtLoginState() {
-        let actualStatus = currentLaunchAtLoginEnabled()
-        state.launchAtLoginEnabled = actualStatus
-        state.configuration.launchAtLogin = actualStatus
-        state.launchAtLoginError = nil
+        let resolved = currentLaunchAtLoginEnabled()
+        if state.launchAtLoginEnabled != resolved {
+            state.launchAtLoginEnabled = resolved
+        }
+        if state.launchAtLoginError != nil {
+            state.launchAtLoginError = nil
+        }
+        guard state.configuration.launchAtLogin != resolved else {
+            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
+            return
+        }
+        state.configuration.launchAtLogin = resolved
+        configurationStore.save(state.configuration)
+    }
+
+    private func saveConfigurationIfChanged(from previousConfiguration: AppConfiguration) {
+        guard state.configuration != previousConfiguration else {
+            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
+            return
+        }
         configurationStore.save(state.configuration)
     }
 
