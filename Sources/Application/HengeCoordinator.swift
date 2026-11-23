@@ -60,6 +60,12 @@ final class HengeCoordinator: ObservableObject {
         )
 
         updateHotkeyRegistration()
+
+        environment.runtime.setActivationHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.refreshPermissions()
+            }
+        }
     }
 
     var isEnabled: Bool {

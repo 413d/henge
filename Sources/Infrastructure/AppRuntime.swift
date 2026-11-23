@@ -144,6 +144,7 @@ protocol AppRuntime {
     var clipboardManager: ClipboardManaging { get }
 
     func openAccessibilitySettings()
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?)
     @MainActor
     func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws
@@ -159,6 +160,8 @@ protocol AppRuntime {
 }
 
 extension AppRuntime {
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?) {}
+
     @MainActor
     func prepareTargetApplicationForFixText(_ application: ApplicationIdentity) async -> Bool {
         true
@@ -228,6 +231,10 @@ final class LiveAppRuntime: AppRuntime {
 
     func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity? {
         applicationProvider.application(bundleIdentifier: bundleIdentifier)
+    }
+
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?) {
+        applicationProvider.setActivationHandler(handler)
     }
 
     init(

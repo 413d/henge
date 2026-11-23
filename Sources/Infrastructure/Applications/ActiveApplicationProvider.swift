@@ -100,6 +100,7 @@ protocol ActiveApplicationProviding {
     func isFrontmost(_ application: ApplicationIdentity) -> Bool
     @discardableResult
     func activateApplication(_ application: ApplicationIdentity) -> Bool
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?)
 }
 
 extension ActiveApplicationProviding {
@@ -115,6 +116,8 @@ extension ActiveApplicationProviding {
     func activateApplication(_ application: ApplicationIdentity) -> Bool {
         true
     }
+
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?) {}
 }
 
 final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unchecked Sendable {
@@ -127,6 +130,7 @@ final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unc
     private let selfBundleIdentifier: String?
     private let lock = NSLock()
     private var lastExternalApplication: TrackedApplication?
+    private var activationHandler: (@Sendable () -> Void)?
     private var observerToken: AnyObject?
 
     init(
@@ -214,6 +218,12 @@ final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unc
         return workspace.activateApplication(processIdentifier: pid)
     }
 
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?) {
+        lock.lock()
+        activationHandler = handler
+        lock.unlock()
+    }
+
     private func recordActivation(_ snapshot: WorkspaceApplicationSnapshot) {
         guard !snapshot.isTerminated,
               let identity = externalIdentity(from: snapshot) else {
@@ -221,6 +231,10 @@ final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unc
         }
 
         storeTracked(TrackedApplication(identity: identity, processIdentifier: snapshot.processIdentifier))
+        lock.lock()
+        let handler = activationHandler
+        lock.unlock()
+        handler?()
     }
 
     private func externalIdentity(from snapshot: WorkspaceApplicationSnapshot) -> ApplicationIdentity? {

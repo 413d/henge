@@ -227,6 +227,57 @@ struct MenuBarActionsTests {
     }
 
     @Test
+    func activeApplicationProviderReportsActivations() {
+        final class Counter: @unchecked Sendable {
+            private let lock = NSLock()
+            private var value = 0
+
+            func increment() {
+                lock.lock()
+                value += 1
+                lock.unlock()
+            }
+
+            var count: Int {
+                lock.lock()
+                defer { lock.unlock() }
+                return value
+            }
+        }
+
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: henge,
+            running: [notes, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let counter = Counter()
+        provider.setActivationHandler {
+            counter.increment()
+        }
+
+        workspace.simulateActivation(henge)
+        #expect(counter.count == 0)
+
+        workspace.simulateActivation(notes)
+        #expect(counter.count == 1)
+    }
+
+    @Test
     func triggerFixTextRestoresTargetFocusAfterMenuDismissalAndTransformsWordEndToEnd() async {
         let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
         let runtime = MenuBarEditorRuntime(
@@ -384,45 +435,25 @@ struct MenuBarActionsTests {
     }
 
     @Test
-    func menuBarLifecycleObserverRefreshesPermissionsOnMenuOpenAndWorkspaceActivation() async {
-        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
-        let runtime = MenuBarEditorRuntime(
-            hasAccessibilityPermission: false,
-            activeApplication: notes,
-            initiallyFocused: true,
-            text: "ghbdtn",
-            selectedRange: SelectionRangeSnapshot(location: 0, length: 6),
-            isSecure: false
-        )
-        let useCase = LiveFixTextUseCase(
-            runtime: runtime,
-            transformer: SimpleTextTransformer(
-                detector: MajorityLayoutDetector(),
-                mapper: runtime.layoutMapper,
-                casePreserver: DefaultCasePreserver()
-            )
-        )
+    func menuBarLifecycleObserverRefreshesPermissions() async {
+        let runtime = MenuBarTestRuntime(hasAccessibilityPermission: false)
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: useCase,
+                fixTextUseCase: DeferredFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             )
         )
         let menuCenter = NotificationCenter()
-        let workspaceCenter = NotificationCenter()
-        let observer = MenuBarLifecycleObserver(
-            menuNotificationCenter: menuCenter,
-            workspaceNotificationCenter: workspaceCenter
-        )
+        let observer = MenuBarLifecycleObserver(menuNotificationCenter: menuCenter)
         observer.bind(coordinator: coordinator)
 
         #expect(coordinator.state.accessibilityGranted == false)
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
 
         runtime.hasAccessibilityPermission = true
-        workspaceCenter.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        runtime.activationHandler?()
         await Task.yield()
 
         #expect(coordinator.state.accessibilityGranted == true)
@@ -462,9 +493,14 @@ private final class MenuBarTestRuntime: AppRuntime {
     )
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
+    var activationHandler: (@Sendable () -> Void)?
 
     init(hasAccessibilityPermission: Bool) {
         self.hasAccessibilityPermission = hasAccessibilityPermission
+    }
+
+    func setActivationHandler(_ handler: (@Sendable () -> Void)?) {
+        activationHandler = handler
     }
 
     func openAccessibilitySettings() {}
