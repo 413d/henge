@@ -40,7 +40,10 @@ struct HengeApp: App {
             MenuBarView()
                 .environmentObject(coordinator)
         } label: {
-            MenuBarIconLabel(symbolName: coordinator.statusItemSymbolName)
+            MenuBarIconLabel(
+                state: coordinator.statusItemState,
+                symbolName: coordinator.statusItemSymbolName
+            )
         }
     }
 }

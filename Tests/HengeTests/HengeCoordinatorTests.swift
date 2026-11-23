@@ -121,6 +121,7 @@ struct HengeCoordinatorTests {
 
         coordinator.setEnabled(false)
 
+        #expect(coordinator.statusItemState == .disabled)
         #expect(coordinator.statusItemSymbolName == "cloud")
     }
 
@@ -134,6 +135,7 @@ struct HengeCoordinatorTests {
             )
         )
 
+        #expect(coordinator.statusItemState == .active)
         #expect(coordinator.statusItemSymbolName == "cloud.fill")
     }
 
@@ -147,6 +149,7 @@ struct HengeCoordinatorTests {
             )
         )
 
+        #expect(coordinator.statusItemState == .permissionRequired)
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
     }
 
@@ -163,7 +166,28 @@ struct HengeCoordinatorTests {
             )
         )
 
+        #expect(coordinator.statusItemState == .degraded)
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
+    }
+
+    @Test
+    func statusItemStateDisabledTakesPrecedenceOverPermissionAndHotkeyIssues() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: false, shortcut: .defaultFixText))
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(
+                    hasAccessibilityPermission: false,
+                    registrationError: HotkeyRegistrationError.unsupportedShortcut("X")
+                )
+            )
+        )
+
+        #expect(coordinator.statusItemState == .disabled)
+        #expect(coordinator.statusItemSymbolName == "cloud")
     }
 
     @Test

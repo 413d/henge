@@ -1,3 +1,10 @@
+enum MenuBarIconState: Equatable, Hashable, Sendable {
+    case active
+    case disabled
+    case permissionRequired
+    case degraded
+}
+
 struct ApplicationState: Equatable {
     var configuration: AppConfiguration
     var accessibilityGranted: Bool

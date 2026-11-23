@@ -5,21 +5,56 @@ enum MenuBarIcon {
     static let resourceName = "HengeMenuBar"
     static let resourceExtension = "png"
     static let pointSize = NSSize(width: 22, height: 22)
+    static let pixelScale = 2
+    static let disabledAlpha: CGFloat = 0.40
     static let fallbackSystemSymbolName = "cloud.fill"
 
     @MainActor
-    private static let mainBundleTemplateImage: NSImage? = loadTemplateImage(from: .main)
+    private static var mainBundleImages: [MenuBarIconState: NSImage] = [:]
 
     @MainActor
     static func templateImage(in bundle: Bundle = .main) -> NSImage? {
+        templateImage(for: .active, in: bundle)
+    }
+
+    @MainActor
+    static func templateImage(for state: MenuBarIconState, in bundle: Bundle = .main) -> NSImage? {
         if bundle === Bundle.main {
-            return mainBundleTemplateImage
+            if let cached = mainBundleImages[state] {
+                return cached
+            }
+            guard let rendered = loadTemplateImage(for: state, from: bundle) else {
+                return nil
+            }
+            mainBundleImages[state] = rendered
+            return rendered
         }
 
-        return loadTemplateImage(from: bundle)
+        return loadTemplateImage(for: state, from: bundle)
     }
 
     static func loadTemplateImage(from bundle: Bundle) -> NSImage? {
+        loadTemplateImage(for: .active, from: bundle)
+    }
+
+    static func loadTemplateImage(for state: MenuBarIconState, from bundle: Bundle) -> NSImage? {
+        guard let baseImage = loadBaseTemplateImage(from: bundle) else {
+            return nil
+        }
+
+        switch state {
+        case .active:
+            return baseImage
+        case .disabled:
+            return renderImage(from: baseImage, alpha: disabledAlpha, badge: nil)
+        case .permissionRequired:
+            return renderImage(from: baseImage, alpha: 1.0, badge: .solidDot)
+        case .degraded:
+            return renderImage(from: baseImage, alpha: 1.0, badge: .ring)
+        }
+    }
+
+    private static func loadBaseTemplateImage(from bundle: Bundle) -> NSImage? {
         let loadedImage: NSImage?
         if let url = bundle.url(forResource: resourceName, withExtension: resourceExtension) {
             loadedImage = NSImage(contentsOf: url)
@@ -42,6 +77,127 @@ enum MenuBarIcon {
         return image
     }
 
+    private enum BadgeStyle {
+        case solidDot
+        case ring
+    }
+
+    private static func renderImage(
+        from baseImage: NSImage,
+        alpha: CGFloat,
+        badge: BadgeStyle?
+    ) -> NSImage? {
+        let pixelsWide = Int(pointSize.width) * pixelScale
+        let pixelsHigh = Int(pointSize.height) * pixelScale
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelsWide,
+            pixelsHigh: pixelsHigh,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return nil
+        }
+        bitmap.size = pointSize
+
+        guard let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+            return nil
+        }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        defer { NSGraphicsContext.restoreGraphicsState() }
+
+        let targetRect = NSRect(origin: .zero, size: pointSize)
+        baseImage.draw(
+            in: targetRect,
+            from: .zero,
+            operation: .sourceOver,
+            fraction: alpha
+        )
+
+        if let badge {
+            drawBadge(badge, in: context)
+        }
+
+        let image = NSImage(size: pointSize)
+        image.addRepresentation(bitmap)
+        image.isTemplate = true
+        image.accessibilityDescription = "Henge"
+        return image
+    }
+
+    private static func drawBadge(_ style: BadgeStyle, in context: NSGraphicsContext) {
+        let center = NSPoint(x: 18.0, y: 3.5)
+        let haloRadius: CGFloat = 3.5
+        let haloRect = NSRect(
+            x: center.x - haloRadius,
+            y: center.y - haloRadius,
+            width: haloRadius * 2,
+            height: haloRadius * 2
+        )
+
+        context.compositingOperation = .clear
+        NSColor.clear.setFill()
+        NSBezierPath(ovalIn: haloRect).fill()
+
+        context.compositingOperation = .sourceOver
+        NSColor.black.setFill()
+        NSColor.black.setStroke()
+
+        switch style {
+        case .solidDot:
+            let dotRadius: CGFloat = 2.5
+            let dotRect = NSRect(
+                x: center.x - dotRadius,
+                y: center.y - dotRadius,
+                width: dotRadius * 2,
+                height: dotRadius * 2
+            )
+            NSBezierPath(ovalIn: dotRect).fill()
+        case .ring:
+            let ringRadius: CGFloat = 2.25
+            let ringRect = NSRect(
+                x: center.x - ringRadius,
+                y: center.y - ringRadius,
+                width: ringRadius * 2,
+                height: ringRadius * 2
+            )
+            let path = NSBezierPath(ovalIn: ringRect)
+            path.lineWidth = 1.5
+            path.stroke()
+        }
+    }
+
+    static func fallbackSymbolName(for state: MenuBarIconState) -> String {
+        switch state {
+        case .disabled:
+            return "cloud"
+        case .permissionRequired, .degraded:
+            return "exclamationmark.cloud"
+        case .active:
+            return fallbackSystemSymbolName
+        }
+    }
+
+    static func accessibilityValue(for state: MenuBarIconState) -> String {
+        switch state {
+        case .active:
+            return "Active"
+        case .disabled:
+            return "Disabled"
+        case .permissionRequired:
+            return "Accessibility permission required"
+        case .degraded:
+            return "Shortcut registration degraded"
+        }
+    }
+
     @MainActor
     static func resolvedFallbackSymbolName(
         preferred: String,
@@ -60,22 +216,30 @@ enum MenuBarIcon {
 }
 
 struct MenuBarIconLabel: View {
+    let state: MenuBarIconState
     let symbolName: String
     let bundle: Bundle
 
-    init(symbolName: String, bundle: Bundle = .main) {
-        self.symbolName = symbolName
+    init(
+        state: MenuBarIconState = .active,
+        symbolName: String? = nil,
+        bundle: Bundle = .main
+    ) {
+        self.state = state
+        self.symbolName = symbolName ?? MenuBarIcon.fallbackSymbolName(for: state)
         self.bundle = bundle
     }
 
     var body: some View {
-        if let image = MenuBarIcon.templateImage(in: bundle) {
+        if let image = MenuBarIcon.templateImage(for: state, in: bundle) {
             Image(nsImage: image)
                 .renderingMode(.template)
                 .accessibilityLabel(Text("Henge"))
+                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state)))
         } else {
             Image(systemName: MenuBarIcon.resolvedFallbackSymbolName(preferred: symbolName))
                 .accessibilityLabel(Text("Henge"))
+                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state)))
         }
     }
 }

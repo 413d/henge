@@ -164,16 +164,31 @@ final class HengeCoordinator: ObservableObject {
         runtime.applicationIdentity(for: bundleIdentifier)?.displayName ?? bundleIdentifier
     }
 
-    var statusItemSymbolName: String {
+    var statusItemState: MenuBarIconState {
         guard state.configuration.isEnabled else {
+            return .disabled
+        }
+
+        if !state.accessibilityGranted {
+            return .permissionRequired
+        }
+
+        if !state.hotkeyRegistered {
+            return .degraded
+        }
+
+        return .active
+    }
+
+    var statusItemSymbolName: String {
+        switch statusItemState {
+        case .disabled:
             return "cloud"
-        }
-
-        if !state.hotkeyRegistered || !state.accessibilityGranted {
+        case .permissionRequired, .degraded:
             return "exclamationmark.cloud"
+        case .active:
+            return "cloud.fill"
         }
-
-        return "cloud.fill"
     }
 
     func setEnabled(_ isEnabled: Bool) {

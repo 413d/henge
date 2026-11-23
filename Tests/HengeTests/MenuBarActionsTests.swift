@@ -454,6 +454,7 @@ struct MenuBarActionsTests {
         observer.bind(coordinator: coordinator)
 
         #expect(coordinator.state.accessibilityGranted == false)
+        #expect(coordinator.statusItemState == .permissionRequired)
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
 
         runtime.hasAccessibilityPermission = true
@@ -461,6 +462,7 @@ struct MenuBarActionsTests {
         await Task.yield()
 
         #expect(coordinator.state.accessibilityGranted == true)
+        #expect(coordinator.statusItemState == .active)
         #expect(coordinator.statusItemSymbolName == "cloud.fill")
 
         runtime.hasAccessibilityPermission = false
@@ -468,6 +470,7 @@ struct MenuBarActionsTests {
         await Task.yield()
 
         #expect(coordinator.state.accessibilityGranted == false)
+        #expect(coordinator.statusItemState == .permissionRequired)
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
         withExtendedLifetime(observer) {}
     }
