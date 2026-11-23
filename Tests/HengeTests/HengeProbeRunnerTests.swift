@@ -53,6 +53,22 @@ struct HengeProbeRunnerTests {
     }
 
     @Test
+    func clipboardProbeDoesNotWriteMarkerWhenSnapshotIsNotRestorable() {
+        let nonRestorable = ClipboardSnapshot(
+            changeCount: 3,
+            items: [PasteboardItemSnapshot(representations: ["public.png": Data([0x01, 0x02])])],
+            oversizedTypes: ["public.png"]
+        )
+        let manager = SpyProbeClipboardManager(snapshotToReturn: nonRestorable)
+
+        let output = HengeProbeRunner.runClipboardProbe(manager: manager)
+
+        #expect(output.contains("not restorable"))
+        #expect(output.contains("Clipboard snapshot contains oversized representations and is not restorable; skipping test marker write to protect user data."))
+        #expect(manager.restoredSnapshots.isEmpty)
+    }
+
+    @Test
     func helpProbeDescribesUsage() {
         let output = HengeProbeRunner.helpText()
         #expect(output.contains("--probe layout"))
@@ -179,5 +195,23 @@ private final class ProbeStubRuntime: AppRuntime {
 
     func replaceSelection(with text: String) -> SelectionWriteResult {
         .unavailable(.noSelection)
+    }
+}
+
+private final class SpyProbeClipboardManager: ClipboardManaging, @unchecked Sendable {
+    private let snapshotToReturn: ClipboardSnapshot
+    private(set) var restoredSnapshots: [ClipboardSnapshot] = []
+
+    init(snapshotToReturn: ClipboardSnapshot) {
+        self.snapshotToReturn = snapshotToReturn
+    }
+
+    func snapshot() -> ClipboardSnapshot {
+        snapshotToReturn
+    }
+
+    func restore(_ snapshot: ClipboardSnapshot) -> Bool {
+        restoredSnapshots.append(snapshot)
+        return true
     }
 }

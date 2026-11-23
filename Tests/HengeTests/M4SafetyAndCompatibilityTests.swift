@@ -152,6 +152,31 @@ struct M4SafetyAndCompatibilityTests {
         #expect(manager.restoredSnapshot == .empty)
     }
 
+    @Test
+    func clipboardFallbackSkipsWhenSnapshotIsOversized() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let initialChangeCount = pasteboard.changeCount
+        let oversizedSnapshot = ClipboardSnapshot(
+            changeCount: initialChangeCount,
+            items: [PasteboardItemSnapshot(representations: [
+                "public.png": Data([0x01, 0x02, 0x03])
+            ])],
+            oversizedTypes: ["public.png"]
+        )
+        let manager = TestReplacementClipboardManager(snapshot: oversizedSnapshot)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+
+        let didReplace = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+
+        #expect(didReplace == false)
+        #expect(pasteboard.changeCount == initialChangeCount)
+        #expect(pasteboard.string() == "original clipboard")
+        #expect(poster.copySucceeded == false)
+        #expect(poster.pastedText == nil)
+        #expect(manager.restoredSnapshot == nil)
+    }
+
     private func makeUseCase(_ runtime: M4RuntimeStub) -> LiveFixTextUseCase {
         LiveFixTextUseCase(
             runtime: runtime,

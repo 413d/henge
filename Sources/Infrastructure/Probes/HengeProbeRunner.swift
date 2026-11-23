@@ -111,6 +111,11 @@ enum HengeProbeRunner {
             lines.append("  item[\(index)] types: [\(types)]")
         }
 
+        guard original.isRestorable else {
+            lines.append("Clipboard snapshot contains oversized representations and is not restorable; skipping test marker write to protect user data.")
+            return lines.joined(separator: "\n")
+        }
+
         let marker = ClipboardSnapshot(
             changeCount: original.changeCount + 1,
             items: [PasteboardItemSnapshot(representations: ["public.utf8-plain-text": Data("henge-probe-marker".utf8)])]

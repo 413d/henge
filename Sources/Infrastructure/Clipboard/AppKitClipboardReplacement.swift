@@ -76,6 +76,7 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
     private let pasteboard: ReplacementPasteboard
     private let timeout: TimeInterval
     private let eventPoster: ClipboardEventPosting
+    private let logger = Diagnostics.logger(.clipboard)
 
     init(
         clipboardManager: ClipboardManaging,
@@ -114,6 +115,11 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         verifyReplacement: () -> Bool
     ) -> Bool {
         let originalClipboard = clipboardManager.snapshot()
+        guard originalClipboard.isRestorable else {
+            let typeNames = Diagnostics.pasteboardTypeNames(originalClipboard.oversizedTypes)?.joined(separator: ",") ?? "redacted"
+            logger.warning("\(DiagnosticsLabel.snapshotSkippedOversized.rawValue, privacy: .public) types=\(typeNames, privacy: .public)")
+            return false
+        }
         var didAttemptRestore = false
         defer {
             if !didAttemptRestore { _ = clipboardManager.restore(originalClipboard) }
