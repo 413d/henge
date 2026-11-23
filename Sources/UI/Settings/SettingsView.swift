@@ -10,15 +10,25 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("General") {
-                Toggle("Enable Henge", isOn: enabledBinding)
-                Toggle("Launch at Login", isOn: launchAtLoginBinding)
+            Section(L10n.string("settings.section.general", defaultValue: "General")) {
+                Toggle(
+                    L10n.string("settings.toggle.enable_henge", defaultValue: "Enable Henge"),
+                    isOn: enabledBinding
+                )
+                Toggle(
+                    L10n.string("settings.toggle.launch_at_login", defaultValue: "Launch at Login"),
+                    isOn: launchAtLoginBinding
+                )
 
-                LabeledContent("Global shortcut") {
+                LabeledContent(L10n.string("settings.label.global_shortcut", defaultValue: "Global shortcut")) {
                     HStack {
                         Text(coordinator.shortcutDescription)
                             .monospaced()
-                        Button(isRecordingShortcut ? "Press shortcut…" : "Change…") {
+                        Button(
+                            isRecordingShortcut
+                                ? L10n.string("settings.shortcut.press", defaultValue: "Press shortcut…")
+                                : L10n.string("settings.shortcut.change", defaultValue: "Change…")
+                        ) {
                             shortcutCaptureMessage = nil
                             isRecordingShortcut = true
                         }
@@ -29,15 +39,23 @@ struct SettingsView: View {
                     ShortcutRecorder { shortcut in
                         isRecordingShortcut = false
                         guard let shortcut else {
-                            shortcutCaptureMessage = "Use a key together with ⌘, ⌥, ⌃, or ⇧."
+                            shortcutCaptureMessage = L10n.string(
+                                "settings.shortcut.error_modifiers",
+                                defaultValue: "Use a key together with ⌘, ⌥, ⌃, or ⇧."
+                            )
                             return
                         }
                         coordinator.setShortcut(shortcut)
                     }
                     .frame(height: 30)
-                    Text("Press a key with at least one modifier. Escape cancels.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(
+                        L10n.string(
+                            "settings.shortcut.hint",
+                            defaultValue: "Press a key with at least one modifier. Escape cancels."
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 if let shortcutCaptureMessage {
                     Text(shortcutCaptureMessage)
@@ -57,25 +75,29 @@ struct SettingsView: View {
                 }
 
                 if coordinator.state.launchAtLoginStatus == .requiresApproval || coordinator.state.launchAtLoginError != nil {
-                    Button("Open Login Items…") {
+                    Button(L10n.string("settings.action.open_login_items", defaultValue: "Open Login Items…")) {
                         coordinator.openLoginItemSettings()
                     }
                 }
             }
 
-            Section("Permissions") {
-                Text(coordinator.state.accessibilityGranted ? "Accessibility permission is available." : "Accessibility permission is not granted yet.")
+            Section(L10n.string("settings.section.permissions", defaultValue: "Permissions")) {
+                Text(
+                    coordinator.state.accessibilityGranted
+                        ? L10n.string("settings.permissions.accessibility_granted", defaultValue: "Accessibility permission is available.")
+                        : L10n.string("settings.permissions.accessibility_missing", defaultValue: "Accessibility permission is not granted yet.")
+                )
 
                 if !coordinator.state.accessibilityGranted {
-                    Button("Open Accessibility Settings") {
+                    Button(L10n.string("action.open_accessibility_settings", defaultValue: "Open Accessibility Settings")) {
                         coordinator.openAccessibilitySettings()
                     }
                 }
             }
 
-            Section("Exceptions") {
+            Section(L10n.string("settings.section.exceptions", defaultValue: "Exceptions")) {
                 if coordinator.state.configuration.excludedApplicationBundleIdentifiers.isEmpty {
-                    Text("No excluded applications.")
+                    Text(L10n.string("settings.exceptions.empty", defaultValue: "No excluded applications."))
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(coordinator.state.configuration.excludedApplicationBundleIdentifiers, id: \.self) { bundleIdentifier in
@@ -87,19 +109,19 @@ struct SettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Button("Remove") {
+                            Button(L10n.string("settings.exceptions.remove", defaultValue: "Remove")) {
                                 coordinator.removeApplicationException(bundleIdentifier: bundleIdentifier)
                             }
                         }
                     }
                 }
 
-                Button("Add Application…") {
+                Button(L10n.string("settings.exceptions.add", defaultValue: "Add Application…")) {
                     isChoosingApplication = true
                 }
             }
 
-            Section("Text correction") {
+            Section(L10n.string("section.text_correction", defaultValue: "Text correction")) {
                 Text(fixTextStatusText)
                     .foregroundStyle(.secondary)
 
@@ -110,7 +132,10 @@ struct SettingsView: View {
             }
 
             Section {
-                Button("Reset Settings to Defaults…", role: .destructive) {
+                Button(
+                    L10n.string("settings.reset.button", defaultValue: "Reset Settings to Defaults…"),
+                    role: .destructive
+                ) {
                     isConfirmingReset = true
                 }
             }
@@ -120,12 +145,24 @@ struct SettingsView: View {
         .onAppear {
             coordinator.refreshPermissions()
         }
-        .confirmationDialog("Reset all Henge settings?", isPresented: $isConfirmingReset, titleVisibility: .visible) {
-            Button("Reset Settings", role: .destructive) {
+        .confirmationDialog(
+            L10n.string("settings.reset.dialog_title", defaultValue: "Reset all Henge settings?"),
+            isPresented: $isConfirmingReset,
+            titleVisibility: .visible
+        ) {
+            Button(
+                L10n.string("settings.reset.confirm", defaultValue: "Reset Settings"),
+                role: .destructive
+            ) {
                 coordinator.resetConfigurationToDefaults()
             }
         } message: {
-            Text("This restores the default shortcut and removes application exceptions.")
+            Text(
+                L10n.string(
+                    "settings.reset.dialog_message",
+                    defaultValue: "This restores the default shortcut and removes application exceptions."
+                )
+            )
         }
         .fileImporter(isPresented: $isChoosingApplication, allowedContentTypes: [.applicationBundle], allowsMultipleSelection: false) { result in
             guard case let .success(urls) = result,
@@ -168,7 +205,10 @@ struct SettingsView: View {
     private var fixTextStatusText: String {
         switch coordinator.fixTextAvailability {
         case .available:
-            return "Text correction is available."
+            return L10n.string(
+                "settings.text_correction.available",
+                defaultValue: "Text correction is available."
+            )
         case let .deferred(message):
             return message
         }
@@ -198,7 +238,10 @@ private final class ShortcutCaptureView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         NSColor.controlBackgroundColor.setFill()
         bounds.fill()
-        let text = "Type the new shortcut…"
+        let text = L10n.string(
+            "settings.shortcut.placeholder",
+            defaultValue: "Type the new shortcut…"
+        )
         (text as NSString).draw(at: NSPoint(x: 8, y: 6), withAttributes: [.foregroundColor: NSColor.secondaryLabelColor])
     }
 
@@ -272,7 +315,7 @@ final class SettingsWindowController {
                 rootView: SettingsView().environmentObject(coordinator)
             )
             let createdWindow = NSWindow(contentViewController: hostingController)
-            createdWindow.title = "Henge Settings"
+            createdWindow.title = L10n.string("settings.window.title", defaultValue: "Henge Settings")
             createdWindow.styleMask = [.titled, .closable, .miniaturizable]
             createdWindow.isReleasedWhenClosed = false
             createdWindow.setContentSize(NSSize(width: 520, height: 460))

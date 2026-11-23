@@ -21,7 +21,10 @@ extension FixTextUseCaseProtocol {
 
 struct DeferredFixTextUseCase: FixTextUseCaseProtocol {
     let availability: FixTextAvailability = .deferred(
-        "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated."
+        L10n.string(
+            "fix_text.availability.deferred",
+            defaultValue: "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated."
+        )
     )
 
     @discardableResult

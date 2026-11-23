@@ -73,7 +73,7 @@ enum MenuBarIcon {
             representation.size = pointSize
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Henge"
+        image.accessibilityDescription = L10n.string("app.name", defaultValue: "Henge", bundle: bundle)
         return image
     }
 
@@ -185,16 +185,32 @@ enum MenuBarIcon {
         }
     }
 
-    static func accessibilityValue(for state: MenuBarIconState) -> String {
+    static func accessibilityValue(for state: MenuBarIconState, bundle: Bundle = .main) -> String {
         switch state {
         case .active:
-            return "Active"
+            return L10n.string(
+                "menubar.icon.accessibility.active",
+                defaultValue: "Active",
+                bundle: bundle
+            )
         case .disabled:
-            return "Disabled"
+            return L10n.string(
+                "menubar.icon.accessibility.disabled",
+                defaultValue: "Disabled",
+                bundle: bundle
+            )
         case .permissionRequired:
-            return "Accessibility permission required"
+            return L10n.string(
+                "menubar.icon.accessibility.permission_required",
+                defaultValue: "Accessibility permission required",
+                bundle: bundle
+            )
         case .degraded:
-            return "Shortcut registration degraded"
+            return L10n.string(
+                "menubar.icon.accessibility.degraded",
+                defaultValue: "Shortcut registration degraded",
+                bundle: bundle
+            )
         }
     }
 
@@ -234,12 +250,12 @@ struct MenuBarIconLabel: View {
         if let image = MenuBarIcon.templateImage(for: state, in: bundle) {
             Image(nsImage: image)
                 .renderingMode(.template)
-                .accessibilityLabel(Text("Henge"))
-                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state)))
+                .accessibilityLabel(Text(L10n.string("app.name", defaultValue: "Henge", bundle: bundle)))
+                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state, bundle: bundle)))
         } else {
             Image(systemName: MenuBarIcon.resolvedFallbackSymbolName(preferred: symbolName))
-                .accessibilityLabel(Text("Henge"))
-                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state)))
+                .accessibilityLabel(Text(L10n.string("app.name", defaultValue: "Henge", bundle: bundle)))
+                .accessibilityValue(Text(MenuBarIcon.accessibilityValue(for: state, bundle: bundle)))
         }
     }
 }

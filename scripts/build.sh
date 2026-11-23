@@ -107,6 +107,16 @@ verify_bundle() {
         echo "verify: menu bar icon OK"
     fi
 
+    local lproj
+    for lproj in en ru; do
+        local strings_file="${app}/Contents/Resources/${lproj}.lproj/Localizable.strings"
+        [[ -f "$strings_file" ]] \
+            || { echo "error: missing localization strings: $strings_file" >&2; return 1; }
+        plutil -lint "$strings_file" >/dev/null \
+            || { echo "error: localization strings lint failed: $strings_file" >&2; return 1; }
+    done
+    echo "verify: localization strings (en, ru) OK"
+
     if [[ "${TARGET}" == "universal" ]]; then
         lipo "$exe" -verify_arch arm64 x86_64 \
             || { echo "error: executable is not universal arm64 + x86_64" >&2; return 1; }
@@ -167,6 +177,12 @@ fi
 
 if [[ -f "App/HengeMenuBar.png" ]]; then
     cp "App/HengeMenuBar.png" "${APP_DIR}/Contents/Resources/HengeMenuBar.png"
+fi
+
+if compgen -G "App/Localization/*.lproj" >/dev/null; then
+    for lproj_dir in App/Localization/*.lproj; do
+        cp -R "${lproj_dir}" "${APP_DIR}/Contents/Resources/$(basename "${lproj_dir}")"
+    done
 fi
 
 PLIST="${APP_DIR}/Contents/Info.plist"

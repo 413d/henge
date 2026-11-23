@@ -14,6 +14,7 @@
 		8480A2032E00000000000001 /* ApplicationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1232E00000000000001 /* ApplicationState.swift */; };
 		8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1242E00000000000001 /* FixTextUseCase.swift */; };
 		8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1252E00000000000001 /* HengeCoordinator.swift */; };
+		8480A2372E00000000000001 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2382E00000000000001 /* Localization.swift */; };
 		8480A2062E00000000000001 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1262E00000000000001 /* AppConfiguration.swift */; };
 		8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1272E00000000000001 /* ConfigurationStore.swift */; };
 		8480A2202E00000000000001 /* ConfigurationMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2212E00000000000001 /* ConfigurationMigrator.swift */; };
@@ -42,6 +43,7 @@
 		8480A2302E00000000000001 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2312E00000000000001 /* Diagnostics.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
+		8480A2392E00000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8480A23A2E00000000000001 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +57,7 @@
 		8480A1232E00000000000001 /* ApplicationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationState.swift; sourceTree = "<group>"; };
 		8480A1242E00000000000001 /* FixTextUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixTextUseCase.swift; sourceTree = "<group>"; };
 		8480A1252E00000000000001 /* HengeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeCoordinator.swift; sourceTree = "<group>"; };
+		8480A2382E00000000000001 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		8480A1262E00000000000001 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		8480A1272E00000000000001 /* ConfigurationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationStore.swift; sourceTree = "<group>"; };
 		8480A2212E00000000000001 /* ConfigurationMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationMigrator.swift; sourceTree = "<group>"; };
@@ -83,6 +86,8 @@
 		8480A2312E00000000000001 /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		8480A2282E00000000000001 /* Henge.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Henge.icns; sourceTree = "<group>"; };
 		8480A22A2E00000000000001 /* HengeMenuBar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = HengeMenuBar.png; sourceTree = "<group>"; };
+		8480A23B2E00000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Localization/en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		8480A23C2E00000000000001 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = Localization/ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +149,7 @@
 				8480A1232E00000000000001 /* ApplicationState.swift */,
 				8480A1242E00000000000001 /* FixTextUseCase.swift */,
 				8480A1252E00000000000001 /* HengeCoordinator.swift */,
+				8480A2382E00000000000001 /* Localization.swift */,
 			);
 			path = Application;
 			sourceTree = "<group>";
@@ -296,6 +302,7 @@
 				8480A1162E00000000000001 /* Info.plist */,
 				8480A2282E00000000000001 /* Henge.icns */,
 				8480A22A2E00000000000001 /* HengeMenuBar.png */,
+				8480A23A2E00000000000001 /* Localizable.strings */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -340,6 +347,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ru,
 				Base,
 			);
 			mainGroup = 8480A1012E00000000000001;
@@ -359,6 +367,7 @@
 			files = (
 				8480A2272E00000000000001 /* Henge.icns in Resources */,
 				8480A2292E00000000000001 /* HengeMenuBar.png in Resources */,
+				8480A2392E00000000000001 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,6 +385,7 @@
 				8480A2032E00000000000001 /* ApplicationState.swift in Sources */,
 				8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */,
 				8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */,
+				8480A2372E00000000000001 /* Localization.swift in Sources */,
 				8480A2062E00000000000001 /* AppConfiguration.swift in Sources */,
 				8480A2072E00000000000001 /* ConfigurationStore.swift in Sources */,
 				8480A2202E00000000000001 /* ConfigurationMigrator.swift in Sources */,
@@ -406,6 +416,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		8480A23A2E00000000000001 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				8480A23B2E00000000000001 /* en */,
+				8480A23C2E00000000000001 /* ru */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		8480A3012E00000000000001 /* Debug */ = {

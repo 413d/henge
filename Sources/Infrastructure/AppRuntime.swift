@@ -15,11 +15,21 @@ enum FocusedElementProbeFailure: Error, Equatable {
     var description: String {
         switch self {
         case .missingPermission:
-            return "Accessibility access is required before Henge can inspect the focused element."
+            return L10n.string(
+                "fix_outcome.failed.missing_permission",
+                defaultValue: "Accessibility access is required before Henge can inspect the focused element."
+            )
         case .noFocusedElement:
-            return "No focused text element is currently available for Henge to inspect."
+            return L10n.string(
+                "fix_outcome.failed.no_focused_element",
+                defaultValue: "No focused text element is currently available for Henge to inspect."
+            )
         case let .accessibilityError(error):
-            return "Henge could not inspect the focused element (AXError \(error.rawValue))."
+            return L10n.format(
+                "probe.focused_element.accessibility_error",
+                defaultValue: "Henge could not inspect the focused element (AXError %d).",
+                error.rawValue
+            )
         }
     }
 }
@@ -38,7 +48,10 @@ struct FocusedElementSnapshot: Equatable {
         case let (_, subrole?) where !subrole.isEmpty:
             return subrole
         default:
-            return "unknown role"
+            return L10n.string(
+                "probe.focused_element.unknown_role",
+                defaultValue: "unknown role"
+            )
         }
     }
 }
@@ -59,17 +72,36 @@ enum SelectionProbeFailure: Error, Equatable {
     var description: String {
         switch self {
         case .missingPermission:
-            return "Accessibility access is required before Henge can inspect the current selection."
+            return L10n.string(
+                "probe.selection.missing_permission",
+                defaultValue: "Accessibility access is required before Henge can inspect the current selection."
+            )
         case .noFocusedElement:
-            return "No focused text element is currently available for selection inspection."
+            return L10n.string(
+                "probe.selection.no_focused_element",
+                defaultValue: "No focused text element is currently available for selection inspection."
+            )
         case .secureField:
-            return "Focused secure text field detected. Henge did not inspect its selection."
+            return L10n.string(
+                "probe.selection.secure_field",
+                defaultValue: "Focused secure text field detected. Henge did not inspect its selection."
+            )
         case .noSelection:
-            return "No text selection is currently available."
+            return L10n.string(
+                "probe.selection.no_selection",
+                defaultValue: "No text selection is currently available."
+            )
         case .unsupported:
-            return "The focused element does not expose a readable text selection through Accessibility."
+            return L10n.string(
+                "probe.selection.unsupported",
+                defaultValue: "The focused element does not expose a readable text selection through Accessibility."
+            )
         case let .accessibilityError(error):
-            return "Henge could not inspect the current selection (AXError \(error.rawValue))."
+            return L10n.format(
+                "probe.selection.accessibility_error",
+                defaultValue: "Henge could not inspect the current selection (AXError %d).",
+                error.rawValue
+            )
         }
     }
 }
@@ -115,23 +147,51 @@ enum SelectionWriteFailure: Equatable {
     var description: String {
         switch self {
         case .missingPermission:
-            return "Accessibility access is required before Henge can replace the current selection."
+            return L10n.string(
+                "probe.write.missing_permission",
+                defaultValue: "Accessibility access is required before Henge can replace the current selection."
+            )
         case .noFocusedElement:
-            return "No focused text element is currently available for replacement."
+            return L10n.string(
+                "probe.write.no_focused_element",
+                defaultValue: "No focused text element is currently available for replacement."
+            )
         case .secureField:
-            return "Focused secure text field detected. Henge left the selection untouched."
+            return L10n.string(
+                "probe.write.secure_field",
+                defaultValue: "Focused secure text field detected. Henge left the selection untouched."
+            )
         case .noSelection:
-            return "No text selection is currently available for replacement."
+            return L10n.string(
+                "probe.write.no_selection",
+                defaultValue: "No text selection is currently available for replacement."
+            )
         case .unsupported:
-            return "The focused element does not support direct selection replacement through Accessibility."
+            return L10n.string(
+                "probe.write.unsupported",
+                defaultValue: "The focused element does not support direct selection replacement through Accessibility."
+            )
         case let .accessibilityError(error):
-            return "Henge could not replace the current selection (AXError \(error.rawValue))."
+            return L10n.format(
+                "probe.write.accessibility_error",
+                defaultValue: "Henge could not replace the current selection (AXError %d).",
+                error.rawValue
+            )
         case .pasteUnverified:
-            return "Henge attempted clipboard replacement, but could not verify that the text changed."
+            return L10n.string(
+                "fix_outcome.paste_unverified",
+                defaultValue: "Henge attempted clipboard replacement, but could not verify that the text changed."
+            )
         case .clipboardRestoreFailed:
-            return "Henge could not restore the original clipboard contents after replacement."
+            return L10n.string(
+                "fix_outcome.failed.clipboard_restore_failed",
+                defaultValue: "Henge could not restore the original clipboard contents after replacement."
+            )
         case .clipboardSuperseded:
-            return "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
+            return L10n.string(
+                "fix_outcome.failed.clipboard_superseded",
+                defaultValue: "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
+            )
         }
     }
 }
@@ -205,11 +265,23 @@ extension HotkeyRegistrationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .unsupportedShortcut(key):
-            return "The shortcut key \(key) is not supported by the current global hotkey backend."
+            return L10n.format(
+                "hotkey.error.unsupported_shortcut",
+                defaultValue: "The shortcut key %@ is not supported by the current global hotkey backend.",
+                key
+            )
         case let .eventHandlerInstallationFailed(status):
-            return "Henge could not install the global hotkey event handler (OSStatus \(status))."
+            return L10n.format(
+                "hotkey.error.event_handler_failed",
+                defaultValue: "Henge could not install the global hotkey event handler (OSStatus %d).",
+                status
+            )
         case let .registrationFailed(status):
-            return "Henge could not register the global hotkey (OSStatus \(status))."
+            return L10n.format(
+                "hotkey.error.registration_failed",
+                defaultValue: "Henge could not register the global hotkey (OSStatus %d).",
+                status
+            )
         }
     }
 }

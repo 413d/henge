@@ -6,10 +6,13 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle("Enabled", isOn: enabledBinding)
+            Toggle(
+                L10n.string("menubar.toggle.enabled", defaultValue: "Enabled"),
+                isOn: enabledBinding
+            )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Shortcut")
+                Text(L10n.string("menubar.section.shortcut", defaultValue: "Shortcut"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -24,11 +27,15 @@ struct MenuBarView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(coordinator.state.accessibilityGranted ? "Accessibility access granted" : "Accessibility access required")
+                Text(
+                    coordinator.state.accessibilityGranted
+                        ? L10n.string("menubar.accessibility.granted", defaultValue: "Accessibility access granted")
+                        : L10n.string("menubar.accessibility.required", defaultValue: "Accessibility access required")
+                )
                     .font(.callout)
 
                 if !coordinator.state.accessibilityGranted {
-                    Button("Open Accessibility Settings") {
+                    Button(L10n.string("action.open_accessibility_settings", defaultValue: "Open Accessibility Settings")) {
                         coordinator.openAccessibilitySettings()
                     }
                 }
@@ -37,7 +44,7 @@ struct MenuBarView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Text correction")
+                Text(L10n.string("section.text_correction", defaultValue: "Text correction"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -54,7 +61,7 @@ struct MenuBarView: View {
 
             Divider()
 
-            Button("Fix Text") {
+            Button(L10n.string("menubar.action.fix_text", defaultValue: "Fix Text")) {
                 coordinator.triggerFixText()
             }
             .disabled(!coordinator.canTriggerFixText)
@@ -62,16 +69,22 @@ struct MenuBarView: View {
             if let app = coordinator.frontmostExcludableApplication {
                 let trimmedDisplayName = app.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
                 let labelName = trimmedDisplayName.isEmpty ? app.bundleIdentifier : trimmedDisplayName
-                Button("Exclude \(labelName)") {
+                Button(
+                    L10n.format(
+                        "menubar.action.exclude_app",
+                        defaultValue: "Exclude %@",
+                        labelName
+                    )
+                ) {
                     coordinator.excludeFrontmostApplication()
                 }
             }
 
-            Button("Settings…") {
+            Button(L10n.string("menubar.action.settings", defaultValue: "Settings…")) {
                 coordinator.openSettings()
             }
 
-            Button("Quit Henge") {
+            Button(L10n.string("menubar.action.quit", defaultValue: "Quit Henge")) {
                 coordinator.quitApplication()
             }
         }
@@ -92,7 +105,10 @@ struct MenuBarView: View {
     private var fixTextStatusText: String {
         switch coordinator.fixTextAvailability {
         case .available:
-            return "Ready to run with the current focused text context."
+            return L10n.string(
+                "menubar.text_correction.ready",
+                defaultValue: "Ready to run with the current focused text context."
+            )
         case let .deferred(message):
             return message
         }

@@ -1,0 +1,92 @@
+/* App & Shared */
+"app.name" = "Henge";
+"action.open_accessibility_settings" = "Открыть настройки Универсального доступа";
+"section.text_correction" = "Исправление текста";
+
+/* Menu Bar Icon */
+"menubar.icon.accessibility.active" = "Активен";
+"menubar.icon.accessibility.disabled" = "Выключен";
+"menubar.icon.accessibility.permission_required" = "Требуется разрешение Универсального доступа";
+"menubar.icon.accessibility.degraded" = "Сбой регистрации сочетания клавиш";
+
+/* Menu Bar View */
+"menubar.toggle.enabled" = "Включён";
+"menubar.section.shortcut" = "Сочетание клавиш";
+"menubar.accessibility.granted" = "Доступ к Универсальному доступу предоставлен";
+"menubar.accessibility.required" = "Требуется доступ к Универсальному доступу";
+"menubar.text_correction.ready" = "Готово к исправлению текста в текущем поле ввода.";
+"menubar.action.fix_text" = "Исправить текст";
+"menubar.action.exclude_app" = "Исключить %@";
+"menubar.action.settings" = "Настройки…";
+"menubar.action.quit" = "Завершить Henge";
+
+/* Settings View */
+"settings.window.title" = "Настройки Henge";
+"settings.section.general" = "Основные";
+"settings.toggle.enable_henge" = "Включить Henge";
+"settings.toggle.launch_at_login" = "Запускать при входе в систему";
+"settings.label.global_shortcut" = "Глобальное сочетание клавиш";
+"settings.shortcut.press" = "Нажмите клавиши…";
+"settings.shortcut.change" = "Изменить…";
+"settings.shortcut.placeholder" = "Введите новое сочетание…";
+"settings.shortcut.hint" = "Нажмите клавишу хотя бы с одним модификатором. Esc — отмена.";
+"settings.shortcut.error_modifiers" = "Используйте клавишу вместе с ⌘, ⌥, ⌃ или ⇧.";
+"settings.action.open_login_items" = "Открыть «Объекты входа»…";
+"settings.section.permissions" = "Разрешения";
+"settings.permissions.accessibility_granted" = "Доступ к Универсальному доступу предоставлен.";
+"settings.permissions.accessibility_missing" = "Доступ к Универсальному доступу ещё не предоставлен.";
+"settings.section.exceptions" = "Исключения";
+"settings.exceptions.empty" = "Нет исключённых приложений.";
+"settings.exceptions.remove" = "Удалить";
+"settings.exceptions.add" = "Добавить приложение…";
+"settings.text_correction.available" = "Исправление текста доступно.";
+"settings.reset.button" = "Сбросить настройки по умолчанию…";
+"settings.reset.dialog_title" = "Сбросить все настройки Henge?";
+"settings.reset.confirm" = "Сбросить настройки";
+"settings.reset.dialog_message" = "Будет восстановлено сочетание клавиш по умолчанию и удалены исключения для приложений.";
+
+/* Hotkey & Launch at Login Status / Errors */
+"hotkey.status.error_with_active_fallback" = "%@ Текущее сочетание клавиш остаётся активным.";
+"hotkey.status.registered_accessibility_required" = "Глобальное сочетание клавиш зарегистрировано, но для работы с текстом по-прежнему требуется доступ к Универсальному доступу.";
+"hotkey.status.registered_ready" = "Глобальное сочетание клавиш зарегистрировано и готово к работе.";
+"hotkey.status.inactive_disabled" = "Глобальное сочетание клавиш неактивно, пока Henge выключен.";
+"hotkey.error.unsupported_shortcut" = "Клавиша %@ не поддерживается текущим обработчиком глобальных сочетаний клавиш.";
+"hotkey.error.event_handler_failed" = "Henge не удалось установить обработчик глобальных сочетаний клавиш (OSStatus %d).";
+"hotkey.error.registration_failed" = "Henge не удалось зарегистрировать глобальное сочетание клавиш (OSStatus %d).";
+"launch_at_login.status.enabled" = "Запуск при входе в систему включён.";
+"launch_at_login.status.disabled" = "Запуск при входе в систему выключен.";
+"launch_at_login.status.requires_approval" = "Требуется подтверждение в «Системных настройках» → «Объекты входа».";
+"launch_at_login.error.unverified" = "Не удалось подтвердить состояние запуска при входе в систему.";
+
+/* Fix Text Availability & Outcomes */
+"fix_text.availability.deferred" = "Исправление текста пока недоступно, пока проверяются системные интеграции горячих клавиш и работы с текстом.";
+"fix_outcome.fixed_direct" = "Текст исправлен.";
+"fix_outcome.fixed_clipboard" = "Текст исправлен через резервный буфер обмена.";
+"fix_outcome.nothing_to_fix" = "В текущем тексте нечего исправлять.";
+"fix_outcome.secure_field" = "Обнаружено защищённое поле ввода. Henge оставил содержимое без изменений.";
+"fix_outcome.unsupported" = "Активный элемент не поддерживает замену текста.";
+"fix_outcome.paste_unverified" = "Henge попытался заменить текст через буфер обмена, но не смог подтвердить изменение текста.";
+"fix_outcome.failed.no_active_application" = "Henge не смог определить активное приложение и оставил текст без изменений.";
+"fix_outcome.failed.missing_permission" = "Для проверки активного элемента Henge требуется доступ к Универсальному доступу.";
+"fix_outcome.failed.no_focused_element" = "Сейчас нет доступного текстового элемента в фокусе для проверки.";
+"fix_outcome.failed.accessibility_error" = "Henge не смог проверить или обновить активный элемент (AXError %d).";
+"fix_outcome.failed.clipboard_restore_failed" = "Henge не смог восстановить исходное содержимое буфера обмена после замены.";
+"fix_outcome.failed.clipboard_superseded" = "Содержимое буфера обмена изменилось до восстановления, поэтому Henge сохранил новое содержимое.";
+"fix_outcome.failed.focus_lost" = "Henge не смог вернуть фокус в %@ и оставил текст без изменений.";
+
+/* Probes */
+"probe.status.focused_element_resolved" = "Активный элемент определён: %@.";
+"probe.focused_element.accessibility_error" = "Henge не смог проверить активный элемент (AXError %d).";
+"probe.focused_element.unknown_role" = "неизвестная роль";
+"probe.selection.missing_permission" = "Для проверки текущего выделения Henge требуется доступ к Универсальному доступу.";
+"probe.selection.no_focused_element" = "Сейчас нет доступного текстового элемента в фокусе для проверки выделения.";
+"probe.selection.secure_field" = "Обнаружено защищённое поле ввода. Henge не проверял выделение.";
+"probe.selection.no_selection" = "Сейчас нет выделенного текста.";
+"probe.selection.unsupported" = "Активный элемент не предоставляет доступ к выделенному тексту через Универсальный доступ.";
+"probe.selection.accessibility_error" = "Henge не смог проверить текущее выделение (AXError %d).";
+"probe.write.missing_permission" = "Для замены выделенного текста Henge требуется доступ к Универсальному доступу.";
+"probe.write.no_focused_element" = "Сейчас нет доступного текстового элемента в фокусе для замены.";
+"probe.write.secure_field" = "Обнаружено защищённое поле ввода. Henge оставил выделение без изменений.";
+"probe.write.no_selection" = "Сейчас нет выделенного текста для замены.";
+"probe.write.unsupported" = "Активный элемент не поддерживает прямую замену выделения через Универсальный доступ.";
+"probe.write.accessibility_error" = "Henge не смог заменить выделенный текст (AXError %d).";

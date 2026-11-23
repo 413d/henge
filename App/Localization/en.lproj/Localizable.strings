@@ -1,0 +1,92 @@
+/* App & Shared */
+"app.name" = "Henge";
+"action.open_accessibility_settings" = "Open Accessibility Settings";
+"section.text_correction" = "Text correction";
+
+/* Menu Bar Icon */
+"menubar.icon.accessibility.active" = "Active";
+"menubar.icon.accessibility.disabled" = "Disabled";
+"menubar.icon.accessibility.permission_required" = "Accessibility permission required";
+"menubar.icon.accessibility.degraded" = "Shortcut registration degraded";
+
+/* Menu Bar View */
+"menubar.toggle.enabled" = "Enabled";
+"menubar.section.shortcut" = "Shortcut";
+"menubar.accessibility.granted" = "Accessibility access granted";
+"menubar.accessibility.required" = "Accessibility access required";
+"menubar.text_correction.ready" = "Ready to run with the current focused text context.";
+"menubar.action.fix_text" = "Fix Text";
+"menubar.action.exclude_app" = "Exclude %@";
+"menubar.action.settings" = "Settings…";
+"menubar.action.quit" = "Quit Henge";
+
+/* Settings View */
+"settings.window.title" = "Henge Settings";
+"settings.section.general" = "General";
+"settings.toggle.enable_henge" = "Enable Henge";
+"settings.toggle.launch_at_login" = "Launch at Login";
+"settings.label.global_shortcut" = "Global shortcut";
+"settings.shortcut.press" = "Press shortcut…";
+"settings.shortcut.change" = "Change…";
+"settings.shortcut.placeholder" = "Type the new shortcut…";
+"settings.shortcut.hint" = "Press a key with at least one modifier. Escape cancels.";
+"settings.shortcut.error_modifiers" = "Use a key together with ⌘, ⌥, ⌃, or ⇧.";
+"settings.action.open_login_items" = "Open Login Items…";
+"settings.section.permissions" = "Permissions";
+"settings.permissions.accessibility_granted" = "Accessibility permission is available.";
+"settings.permissions.accessibility_missing" = "Accessibility permission is not granted yet.";
+"settings.section.exceptions" = "Exceptions";
+"settings.exceptions.empty" = "No excluded applications.";
+"settings.exceptions.remove" = "Remove";
+"settings.exceptions.add" = "Add Application…";
+"settings.text_correction.available" = "Text correction is available.";
+"settings.reset.button" = "Reset Settings to Defaults…";
+"settings.reset.dialog_title" = "Reset all Henge settings?";
+"settings.reset.confirm" = "Reset Settings";
+"settings.reset.dialog_message" = "This restores the default shortcut and removes application exceptions.";
+
+/* Hotkey & Launch at Login Status / Errors */
+"hotkey.status.error_with_active_fallback" = "%@ The current shortcut remains active.";
+"hotkey.status.registered_accessibility_required" = "Global shortcut is registered, but Accessibility access is still required for text operations.";
+"hotkey.status.registered_ready" = "Global shortcut is registered and ready for native validation.";
+"hotkey.status.inactive_disabled" = "Global shortcut is inactive while Henge is disabled.";
+"hotkey.error.unsupported_shortcut" = "The shortcut key %@ is not supported by the current global hotkey backend.";
+"hotkey.error.event_handler_failed" = "Henge could not install the global hotkey event handler (OSStatus %d).";
+"hotkey.error.registration_failed" = "Henge could not register the global hotkey (OSStatus %d).";
+"launch_at_login.status.enabled" = "Launch at Login is enabled.";
+"launch_at_login.status.disabled" = "Launch at Login is disabled.";
+"launch_at_login.status.requires_approval" = "Approval required in System Settings → Login Items.";
+"launch_at_login.error.unverified" = "Launch at Login state could not be verified.";
+
+/* Fix Text Availability & Outcomes */
+"fix_text.availability.deferred" = "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated.";
+"fix_outcome.fixed_direct" = "Text corrected.";
+"fix_outcome.fixed_clipboard" = "Text corrected using the clipboard fallback.";
+"fix_outcome.nothing_to_fix" = "Nothing to fix in the current text.";
+"fix_outcome.secure_field" = "Focused secure text field detected. Henge left the content untouched.";
+"fix_outcome.unsupported" = "The focused element does not support text replacement.";
+"fix_outcome.paste_unverified" = "Henge attempted clipboard replacement, but could not verify that the text changed.";
+"fix_outcome.failed.no_active_application" = "Henge could not identify the active application and left the text untouched.";
+"fix_outcome.failed.missing_permission" = "Accessibility access is required before Henge can inspect the focused element.";
+"fix_outcome.failed.no_focused_element" = "No focused text element is currently available for Henge to inspect.";
+"fix_outcome.failed.accessibility_error" = "Henge could not inspect or update the focused element (AXError %d).";
+"fix_outcome.failed.clipboard_restore_failed" = "Henge could not restore the original clipboard contents after replacement.";
+"fix_outcome.failed.clipboard_superseded" = "Clipboard contents changed before restoration, so Henge kept the new clipboard contents.";
+"fix_outcome.failed.focus_lost" = "Henge could not restore focus to %@ and left the text untouched.";
+
+/* Probes */
+"probe.status.focused_element_resolved" = "Focused element resolved: %@.";
+"probe.focused_element.accessibility_error" = "Henge could not inspect the focused element (AXError %d).";
+"probe.focused_element.unknown_role" = "unknown role";
+"probe.selection.missing_permission" = "Accessibility access is required before Henge can inspect the current selection.";
+"probe.selection.no_focused_element" = "No focused text element is currently available for selection inspection.";
+"probe.selection.secure_field" = "Focused secure text field detected. Henge did not inspect its selection.";
+"probe.selection.no_selection" = "No text selection is currently available.";
+"probe.selection.unsupported" = "The focused element does not expose a readable text selection through Accessibility.";
+"probe.selection.accessibility_error" = "Henge could not inspect the current selection (AXError %d).";
+"probe.write.missing_permission" = "Accessibility access is required before Henge can replace the current selection.";
+"probe.write.no_focused_element" = "No focused text element is currently available for replacement.";
+"probe.write.secure_field" = "Focused secure text field detected. Henge left the selection untouched.";
+"probe.write.no_selection" = "No text selection is currently available for replacement.";
+"probe.write.unsupported" = "The focused element does not support direct selection replacement through Accessibility.";
+"probe.write.accessibility_error" = "Henge could not replace the current selection (AXError %d).";

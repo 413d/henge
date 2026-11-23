@@ -115,17 +115,30 @@ final class HengeCoordinator: ObservableObject {
     var hotkeyStatusText: String {
         if let hotkeyRegistrationError = state.hotkeyRegistrationError {
             return state.hotkeyRegistered
-                ? "\(hotkeyRegistrationError) The current shortcut remains active."
+                ? L10n.format(
+                    "hotkey.status.error_with_active_fallback",
+                    defaultValue: "%@ The current shortcut remains active.",
+                    hotkeyRegistrationError
+                )
                 : hotkeyRegistrationError
         }
 
         if state.hotkeyRegistered, !state.accessibilityGranted {
-            return "Global shortcut is registered, but Accessibility access is still required for text operations."
+            return L10n.string(
+                "hotkey.status.registered_accessibility_required",
+                defaultValue: "Global shortcut is registered, but Accessibility access is still required for text operations."
+            )
         }
 
         return state.hotkeyRegistered
-            ? "Global shortcut is registered and ready for native validation."
-            : "Global shortcut is inactive while Henge is disabled."
+            ? L10n.string(
+                "hotkey.status.registered_ready",
+                defaultValue: "Global shortcut is registered and ready for native validation."
+            )
+            : L10n.string(
+                "hotkey.status.inactive_disabled",
+                defaultValue: "Global shortcut is inactive while Henge is disabled."
+            )
     }
 
     var launchAtLoginStatusText: String {
@@ -135,11 +148,20 @@ final class HengeCoordinator: ObservableObject {
 
         switch state.launchAtLoginStatus {
         case .enabled:
-            return "Launch at Login is enabled."
+            return L10n.string(
+                "launch_at_login.status.enabled",
+                defaultValue: "Launch at Login is enabled."
+            )
         case .disabled:
-            return "Launch at Login is disabled."
+            return L10n.string(
+                "launch_at_login.status.disabled",
+                defaultValue: "Launch at Login is disabled."
+            )
         case .requiresApproval:
-            return "Approval required in System Settings → Login Items."
+            return L10n.string(
+                "launch_at_login.status.requires_approval",
+                defaultValue: "Approval required in System Settings → Login Items."
+            )
         }
     }
 
@@ -153,35 +175,73 @@ final class HengeCoordinator: ObservableObject {
     static func statusText(for outcome: FixOutcome) -> String? {
         switch outcome {
         case .fixed(viaClipboard: false):
-            return "Text corrected."
+            return L10n.string("fix_outcome.fixed_direct", defaultValue: "Text corrected.")
         case .fixed(viaClipboard: true):
-            return "Text corrected using the clipboard fallback."
+            return L10n.string(
+                "fix_outcome.fixed_clipboard",
+                defaultValue: "Text corrected using the clipboard fallback."
+            )
         case .nothingToFix:
-            return "Nothing to fix in the current text."
+            return L10n.string(
+                "fix_outcome.nothing_to_fix",
+                defaultValue: "Nothing to fix in the current text."
+            )
         case .secureField:
-            return "Focused secure text field detected. Henge left the content untouched."
+            return L10n.string(
+                "fix_outcome.secure_field",
+                defaultValue: "Focused secure text field detected. Henge left the content untouched."
+            )
         case .excluded:
             return nil
         case .unsupported:
-            return "The focused element does not support text replacement."
+            return L10n.string(
+                "fix_outcome.unsupported",
+                defaultValue: "The focused element does not support text replacement."
+            )
         case .pasteUnverified:
-            return "Henge attempted clipboard replacement, but could not verify that the text changed."
+            return L10n.string(
+                "fix_outcome.paste_unverified",
+                defaultValue: "Henge attempted clipboard replacement, but could not verify that the text changed."
+            )
         case let .failed(reason):
             switch reason {
             case .noActiveApplication:
-                return "Henge could not identify the active application and left the text untouched."
+                return L10n.string(
+                    "fix_outcome.failed.no_active_application",
+                    defaultValue: "Henge could not identify the active application and left the text untouched."
+                )
             case .missingPermission:
-                return "Accessibility access is required before Henge can inspect the focused element."
+                return L10n.string(
+                    "fix_outcome.failed.missing_permission",
+                    defaultValue: "Accessibility access is required before Henge can inspect the focused element."
+                )
             case .noFocusedElement:
-                return "No focused text element is currently available for Henge to inspect."
+                return L10n.string(
+                    "fix_outcome.failed.no_focused_element",
+                    defaultValue: "No focused text element is currently available for Henge to inspect."
+                )
             case let .accessibilityError(code):
-                return "Henge could not inspect or update the focused element (AXError \(code))."
+                return L10n.format(
+                    "fix_outcome.failed.accessibility_error",
+                    defaultValue: "Henge could not inspect or update the focused element (AXError %d).",
+                    code
+                )
             case .clipboardRestoreFailed:
-                return "Henge could not restore the original clipboard contents after replacement."
+                return L10n.string(
+                    "fix_outcome.failed.clipboard_restore_failed",
+                    defaultValue: "Henge could not restore the original clipboard contents after replacement."
+                )
             case .clipboardSuperseded:
-                return "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
+                return L10n.string(
+                    "fix_outcome.failed.clipboard_superseded",
+                    defaultValue: "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
+                )
             case let .focusLost(applicationName):
-                return "Henge could not restore focus to \(applicationName) and left the text untouched."
+                return L10n.format(
+                    "fix_outcome.failed.focus_lost",
+                    defaultValue: "Henge could not restore focus to %@ and left the text untouched.",
+                    applicationName
+                )
             }
         }
     }
@@ -250,7 +310,12 @@ final class HengeCoordinator: ObservableObject {
                 state.launchAtLoginEnabled = false
                 state.configuration.launchAtLogin = false
             default:
-                throw LoginItemUpdateError.updateFailed("Launch at Login state could not be verified.")
+                throw LoginItemUpdateError.updateFailed(
+                    L10n.string(
+                        "launch_at_login.error.unverified",
+                        defaultValue: "Launch at Login state could not be verified."
+                    )
+                )
             }
 
             saveConfigurationIfChanged(from: previousConfiguration)
@@ -523,7 +588,11 @@ final class HengeCoordinator: ObservableObject {
 
         guard canTriggerFixText else {
             state.lastFixOutcome = nil
-            state.lastProbeSummary = "Focused element resolved: \(focusedSnapshot.summary)."
+            state.lastProbeSummary = L10n.format(
+                "probe.status.focused_element_resolved",
+                defaultValue: "Focused element resolved: %@.",
+                focusedSnapshot.summary
+            )
             return
         }
 
