@@ -209,13 +209,20 @@ private final class ShortcutCaptureView: NSView {
         if flags.contains(.control) { modifiers.insert(.control) }
         if flags.contains(.shift) { modifiers.insert(.shift) }
 
+        let keyCode = UInt32(event.keyCode)
         guard !modifiers.isEmpty,
-              let key = event.charactersIgnoringModifiers?.uppercased(),
-              key.count == 1 else {
+              let key = CarbonHotkey.displayKey(forKeyCode: keyCode) else {
             onCapture?(nil)
             return
         }
-        onCapture?(Shortcut(key: key, modifiers: modifiers))
+
+        let shortcut = Shortcut(key: key, modifiers: modifiers, keyCode: keyCode)
+        guard CarbonHotkey.isSupported(shortcut: shortcut) else {
+            onCapture?(nil)
+            return
+        }
+
+        onCapture?(shortcut)
     }
 }
 

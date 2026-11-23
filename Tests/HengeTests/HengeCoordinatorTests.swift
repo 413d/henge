@@ -932,7 +932,7 @@ private final class StubRuntime: AppRuntime {
             throw registrationError
         }
 
-        guard CarbonHotkey.isSupported(key: shortcut.key) else {
+        guard CarbonHotkey.isSupported(shortcut: shortcut) else {
             throw HotkeyRegistrationError.unsupportedShortcut(shortcut.key)
         }
 

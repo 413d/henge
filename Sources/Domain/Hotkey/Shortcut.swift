@@ -36,8 +36,35 @@ struct Shortcut: Codable, Equatable {
 
     let key: String
     let modifiers: Modifiers
+    let keyCode: UInt32?
 
-    static let defaultFixText = Shortcut(key: "X", modifiers: [.option])
+    static let defaultFixText = Shortcut(key: "X", modifiers: [.option], keyCode: 7)
+
+    init(key: String, modifiers: Modifiers, keyCode: UInt32? = nil) {
+        self.key = key
+        self.modifiers = modifiers
+        self.keyCode = keyCode
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case key
+        case modifiers
+        case keyCode
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decode(String.self, forKey: .key)
+        modifiers = try container.decode(Modifiers.self, forKey: .modifiers)
+        keyCode = try container.decodeIfPresent(UInt32.self, forKey: .keyCode)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(key, forKey: .key)
+        try container.encode(modifiers, forKey: .modifiers)
+        try container.encodeIfPresent(keyCode, forKey: .keyCode)
+    }
 
     var displayString: String {
         let orderedModifiers: [(Modifiers, String)] = [
@@ -52,6 +79,23 @@ struct Shortcut: Codable, Equatable {
             .map(\.1)
             .joined()
 
-        return prefix + key.uppercased()
+        return prefix + formattedKey
+    }
+
+    private var formattedKey: String {
+        if key.count == 1 {
+            return key.uppercased()
+        }
+
+        switch key.lowercased() {
+        case "space":
+            return "Space"
+        case "return", "enter":
+            return "↩"
+        case "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12":
+            return key.uppercased()
+        default:
+            return key
+        }
     }
 }

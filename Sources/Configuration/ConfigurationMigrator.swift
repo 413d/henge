@@ -15,6 +15,11 @@ struct ConfigurationMigrator {
 
         var normalized = configuration
         normalized.schemaVersion = currentSchemaVersion
+        if normalized.shortcut.keyCode == nil,
+           normalized.shortcut.key.caseInsensitiveCompare(Shortcut.defaultFixText.key) == .orderedSame,
+           normalized.shortcut.modifiers == Shortcut.defaultFixText.modifiers {
+            normalized.shortcut = .defaultFixText
+        }
         normalized.excludedApplicationBundleIdentifiers = Array(Set(normalized.excludedApplicationBundleIdentifiers)).sorted()
         return normalized
     }
