@@ -93,7 +93,7 @@ struct SystemWorkspaceApplicationSource: WorkspaceApplicationSource, Sendable {
     }
 }
 
-protocol ActiveApplicationProviding {
+protocol ActiveApplicationProviding: Sendable {
     func activeApplication() -> ApplicationIdentity?
     func application(bundleIdentifier: String) -> ApplicationIdentity?
     func activeProcessIdentifier(for application: ApplicationIdentity) -> pid_t?
@@ -101,6 +101,7 @@ protocol ActiveApplicationProviding {
     @discardableResult
     func activateApplication(_ application: ApplicationIdentity) -> Bool
     func setActivationHandler(_ handler: (@Sendable () -> Void)?)
+    func waitForActivation(of application: ApplicationIdentity, timeout: TimeInterval) async
 }
 
 extension ActiveApplicationProviding {
@@ -118,6 +119,77 @@ extension ActiveApplicationProviding {
     }
 
     func setActivationHandler(_ handler: (@Sendable () -> Void)?) {}
+
+    func waitForActivation(of application: ApplicationIdentity, timeout: TimeInterval) async {
+        guard timeout > 0 else { return }
+        let nanoseconds = UInt64(min(timeout * 1_000_000_000, Double(UInt64.max - 1)).rounded())
+        try? await Task.sleep(nanoseconds: nanoseconds)
+    }
+}
+
+enum ActivationWaiter {
+    private final class ActivationGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var isResumed = false
+        private var continuation: CheckedContinuation<Void, Never>?
+
+        func setContinuation(_ continuation: CheckedContinuation<Void, Never>) {
+            lock.lock()
+            if isResumed {
+                lock.unlock()
+                continuation.resume()
+                return
+            }
+            self.continuation = continuation
+            lock.unlock()
+        }
+
+        func resume() {
+            lock.lock()
+            guard !isResumed else {
+                lock.unlock()
+                return
+            }
+            isResumed = true
+            let continuation = self.continuation
+            self.continuation = nil
+            lock.unlock()
+            continuation?.resume()
+        }
+    }
+
+    static func wait(
+        bundleIdentifier: String,
+        source: WorkspaceApplicationSource,
+        timeout: TimeInterval
+    ) async {
+        guard timeout > 0 else { return }
+
+        let gate = ActivationGate()
+        let token = source.observeActivations { snapshot in
+            guard !snapshot.isTerminated,
+                  snapshot.bundleIdentifier == bundleIdentifier else {
+                return
+            }
+            gate.resume()
+        }
+        defer { source.stopObserving(token) }
+
+        let nanoseconds = UInt64(min(timeout * 1_000_000_000, Double(UInt64.max - 1)).rounded())
+        let timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: nanoseconds)
+            gate.resume()
+        }
+        defer { timeoutTask.cancel() }
+
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                gate.setContinuation(continuation)
+            }
+        } onCancel: {
+            gate.resume()
+        }
+    }
 }
 
 final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unchecked Sendable {
@@ -222,6 +294,14 @@ final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unc
         lock.lock()
         activationHandler = handler
         lock.unlock()
+    }
+
+    func waitForActivation(of application: ApplicationIdentity, timeout: TimeInterval) async {
+        await ActivationWaiter.wait(
+            bundleIdentifier: application.bundleIdentifier,
+            source: workspace,
+            timeout: timeout
+        )
     }
 
     private func recordActivation(_ snapshot: WorkspaceApplicationSnapshot) {

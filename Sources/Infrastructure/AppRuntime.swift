@@ -291,12 +291,15 @@ final class LiveAppRuntime: AppRuntime {
             return false
         }
 
-        for _ in 0..<15 {
-            try? await Task.sleep(nanoseconds: 20_000_000)
+        let deadline = Date().addingTimeInterval(0.3)
+        while Date() < deadline {
             if applicationProvider.isFrontmost(application),
                case .success = resolveFocusedElement() {
                 return true
             }
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { break }
+            await applicationProvider.waitForActivation(of: application, timeout: remaining)
         }
 
         return applicationProvider.isFrontmost(application)

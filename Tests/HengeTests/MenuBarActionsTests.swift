@@ -467,6 +467,123 @@ struct MenuBarActionsTests {
         #expect(coordinator.statusItemSymbolName == "exclamationmark.cloud")
         withExtendedLifetime(observer) {}
     }
+
+    @Test
+    func waitForActivationReturnsAfterMatchingEvent() async {
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: henge,
+            running: [notes, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let target = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let initialObservers = workspace.activeObserverCount
+
+        let start = Date()
+        Task.detached {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            workspace.simulateActivation(notes)
+        }
+
+        await provider.waitForActivation(of: target, timeout: 1.0)
+        let elapsed = Date().timeIntervalSince(start)
+
+        #expect(elapsed < 0.5)
+        #expect(workspace.activeObserverCount == initialObservers)
+    }
+
+    @Test
+    func waitForActivationTimesOut() async {
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: henge,
+            running: [notes, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let target = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let initialObservers = workspace.activeObserverCount
+
+        let start = Date()
+        await provider.waitForActivation(of: target, timeout: 0.05)
+        let elapsed = Date().timeIntervalSince(start)
+
+        #expect(elapsed >= 0.03)
+        #expect(elapsed < 0.5)
+        #expect(workspace.activeObserverCount == initialObservers)
+    }
+
+    @Test
+    func waitForActivationIgnoresOtherApplications() async {
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let safari = WorkspaceApplicationSnapshot(
+            processIdentifier: 5200,
+            bundleIdentifier: "com.apple.Safari",
+            localizedName: "Safari",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: henge,
+            running: [notes, safari, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let target = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let initialObservers = workspace.activeObserverCount
+
+        let start = Date()
+        Task.detached {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            workspace.simulateActivation(safari)
+        }
+
+        await provider.waitForActivation(of: target, timeout: 0.08)
+        let elapsed = Date().timeIntervalSince(start)
+
+        #expect(elapsed >= 0.05)
+        #expect(elapsed < 0.5)
+        #expect(workspace.activeObserverCount == initialObservers)
+    }
 }
 
 private final class MenuBarTestLoginItemManager: LoginItemManaging, @unchecked Sendable {
@@ -521,10 +638,23 @@ private final class MenuBarTestRuntime: AppRuntime {
 }
 
 private final class FakeWorkspaceApplicationSource: WorkspaceApplicationSource, @unchecked Sendable {
+    private let lock = NSLock()
     private var currentFrontmost: WorkspaceApplicationSnapshot?
     private var appsByPID: [pid_t: WorkspaceApplicationSnapshot]
     private var observers: [UUID: @Sendable (WorkspaceApplicationSnapshot) -> Void] = [:]
-    private(set) var activatedProcessIdentifiers: [pid_t] = []
+    private var recordedActivatedPIDs: [pid_t] = []
+
+    var activatedProcessIdentifiers: [pid_t] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recordedActivatedPIDs
+    }
+
+    var activeObserverCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return observers.count
+    }
 
     init(frontmost: WorkspaceApplicationSnapshot?, running: [WorkspaceApplicationSnapshot]) {
         currentFrontmost = frontmost
@@ -532,18 +662,25 @@ private final class FakeWorkspaceApplicationSource: WorkspaceApplicationSource, 
     }
 
     func setFrontmost(_ snapshot: WorkspaceApplicationSnapshot?) {
+        lock.lock()
         currentFrontmost = snapshot
+        lock.unlock()
     }
 
     func simulateActivation(_ snapshot: WorkspaceApplicationSnapshot) {
+        lock.lock()
         appsByPID[snapshot.processIdentifier] = snapshot
         currentFrontmost = snapshot
-        for observer in observers.values {
+        let handlers = Array(observers.values)
+        lock.unlock()
+        for observer in handlers {
             observer(snapshot)
         }
     }
 
     func terminate(processIdentifier: pid_t) {
+        lock.lock()
+        defer { lock.unlock() }
         guard var app = appsByPID[processIdentifier] else { return }
         app = WorkspaceApplicationSnapshot(
             processIdentifier: app.processIdentifier,
@@ -558,39 +695,53 @@ private final class FakeWorkspaceApplicationSource: WorkspaceApplicationSource, 
     }
 
     func frontmostApplication() -> WorkspaceApplicationSnapshot? {
-        currentFrontmost
+        lock.lock()
+        defer { lock.unlock() }
+        return currentFrontmost
     }
 
     func runningApplication(processIdentifier: pid_t) -> WorkspaceApplicationSnapshot? {
-        appsByPID[processIdentifier]
+        lock.lock()
+        defer { lock.unlock() }
+        return appsByPID[processIdentifier]
     }
 
     func runningApplications(bundleIdentifier: String) -> [WorkspaceApplicationSnapshot] {
-        appsByPID.values.filter { $0.bundleIdentifier == bundleIdentifier && !$0.isTerminated }
+        lock.lock()
+        defer { lock.unlock() }
+        return appsByPID.values.filter { $0.bundleIdentifier == bundleIdentifier && !$0.isTerminated }
     }
 
     func installedApplicationDisplayName(bundleIdentifier: String) -> String? {
-        appsByPID.values.first(where: { $0.bundleIdentifier == bundleIdentifier })?.localizedName
+        lock.lock()
+        defer { lock.unlock() }
+        return appsByPID.values.first(where: { $0.bundleIdentifier == bundleIdentifier })?.localizedName
     }
 
     func activateApplication(processIdentifier: pid_t) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
         guard let app = appsByPID[processIdentifier], !app.isTerminated else {
             return false
         }
-        activatedProcessIdentifiers.append(processIdentifier)
+        recordedActivatedPIDs.append(processIdentifier)
         currentFrontmost = app
         return true
     }
 
     func observeActivations(_ handler: @escaping @Sendable (WorkspaceApplicationSnapshot) -> Void) -> AnyObject {
         let token = UUID()
+        lock.lock()
         observers[token] = handler
+        lock.unlock()
         return token as NSUUID
     }
 
     func stopObserving(_ token: AnyObject) {
         if let uuid = token as? NSUUID {
+            lock.lock()
             observers.removeValue(forKey: uuid as UUID)
+            lock.unlock()
         }
     }
 }
