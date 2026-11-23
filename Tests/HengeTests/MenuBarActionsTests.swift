@@ -591,6 +591,127 @@ struct MenuBarActionsTests {
         #expect(elapsed < 0.5)
         #expect(workspace.activeObserverCount == initialObservers)
     }
+
+    @Test
+    func excludeFrontmostApplicationAddsLastExternalAppAndClearsCandidate() {
+        let store = InMemoryConfigurationStore()
+        let runtime = MenuBarTestRuntime(hasAccessibilityPermission: true)
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        runtime.activeApplication = notes
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
+            )
+        )
+
+        #expect(coordinator.frontmostExcludableApplication == notes)
+        #expect(coordinator.excludeFrontmostApplication() == true)
+        #expect(store.load().excludedApplicationBundleIdentifiers == ["com.apple.Notes"])
+        #expect(coordinator.frontmostExcludableApplication == nil)
+    }
+
+    @Test
+    func frontmostExcludableApplicationSkipsHengeAndAlreadyExcludedApps() {
+        let store = InMemoryConfigurationStore()
+        store.save(
+            AppConfiguration(
+                isEnabled: true,
+                excludedApplicationBundleIdentifiers: ["com.1password.1password"]
+            )
+        )
+        let runtime = MenuBarTestRuntime(hasAccessibilityPermission: true)
+        runtime.activeApplication = ApplicationIdentity(
+            bundleIdentifier: "io.github.413d.Henge",
+            displayName: "Henge"
+        )
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
+            )
+        )
+
+        #expect(coordinator.frontmostExcludableApplication == nil)
+        #expect(coordinator.excludeFrontmostApplication() == false)
+
+        runtime.activeApplication = ApplicationIdentity(
+            bundleIdentifier: "com.1password.1password",
+            displayName: "1Password"
+        )
+        #expect(coordinator.frontmostExcludableApplication == nil)
+        #expect(coordinator.excludeFrontmostApplication() == false)
+    }
+
+    @Test
+    func menuBarLifecycleObserverRefreshesFrontmostExcludableApplicationAndExcludesIt() async {
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let safari = WorkspaceApplicationSnapshot(
+            processIdentifier: 5200,
+            bundleIdentifier: "com.apple.Safari",
+            localizedName: "Safari",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: notes,
+            running: [notes, safari, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let runtime = LiveAppRuntime(applicationProvider: provider)
+        let store = InMemoryConfigurationStore()
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
+            ),
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        let menuCenter = NotificationCenter()
+        let observer = MenuBarLifecycleObserver(menuNotificationCenter: menuCenter)
+        observer.bind(coordinator: coordinator)
+
+        var changeNotifications = 0
+        let cancellable = coordinator.objectWillChange.sink { _ in
+            changeNotifications += 1
+        }
+        defer { cancellable.cancel() }
+
+        workspace.simulateActivation(safari)
+        workspace.setFrontmost(henge)
+        menuCenter.post(name: NSMenu.didBeginTrackingNotification, object: nil)
+        await Task.yield()
+
+        #expect(changeNotifications >= 1)
+        #expect(coordinator.frontmostExcludableApplication?.bundleIdentifier == "com.apple.Safari")
+        #expect(coordinator.frontmostExcludableApplication?.displayName == "Safari")
+
+        #expect(coordinator.excludeFrontmostApplication() == true)
+        #expect(store.load().excludedApplicationBundleIdentifiers == ["com.apple.Safari"])
+        #expect(coordinator.frontmostExcludableApplication == nil)
+        withExtendedLifetime(observer) {}
+    }
 }
 
 private final class MenuBarTestLoginItemManager: LoginItemManaging, @unchecked Sendable {

@@ -59,6 +59,14 @@ struct MenuBarView: View {
             }
             .disabled(!coordinator.canTriggerFixText)
 
+            if let app = coordinator.frontmostExcludableApplication {
+                let trimmedDisplayName = app.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let labelName = trimmedDisplayName.isEmpty ? app.bundleIdentifier : trimmedDisplayName
+                Button("Exclude \(labelName)") {
+                    coordinator.excludeFrontmostApplication()
+                }
+            }
+
             Button("Settings…") {
                 coordinator.openSettings()
             }

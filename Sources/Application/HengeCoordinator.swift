@@ -6,19 +6,24 @@ import SwiftUI
 final class HengeCoordinator: ObservableObject {
     @Published private(set) var state: ApplicationState
 
+    private static let hengeBundleIdentifier = "io.github.413d.Henge"
+
     private let configurationStore: ConfigurationStore
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
     private let loginItemManager: LoginItemManaging
+    private let selfBundleIdentifier: String?
     private let presentSettings: @MainActor () -> Void
     private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
     private let exceptionMatcher = ExceptionMatcher()
     private let configLogger = Diagnostics.logger(.config)
     private var isExecutingFixText = false
+    private var lastObservedFrontmostExcludableApplication: ApplicationIdentity?
 
     init(
         environment: AppEnvironment,
+        selfBundleIdentifier: String? = Bundle.main.bundleIdentifier,
         presentSettings: (@MainActor () -> Void)? = nil,
         terminateApplication: (@MainActor () -> Void)? = nil
     ) {
@@ -26,6 +31,7 @@ final class HengeCoordinator: ObservableObject {
         fixTextUseCase = environment.fixTextUseCase
         runtime = environment.runtime
         loginItemManager = environment.loginItemManager
+        self.selfBundleIdentifier = selfBundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.presentSettings = presentSettings ?? {}
         self.terminateApplication = terminateApplication ?? {
             NSApplication.shared.terminate(nil)
@@ -69,6 +75,7 @@ final class HengeCoordinator: ObservableObject {
         )
 
         updateHotkeyRegistration()
+        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
 
         environment.runtime.setActivationHandler { [weak self] in
             Task { @MainActor [weak self] in
@@ -99,6 +106,10 @@ final class HengeCoordinator: ObservableObject {
         }
 
         return false
+    }
+
+    var frontmostExcludableApplication: ApplicationIdentity? {
+        resolveFrontmostExcludableApplication()
     }
 
     var hotkeyStatusText: String {
@@ -271,6 +282,7 @@ final class HengeCoordinator: ObservableObject {
         state.lastProbeSummary = nil
         saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
+        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
     }
 
     func setShortcut(_ shortcut: Shortcut) {
@@ -337,6 +349,16 @@ final class HengeCoordinator: ObservableObject {
         }
     }
 
+    @discardableResult
+    func excludeFrontmostApplication() -> Bool {
+        guard let application = frontmostExcludableApplication else {
+            return false
+        }
+
+        addApplicationException(application)
+        return true
+    }
+
     func addApplicationException(_ application: ApplicationIdentity) {
         let previousConfiguration = state.configuration
         let updated = exceptionManager.add(
@@ -347,6 +369,7 @@ final class HengeCoordinator: ObservableObject {
             state.configuration.excludedApplicationBundleIdentifiers = updated
         }
         saveConfigurationIfChanged(from: previousConfiguration)
+        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
     }
 
     func removeApplicationException(bundleIdentifier: String) {
@@ -359,6 +382,7 @@ final class HengeCoordinator: ObservableObject {
             state.configuration.excludedApplicationBundleIdentifiers = updated
         }
         saveConfigurationIfChanged(from: previousConfiguration)
+        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
     }
 
     func refreshPermissions() {
@@ -367,6 +391,7 @@ final class HengeCoordinator: ObservableObject {
             state.accessibilityGranted = accessibilityGranted
         }
         syncLaunchAtLoginState()
+        refreshFrontmostExcludableApplication()
     }
 
     func openAccessibilitySettings() {
@@ -507,6 +532,52 @@ final class HengeCoordinator: ObservableObject {
             excludingApplicationBundleIdentifiers: state.configuration.excludedApplicationBundleIdentifiers
         )
         state.lastFixOutcome = outcome == .excluded ? nil : outcome
+    }
+
+    private func refreshFrontmostExcludableApplication() {
+        let resolved = resolveFrontmostExcludableApplication()
+        guard resolved != lastObservedFrontmostExcludableApplication else {
+            return
+        }
+        objectWillChange.send()
+        lastObservedFrontmostExcludableApplication = resolved
+    }
+
+    private func resolveFrontmostExcludableApplication() -> ApplicationIdentity? {
+        guard let application = runtime.activeApplication else {
+            return nil
+        }
+
+        let bundleIdentifier = application.bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !bundleIdentifier.isEmpty else {
+            return nil
+        }
+
+        if isOwnBundleIdentifier(bundleIdentifier) {
+            return nil
+        }
+
+        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
+        guard !exceptionMatcher.contains(application, in: excluded),
+              !excluded.contains(bundleIdentifier) else {
+            return nil
+        }
+
+        return application
+    }
+
+    private func isOwnBundleIdentifier(_ bundleIdentifier: String) -> Bool {
+        if bundleIdentifier == Self.hengeBundleIdentifier {
+            return true
+        }
+
+        if let selfBundleIdentifier,
+           !selfBundleIdentifier.isEmpty,
+           bundleIdentifier == selfBundleIdentifier {
+            return true
+        }
+
+        return false
     }
 
     private static func outcome(from failure: FocusedElementProbeFailure) -> FixOutcome {

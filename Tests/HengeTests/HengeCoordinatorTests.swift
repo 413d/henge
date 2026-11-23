@@ -916,6 +916,114 @@ struct HengeCoordinatorTests {
         #expect(HengeCoordinator.statusText(for: .failed(.clipboardSuperseded)) == SelectionWriteFailure.clipboardSuperseded.description)
         #expect(HengeCoordinator.statusText(for: .failed(.focusLost(applicationName: "Notes")))?.contains("Notes") == true)
     }
+
+    @Test
+    func frontmostExcludableApplicationReturnsExternalAppWhenNotExcluded() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        runtime.activeApplication = notes
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+
+        #expect(coordinator.frontmostExcludableApplication == notes)
+    }
+
+    @Test
+    func frontmostExcludableApplicationSkipsExcludedEmptyAndOwnBundleIdentifiers() {
+        let store = InMemoryConfigurationStore()
+        store.save(
+            AppConfiguration(
+                isEnabled: true,
+                excludedApplicationBundleIdentifiers: ["com.1password.1password"]
+            )
+        )
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            ),
+            selfBundleIdentifier: "com.custom.Henge"
+        )
+
+        runtime.activeApplication = ApplicationIdentity(bundleIdentifier: "com.1password.1password", displayName: "1Password")
+        #expect(coordinator.frontmostExcludableApplication == nil)
+
+        runtime.activeApplication = ApplicationIdentity(bundleIdentifier: "io.github.413d.Henge", displayName: "Henge")
+        #expect(coordinator.frontmostExcludableApplication == nil)
+
+        runtime.activeApplication = ApplicationIdentity(bundleIdentifier: "com.custom.Henge", displayName: "Henge")
+        #expect(coordinator.frontmostExcludableApplication == nil)
+
+        runtime.activeApplication = ApplicationIdentity(bundleIdentifier: "   ", displayName: "Blank")
+        #expect(coordinator.frontmostExcludableApplication == nil)
+
+        runtime.activeApplication = nil
+        #expect(coordinator.frontmostExcludableApplication == nil)
+    }
+
+    @Test
+    func excludeFrontmostApplicationPersistsAndClearsFrontmostExcludableApplication() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let store = InMemoryConfigurationStore()
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        runtime.activeApplication = notes
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+
+        #expect(coordinator.frontmostExcludableApplication == notes)
+
+        let didExclude = coordinator.excludeFrontmostApplication()
+        #expect(didExclude == true)
+        #expect(store.load().excludedApplicationBundleIdentifiers == ["com.apple.Notes"])
+        #expect(coordinator.state.configuration.excludedApplicationBundleIdentifiers == ["com.apple.Notes"])
+        #expect(coordinator.frontmostExcludableApplication == nil)
+
+        #expect(coordinator.excludeFrontmostApplication() == false)
+    }
+
+    @Test
+    func refreshPermissionsNotifiesWhenFrontmostExcludableApplicationChanges() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let safari = ApplicationIdentity(bundleIdentifier: "com.apple.Safari", displayName: "Safari")!
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        runtime.activeApplication = notes
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: runtime
+            )
+        )
+
+        var changeNotifications = 0
+        let cancellable = coordinator.objectWillChange.sink { _ in
+            changeNotifications += 1
+        }
+        defer { cancellable.cancel() }
+
+        coordinator.refreshPermissions()
+        #expect(changeNotifications == 0)
+
+        runtime.activeApplication = safari
+        coordinator.refreshPermissions()
+        #expect(changeNotifications == 1)
+        #expect(coordinator.frontmostExcludableApplication == safari)
+    }
 }
 
 private extension AppEnvironment {
