@@ -709,6 +709,104 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func syncLaunchAtLoginStatePreservesConfigurationWhenRequiresApproval() {
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true)
+        )
+        let loginItemManager = FakeLoginItemManager(currentStatus: .requiresApproval)
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        #expect(coordinator.state.launchAtLoginStatus == .requiresApproval)
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(store.load().launchAtLogin == true)
+        #expect(store.saveCount == 0)
+        #expect(coordinator.launchAtLoginStatusText == "Approval required in System Settings → Login Items.")
+
+        // Refreshing while still awaiting approval keeps config intact and avoids writes.
+        coordinator.refreshPermissions()
+        #expect(coordinator.state.launchAtLoginStatus == .requiresApproval)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(store.saveCount == 0)
+
+        // Transitioning from enabled to requiresApproval on refresh also preserves configuration.
+        loginItemManager.updateStatus(.enabled)
+        coordinator.refreshPermissions()
+        #expect(coordinator.state.launchAtLoginStatus == .enabled)
+        #expect(coordinator.state.launchAtLoginEnabled == true)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+
+        loginItemManager.updateStatus(.requiresApproval)
+        coordinator.refreshPermissions()
+        #expect(coordinator.state.launchAtLoginStatus == .requiresApproval)
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(store.load().launchAtLogin == true)
+        #expect(store.saveCount == 0)
+    }
+
+    @Test
+    func setLaunchAtLoginTrueAcceptsRequiresApprovalStatus() {
+        let store = InMemoryConfigurationStore()
+        store.save(AppConfiguration(isEnabled: true, launchAtLogin: false))
+        let loginItemManager = FakeLoginItemManager(
+            currentStatus: .disabled,
+            enableResultStatus: .requiresApproval
+        )
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        coordinator.setLaunchAtLogin(true)
+
+        #expect(loginItemManager.setEnabledCalls == [true])
+        #expect(coordinator.state.launchAtLoginStatus == .requiresApproval)
+        #expect(coordinator.state.launchAtLoginEnabled == false)
+        #expect(coordinator.state.configuration.launchAtLogin == true)
+        #expect(store.load().launchAtLogin == true)
+        #expect(coordinator.state.launchAtLoginError == nil)
+        #expect(coordinator.launchAtLoginStatusText == "Approval required in System Settings → Login Items.")
+
+        loginItemManager.updateStatus(.enabled)
+        coordinator.refreshPermissions()
+
+        #expect(coordinator.state.launchAtLoginStatus == .enabled)
+        #expect(coordinator.state.launchAtLoginEnabled == true)
+        #expect(coordinator.launchAtLoginStatusText == "Launch at Login is enabled.")
+    }
+
+    @Test
+    func openLoginItemSettingsForwardsToLoginItemManager() {
+        let loginItemManager = FakeLoginItemManager(currentStatus: .requiresApproval)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: DeferredFixTextUseCase(),
+                runtime: StubRuntime(hasAccessibilityPermission: true),
+                loginItemManager: loginItemManager
+            )
+        )
+
+        coordinator.openLoginItemSettings()
+
+        #expect(loginItemManager.openLoginItemSettingsCallCount == 1)
+    }
+
+    @Test
     func quitApplicationUnregistersHotkeyBeforeTermination() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
@@ -856,10 +954,13 @@ private final class CountingConfigurationStore: ConfigurationStore {
 private final class FakeLoginItemManager: LoginItemManaging, @unchecked Sendable {
     private let lock = NSLock()
     private var currentStatus: LoginItemStatus
+    private let enableResultStatus: LoginItemStatus
     private(set) var setEnabledCalls: [Bool] = []
+    private(set) var openLoginItemSettingsCallCount = 0
 
-    init(currentStatus: LoginItemStatus) {
+    init(currentStatus: LoginItemStatus, enableResultStatus: LoginItemStatus = .enabled) {
         self.currentStatus = currentStatus
+        self.enableResultStatus = enableResultStatus
     }
 
     var status: LoginItemStatus {
@@ -870,7 +971,12 @@ private final class FakeLoginItemManager: LoginItemManaging, @unchecked Sendable
     func setEnabled(_ enabled: Bool) throws {
         lock.lock(); defer { lock.unlock() }
         setEnabledCalls.append(enabled)
-        currentStatus = enabled ? .enabled : .disabled
+        currentStatus = enabled ? enableResultStatus : .disabled
+    }
+
+    func openLoginItemSettings() {
+        lock.lock(); defer { lock.unlock() }
+        openLoginItemSettingsCallCount += 1
     }
 
     func updateStatus(_ status: LoginItemStatus) {
@@ -895,6 +1001,8 @@ private final class FailingLoginItemManager: LoginItemManaging, @unchecked Senda
     func setEnabled(_ enabled: Bool) throws {
         throw LoginItemUpdateError.updateFailed("Launch at Login update failed.")
     }
+
+    func openLoginItemSettings() {}
 }
 
 private final class NonMutatingLoginItemManager: LoginItemManaging, @unchecked Sendable {
@@ -915,6 +1023,8 @@ private final class NonMutatingLoginItemManager: LoginItemManaging, @unchecked S
         lock.lock(); defer { lock.unlock() }
         setEnabledCalls.append(enabled)
     }
+
+    func openLoginItemSettings() {}
 }
 
 private final class StubRuntime: AppRuntime {

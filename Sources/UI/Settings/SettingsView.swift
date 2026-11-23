@@ -55,6 +55,12 @@ struct SettingsView: View {
                     Text(coordinator.launchAtLoginStatusText)
                         .foregroundStyle(.red)
                 }
+
+                if coordinator.state.launchAtLoginStatus == .requiresApproval || coordinator.state.launchAtLoginError != nil {
+                    Button("Open Login Items…") {
+                        coordinator.openLoginItemSettings()
+                    }
+                }
             }
 
             Section("Permissions") {

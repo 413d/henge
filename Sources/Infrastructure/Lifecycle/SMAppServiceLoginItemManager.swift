@@ -4,18 +4,23 @@ import ServiceManagement
 
 public final class SMAppServiceLoginItemManager: LoginItemManaging, @unchecked Sendable {
     private let service: SMAppService
+    private let statusProvider: (@Sendable () -> SMAppService.Status)?
 
     public init(service: SMAppService = .mainApp) {
         self.service = service
+        statusProvider = nil
+    }
+
+    init(
+        service: SMAppService = .mainApp,
+        statusProvider: @escaping @Sendable () -> SMAppService.Status
+    ) {
+        self.service = service
+        self.statusProvider = statusProvider
     }
 
     public var status: LoginItemStatus {
-        switch service.status {
-        case .enabled:
-            return .enabled
-        default:
-            return .disabled
-        }
+        Self.mapStatus(statusProvider?() ?? service.status)
     }
 
     public func setEnabled(_ enabled: Bool) throws {
@@ -27,6 +32,23 @@ public final class SMAppServiceLoginItemManager: LoginItemManaging, @unchecked S
             }
         } catch {
             throw LoginItemUpdateError.updateFailed(error.localizedDescription)
+        }
+    }
+
+    public func openLoginItemSettings() {
+        SMAppService.openSystemSettingsLoginItems()
+    }
+
+    static func mapStatus(_ status: SMAppService.Status) -> LoginItemStatus {
+        switch status {
+        case .enabled:
+            return .enabled
+        case .requiresApproval:
+            return .requiresApproval
+        case .notRegistered, .notFound:
+            return .disabled
+        @unknown default:
+            return .disabled
         }
     }
 }

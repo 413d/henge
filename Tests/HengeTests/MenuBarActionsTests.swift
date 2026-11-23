@@ -607,6 +607,8 @@ private final class MenuBarTestLoginItemManager: LoginItemManaging, @unchecked S
     func setEnabled(_ enabled: Bool) throws {
         currentStatus = enabled ? .enabled : .disabled
     }
+
+    func openLoginItemSettings() {}
 }
 
 private final class MenuBarTestRuntime: AppRuntime {

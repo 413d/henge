@@ -32,11 +32,20 @@ final class HengeCoordinator: ObservableObject {
         }
 
         let loadedConfiguration = environment.configurationStore.load()
-        let systemLaunchAtLogin = environment.loginItemManager.status == .enabled
+        let systemLaunchAtLoginStatus = environment.loginItemManager.status
+        let systemLaunchAtLoginEnabled = systemLaunchAtLoginStatus == .enabled
+        let resolvedConfigurationLaunchAtLogin: Bool = switch systemLaunchAtLoginStatus {
+        case .enabled:
+            true
+        case .disabled:
+            false
+        case .requiresApproval:
+            loadedConfiguration.launchAtLogin
+        }
         let normalizedConfiguration = AppConfiguration(
             schemaVersion: loadedConfiguration.schemaVersion,
             isEnabled: loadedConfiguration.isEnabled,
-            launchAtLogin: systemLaunchAtLogin,
+            launchAtLogin: resolvedConfigurationLaunchAtLogin,
             shortcut: loadedConfiguration.shortcut,
             excludedApplicationBundleIdentifiers: loadedConfiguration.excludedApplicationBundleIdentifiers
         )
@@ -54,7 +63,8 @@ final class HengeCoordinator: ObservableObject {
             hotkeyRegistrationError: nil,
             lastFixOutcome: nil,
             lastProbeSummary: nil,
-            launchAtLoginEnabled: systemLaunchAtLogin,
+            launchAtLoginEnabled: systemLaunchAtLoginEnabled,
+            launchAtLoginStatus: systemLaunchAtLoginStatus,
             launchAtLoginError: nil
         )
 
@@ -112,9 +122,14 @@ final class HengeCoordinator: ObservableObject {
             return launchAtLoginError
         }
 
-        return state.launchAtLoginEnabled
-            ? "Launch at Login is enabled."
-            : "Launch at Login is disabled."
+        switch state.launchAtLoginStatus {
+        case .enabled:
+            return "Launch at Login is enabled."
+        case .disabled:
+            return "Launch at Login is disabled."
+        case .requiresApproval:
+            return "Approval required in System Settings → Login Items."
+        }
     }
 
     var lastProbeStatusText: String? {
@@ -201,24 +216,37 @@ final class HengeCoordinator: ObservableObject {
     }
 
     func setLaunchAtLogin(_ launchAtLogin: Bool) {
-        let previousState = state.launchAtLoginEnabled
+        let previousEnabled = state.launchAtLoginEnabled
+        let previousStatus = state.launchAtLoginStatus
         let previousConfiguration = state.configuration
         state.launchAtLoginError = nil
 
         do {
             try loginItemManager.setEnabled(launchAtLogin)
-            let actualState = currentLaunchAtLoginEnabled()
+            let actualStatus = loginItemManager.status
 
-            guard actualState == launchAtLogin else {
+            switch (launchAtLogin, actualStatus) {
+            case (true, .enabled):
+                state.launchAtLoginStatus = .enabled
+                state.launchAtLoginEnabled = true
+                state.configuration.launchAtLogin = true
+            case (true, .requiresApproval):
+                state.launchAtLoginStatus = .requiresApproval
+                state.launchAtLoginEnabled = false
+                state.configuration.launchAtLogin = true
+            case (false, .disabled):
+                state.launchAtLoginStatus = .disabled
+                state.launchAtLoginEnabled = false
+                state.configuration.launchAtLogin = false
+            default:
                 throw LoginItemUpdateError.updateFailed("Launch at Login state could not be verified.")
             }
 
-            state.launchAtLoginEnabled = actualState
-            state.configuration.launchAtLogin = actualState
             saveConfigurationIfChanged(from: previousConfiguration)
         } catch {
-            state.launchAtLoginEnabled = previousState
-            state.configuration.launchAtLogin = previousState
+            state.launchAtLoginEnabled = previousEnabled
+            state.launchAtLoginStatus = previousStatus
+            state.configuration = previousConfiguration
             state.launchAtLoginError = error.localizedDescription
             saveConfigurationIfChanged(from: previousConfiguration)
         }
@@ -228,9 +256,17 @@ final class HengeCoordinator: ObservableObject {
         let previousConfiguration = state.configuration
         state.configuration = AppConfiguration.default
         // launchAtLogin mirrors the system login-item state, not the config default.
-        let systemLaunchAtLogin = currentLaunchAtLoginEnabled()
-        state.launchAtLoginEnabled = systemLaunchAtLogin
-        state.configuration.launchAtLogin = systemLaunchAtLogin
+        let systemStatus = loginItemManager.status
+        state.launchAtLoginStatus = systemStatus
+        state.launchAtLoginEnabled = systemStatus == .enabled
+        switch systemStatus {
+        case .enabled:
+            state.configuration.launchAtLogin = true
+        case .disabled:
+            state.configuration.launchAtLogin = false
+        case .requiresApproval:
+            state.configuration.launchAtLogin = previousConfiguration.launchAtLogin
+        }
         state.lastFixOutcome = nil
         state.lastProbeSummary = nil
         saveConfigurationIfChanged(from: previousConfiguration)
@@ -337,6 +373,10 @@ final class HengeCoordinator: ObservableObject {
         runtime.openAccessibilitySettings()
     }
 
+    func openLoginItemSettings() {
+        loginItemManager.openLoginItemSettings()
+    }
+
     func openSettings() {
         refreshPermissions()
         presentSettings()
@@ -350,18 +390,26 @@ final class HengeCoordinator: ObservableObject {
     }
 
     private func syncLaunchAtLoginState() {
-        let resolved = currentLaunchAtLoginEnabled()
-        if state.launchAtLoginEnabled != resolved {
-            state.launchAtLoginEnabled = resolved
+        let currentStatus = loginItemManager.status
+        let resolvedEnabled = currentStatus == .enabled
+        if state.launchAtLoginStatus != currentStatus {
+            state.launchAtLoginStatus = currentStatus
+        }
+        if state.launchAtLoginEnabled != resolvedEnabled {
+            state.launchAtLoginEnabled = resolvedEnabled
         }
         if state.launchAtLoginError != nil {
             state.launchAtLoginError = nil
         }
-        guard state.configuration.launchAtLogin != resolved else {
+        guard currentStatus != .requiresApproval else {
+            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=requiresApproval")
+            return
+        }
+        guard state.configuration.launchAtLogin != resolvedEnabled else {
             configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
             return
         }
-        state.configuration.launchAtLogin = resolved
+        state.configuration.launchAtLogin = resolvedEnabled
         configurationStore.save(state.configuration)
     }
 
@@ -371,10 +419,6 @@ final class HengeCoordinator: ObservableObject {
             return
         }
         configurationStore.save(state.configuration)
-    }
-
-    private func currentLaunchAtLoginEnabled() -> Bool {
-        loginItemManager.status == .enabled
     }
 
     private func updateHotkeyRegistration() {

@@ -13,5 +13,6 @@ struct ApplicationState: Equatable {
     var lastFixOutcome: FixOutcome?
     var lastProbeSummary: String?
     var launchAtLoginEnabled: Bool
+    var launchAtLoginStatus: LoginItemStatus = .disabled
     var launchAtLoginError: String?
 }
