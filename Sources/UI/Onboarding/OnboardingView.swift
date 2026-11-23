@@ -1,8 +1,27 @@
 import AppKit
 import SwiftUI
 
+@MainActor
+private final class OnboardingWindowState: ObservableObject {
+    @Published var isVisible = false
+}
+
+private struct OnboardingPollKey: Equatable {
+    let isVisible: Bool
+    let accessibilityGranted: Bool
+}
+
 struct OnboardingView: View {
     @EnvironmentObject private var coordinator: HengeCoordinator
+    @ObservedObject private var windowState: OnboardingWindowState
+
+    init() {
+        self.windowState = OnboardingWindowState()
+    }
+
+    fileprivate init(windowState: OnboardingWindowState) {
+        self.windowState = windowState
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -38,13 +57,15 @@ struct OnboardingView: View {
             coordinator.refreshPermissions()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            guard windowState.isVisible else { return }
             coordinator.refreshPermissions()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            guard windowState.isVisible else { return }
             coordinator.refreshPermissions()
         }
-        .task(id: coordinator.state.accessibilityGranted) {
-            guard !coordinator.state.accessibilityGranted else {
+        .task(id: OnboardingPollKey(isVisible: windowState.isVisible, accessibilityGranted: coordinator.state.accessibilityGranted)) {
+            guard windowState.isVisible, !coordinator.state.accessibilityGranted else {
                 return
             }
             while !Task.isCancelled {
@@ -197,6 +218,7 @@ struct OnboardingView: View {
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private weak var coordinator: HengeCoordinator?
     private var window: NSWindow?
+    private let windowState = OnboardingWindowState()
     private var isClosingWindow = false
     private let activateApplication: @MainActor () -> Void
     private let presentWindow: @MainActor (NSWindow) -> Void
@@ -232,7 +254,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             targetWindow = existingWindow
         } else {
             let hostingController = NSHostingController(
-                rootView: OnboardingView().environmentObject(coordinator)
+                rootView: OnboardingView(windowState: windowState).environmentObject(coordinator)
             )
             let createdWindow = NSWindow(contentViewController: hostingController)
             createdWindow.title = L10n.string(
@@ -247,6 +269,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             targetWindow = createdWindow
         }
 
+        windowState.isVisible = true
         bringCurrentWindowToFront()
 
         if RunLoop.main.currentMode == .eventTracking {
@@ -261,13 +284,17 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     }
 
     func closeWindow() {
+        windowState.isVisible = false
         guard !isClosingWindow, let window else {
             return
         }
+        isClosingWindow = true
+        defer { isClosingWindow = false }
         window.close()
     }
 
     func windowWillClose(_ notification: Notification) {
+        windowState.isVisible = false
         guard !isClosingWindow else {
             return
         }
