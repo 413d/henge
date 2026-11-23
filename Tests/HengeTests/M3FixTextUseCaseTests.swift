@@ -96,4 +96,146 @@ struct M3FixTextUseCaseTests {
         #expect(runtime.replacedText == nil)
         #expect(runtime.replaceCallCount == 0)
     }
+
+    @Test
+    func statusChannelReportsClipboardFallbackSuccess() {
+        let runtime = ClipboardStatusStubRuntime(
+            selection: .available(
+                SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+            ),
+            directResult: .unavailable(.unsupported),
+            clipboardResult: .success(SelectionRangeSnapshot(location: 0, length: 6))
+        )
+        let statusChannel = FixTextStatusChannel()
+        let useCase = LiveFixTextUseCase(
+            runtime: runtime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: runtime.layoutMapper
+            ),
+            statusChannel: statusChannel
+        )
+
+        #expect(statusChannel.take() == nil)
+        useCase.execute()
+        #expect(statusChannel.take() == "Text corrected using the clipboard fallback.")
+        #expect(statusChannel.take() == nil)
+    }
+
+    @Test
+    func statusChannelReportsDirectSuccessAndClipboardFailures() {
+        let directRuntime = ClipboardStatusStubRuntime(
+            selection: .available(
+                SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+            ),
+            directResult: .success(SelectionRangeSnapshot(location: 0, length: 6)),
+            clipboardResult: .unavailable(.unsupported)
+        )
+        let statusChannel = FixTextStatusChannel()
+        let directUseCase = LiveFixTextUseCase(
+            runtime: directRuntime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: directRuntime.layoutMapper
+            ),
+            statusChannel: statusChannel
+        )
+        directUseCase.execute()
+        #expect(statusChannel.take() == "Text corrected.")
+
+        let unverifiedRuntime = ClipboardStatusStubRuntime(
+            selection: .available(
+                SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+            ),
+            directResult: .unavailable(.unsupported),
+            clipboardResult: .unavailable(.pasteUnverified)
+        )
+        LiveFixTextUseCase(
+            runtime: unverifiedRuntime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: unverifiedRuntime.layoutMapper
+            ),
+            statusChannel: statusChannel
+        ).execute()
+        #expect(statusChannel.take() == SelectionWriteFailure.pasteUnverified.description)
+
+        let restoreFailedRuntime = ClipboardStatusStubRuntime(
+            selection: .available(
+                SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+            ),
+            directResult: .unavailable(.unsupported),
+            clipboardResult: .unavailable(.clipboardRestoreFailed)
+        )
+        LiveFixTextUseCase(
+            runtime: restoreFailedRuntime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: restoreFailedRuntime.layoutMapper
+            ),
+            statusChannel: statusChannel
+        ).execute()
+        #expect(statusChannel.take() == SelectionWriteFailure.clipboardRestoreFailed.description)
+
+        let supersededRuntime = ClipboardStatusStubRuntime(
+            selection: .available(
+                SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+            ),
+            directResult: .unavailable(.unsupported),
+            clipboardResult: .unavailable(.clipboardSuperseded)
+        )
+        LiveFixTextUseCase(
+            runtime: supersededRuntime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: supersededRuntime.layoutMapper
+            ),
+            statusChannel: statusChannel
+        ).execute()
+        #expect(statusChannel.take() == nil)
+    }
+}
+
+private final class ClipboardStatusStubRuntime: AppRuntime {
+    var hasAccessibilityPermission: Bool { true }
+    var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let clipboardManager: ClipboardManaging = MockClipboardManager()
+
+    private let selection: SelectionProbe
+    private let directResult: SelectionWriteResult
+    private let clipboardResult: SelectionWriteResult
+
+    init(
+        selection: SelectionProbe,
+        directResult: SelectionWriteResult,
+        clipboardResult: SelectionWriteResult
+    ) {
+        self.selection = selection
+        self.directResult = directResult
+        self.clipboardResult = clipboardResult
+    }
+
+    func openAccessibilitySettings() {}
+    func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws {}
+    func unregisterFixTextHotkey() {}
+    func inspectFocusedElement() -> FocusedElementProbe {
+        .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false))
+    }
+    func inspectSelection() -> SelectionProbe { selection }
+    func replaceSelection(with text: String) -> SelectionWriteResult { directResult }
+    func replaceText(
+        in range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String,
+        in application: ApplicationIdentity
+    ) -> SelectionWriteResult { directResult }
+    func replaceTextUsingClipboard(
+        in range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String,
+        in application: ApplicationIdentity
+    ) -> SelectionWriteResult { clipboardResult }
 }

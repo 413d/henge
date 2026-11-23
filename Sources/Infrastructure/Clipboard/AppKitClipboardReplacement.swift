@@ -2,21 +2,29 @@ import AppKit
 import CoreGraphics
 import Foundation
 
+enum ClipboardReplacementResult: Equatable {
+    case success
+    case pasteUnverified
+    case restoreFailed
+    case superseded
+    case failed
+}
+
 protocol ClipboardReplacing {
     /// Copies the current selection, verifies it matches the expected source,
     /// pastes the replacement, and restores the original full-fidelity clipboard.
-    func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> Bool
-    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool
-    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool
+    func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
+    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
+    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
 }
 
 extension ClipboardReplacing {
-    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool {
-        guard validateTarget() else { return false }
+    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
+        guard validateTarget() else { return .failed }
         return replaceSelection(expectedText: expectedText, with: replacement, verifyReplacement: verifyReplacement)
     }
 
-    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> Bool {
+    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
         replaceSelection(expectedText: expectedText, with: replacement, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
     }
 }
@@ -37,15 +45,26 @@ protocol ReplacementPasteboard {
     func string() -> String?
     func clear()
     func setString(_ string: String) -> Bool
+    /// Writes plain text along with org.nspasteboard.TransientType and org.nspasteboard.ConcealedType markers.
+    func setTransientString(_ string: String) -> Bool
 }
 
-private struct AppKitReplacementPasteboard: ReplacementPasteboard {
+struct AppKitReplacementPasteboard: ReplacementPasteboard {
     let pasteboard: NSPasteboard
 
     var changeCount: Int { pasteboard.changeCount }
     func string() -> String? { pasteboard.string(forType: .string) }
     func clear() { pasteboard.clearContents() }
     func setString(_ string: String) -> Bool { pasteboard.setString(string, forType: .string) }
+
+    func setTransientString(_ string: String) -> Bool {
+        let item = NSPasteboardItem()
+        item.setString(string, forType: .string)
+        item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+        item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
+        pasteboard.clearContents()
+        return pasteboard.writeObjects([item])
+    }
 }
 
 struct SystemClipboardEventPoster: ClipboardEventPosting {
@@ -94,7 +113,7 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         expectedText: String,
         with replacement: String,
         verifyReplacement: () -> Bool
-    ) -> Bool {
+    ) -> ClipboardReplacementResult {
         replaceSelection(expectedText: expectedText, with: replacement, validateTarget: { true }, verifyReplacement: verifyReplacement)
     }
 
@@ -103,7 +122,7 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         with replacement: String,
         validateTarget: () -> Bool,
         verifyReplacement: () -> Bool
-    ) -> Bool {
+    ) -> ClipboardReplacementResult {
         replaceSelection(expectedText: expectedText, with: replacement, processIdentifier: 0, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
     }
 
@@ -113,12 +132,12 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         processIdentifier: pid_t,
         validateTarget: () -> Bool,
         verifyReplacement: () -> Bool
-    ) -> Bool {
+    ) -> ClipboardReplacementResult {
         let originalClipboard = clipboardManager.snapshot()
         guard originalClipboard.isRestorable else {
             let typeNames = Diagnostics.pasteboardTypeNames(originalClipboard.oversizedTypes)?.joined(separator: ",") ?? "redacted"
             logger.warning("\(DiagnosticsLabel.snapshotSkippedOversized.rawValue, privacy: .public) types=\(typeNames, privacy: .public)")
-            return false
+            return .failed
         }
         var didAttemptRestore = false
         defer {
@@ -128,18 +147,39 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         let beforeCopyChangeCount = pasteboard.changeCount
         guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier), waitForClipboardChange(after: beforeCopyChangeCount),
               validateTarget(), pasteboard.string() == expectedText else {
-            return false
+            logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=copy")
+            return .failed
         }
 
         pasteboard.clear()
-        guard pasteboard.setString(replacement), validateTarget(), postCommandKey(virtualKey: 9, processIdentifier: processIdentifier) else {
-            return false
+        guard pasteboard.setTransientString(replacement) else {
+            logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=write")
+            return .failed
+        }
+        let replacementWriteChangeCount = pasteboard.changeCount
+        guard validateTarget(), postCommandKey(virtualKey: 9, processIdentifier: processIdentifier) else {
+            logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=paste")
+            return .failed
         }
 
         let replacementCompleted = waitForReplacement(verifyReplacement)
+        if pasteboard.changeCount != replacementWriteChangeCount {
+            didAttemptRestore = true
+            logger.info("\(DiagnosticsLabel.replacementSuperseded.rawValue, privacy: .public)")
+            return .superseded
+        }
+
         didAttemptRestore = true
         let clipboardRestored = clipboardManager.restore(originalClipboard)
-        return replacementCompleted && clipboardRestored
+        if !clipboardRestored {
+            logger.error("\(DiagnosticsLabel.restoreFailed.rawValue, privacy: .public)")
+            return .restoreFailed
+        }
+        if !replacementCompleted {
+            logger.warning("\(DiagnosticsLabel.pasteUnverified.rawValue, privacy: .public)")
+            return .pasteUnverified
+        }
+        return .success
     }
 
     private func postCommandKey(virtualKey: CGKeyCode, processIdentifier: pid_t) -> Bool {

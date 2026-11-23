@@ -108,6 +108,9 @@ enum SelectionWriteFailure: Equatable {
     case noSelection
     case unsupported
     case accessibilityError(AXError)
+    case pasteUnverified
+    case clipboardRestoreFailed
+    case clipboardSuperseded
 
     var description: String {
         switch self {
@@ -123,6 +126,12 @@ enum SelectionWriteFailure: Equatable {
             return "The focused element does not support direct selection replacement through Accessibility."
         case let .accessibilityError(error):
             return "Henge could not replace the current selection (AXError \(error.rawValue))."
+        case .pasteUnverified:
+            return "Henge attempted clipboard replacement, but could not verify that the text changed."
+        case .clipboardRestoreFailed:
+            return "Henge could not restore the original clipboard contents after replacement."
+        case .clipboardSuperseded:
+            return "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
         }
     }
 }
@@ -450,7 +459,7 @@ final class LiveAppRuntime: AppRuntime {
             guard let targetPID = validatedProcessIdentifier(for: resolvedElement.element, in: application) else {
                 return .unavailable(.unsupported)
             }
-            guard clipboardReplacement.replaceSelection(
+            let replacementResult = clipboardReplacement.replaceSelection(
                 expectedText: expectedText,
                 with: text,
                 processIdentifier: targetPID,
@@ -464,10 +473,19 @@ final class LiveAppRuntime: AppRuntime {
                         of: currentText
                     ) == text
                 }
-            ) else {
+            )
+            switch replacementResult {
+            case .success:
+                return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
+            case .pasteUnverified:
+                return .unavailable(.pasteUnverified)
+            case .restoreFailed:
+                return .unavailable(.clipboardRestoreFailed)
+            case .superseded:
+                return .unavailable(.clipboardSuperseded)
+            case .failed:
                 return .unavailable(.unsupported)
             }
-            return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
         }
     }
 

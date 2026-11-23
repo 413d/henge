@@ -648,6 +648,43 @@ struct HengeCoordinatorTests {
         #expect(terminateCallCount == 1)
         #expect(store.load() == configurationBeforeQuit)
     }
+
+    @Test
+    func coordinatorShowsReportedStatus() async {
+        let statusChannel = FixTextStatusChannel()
+        let runtime = StubRuntime(
+            hasAccessibilityPermission: true,
+            selectionProbe: .available(
+                SelectionSnapshot(
+                    text: "ghbdtn",
+                    range: SelectionRangeSnapshot(location: 0, length: 6)
+                )
+            )
+        )
+        let useCase = SpyFixTextUseCase(
+            availability: .available,
+            statusChannel: statusChannel,
+            reportedStatus: "Text corrected using the clipboard fallback."
+        )
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: useCase,
+                runtime: runtime,
+                loginItemManager: InMemoryLoginItemManager(initialEnabled: true),
+                fixStatusChannel: statusChannel
+            )
+        )
+
+        coordinator.triggerFixText()
+        for _ in 0..<20 where useCase.executionCount == 0 {
+            await Task.yield()
+        }
+        await Task.yield()
+
+        #expect(useCase.executionCount == 1)
+        #expect(coordinator.state.lastProbeStatus == "Text corrected using the clipboard fallback.")
+    }
 }
 
 private extension AppEnvironment {
@@ -818,13 +855,24 @@ private final class StubRuntime: AppRuntime {
 
 private final class SpyFixTextUseCase: FixTextUseCaseProtocol {
     let availability: FixTextAvailability
+    private let statusChannel: FixTextStatusChannel?
+    private let reportedStatus: String?
     private(set) var executionCount = 0
 
-    init(availability: FixTextAvailability) {
+    init(
+        availability: FixTextAvailability,
+        statusChannel: FixTextStatusChannel? = nil,
+        reportedStatus: String? = nil
+    ) {
         self.availability = availability
+        self.statusChannel = statusChannel
+        self.reportedStatus = reportedStatus
     }
 
     func execute(excludingApplicationBundleIdentifiers: Set<String>) {
         executionCount += 1
+        if let reportedStatus {
+            statusChannel?.report(reportedStatus)
+        }
     }
 }

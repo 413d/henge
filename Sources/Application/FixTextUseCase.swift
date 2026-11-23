@@ -1,3 +1,26 @@
+import Foundation
+
+final class FixTextStatusChannel: @unchecked Sendable {
+    private let lock = NSLock()
+    private var latestMessage: String?
+
+    init() {}
+
+    func report(_ message: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        latestMessage = message
+    }
+
+    func take() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        let message = latestMessage
+        latestMessage = nil
+        return message
+    }
+}
+
 enum FixTextAvailability: Equatable {
     case available
     case deferred(String)
@@ -31,17 +54,20 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
     private let transformer: TextTransforming
     private let wordBoundaryDetector: WordBoundaryDetecting
     private let exceptionMatcher: ExceptionMatcher
+    private let statusChannel: FixTextStatusChannel
 
     init(
         runtime: AppRuntime,
         transformer: TextTransforming,
         wordBoundaryDetector: WordBoundaryDetecting = DefaultWordBoundaryDetector(),
-        exceptionMatcher: ExceptionMatcher = ExceptionMatcher()
+        exceptionMatcher: ExceptionMatcher = ExceptionMatcher(),
+        statusChannel: FixTextStatusChannel = FixTextStatusChannel()
     ) {
         self.runtime = runtime
         self.transformer = transformer
         self.wordBoundaryDetector = wordBoundaryDetector
         self.exceptionMatcher = exceptionMatcher
+        self.statusChannel = statusChannel
     }
 
     func execute(excludingApplicationBundleIdentifiers: Set<String>) {
@@ -76,15 +102,35 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             with: replacement,
             in: application
         )
-        guard case .unavailable(.unsupported) = directResult else { return }
+        switch directResult {
+        case .success:
+            statusChannel.report("Text corrected.")
+            return
+        case .unavailable(.unsupported):
+            break
+        case .unavailable:
+            return
+        }
 
-        _ = runtime.replaceTextUsingClipboard(
+        let clipboardResult = runtime.replaceTextUsingClipboard(
             in: targetRange,
             context: context,
             expectedText: targetText,
             with: replacement,
             in: application
         )
+        switch clipboardResult {
+        case .success:
+            statusChannel.report("Text corrected using the clipboard fallback.")
+        case .unavailable(.clipboardRestoreFailed):
+            statusChannel.report(SelectionWriteFailure.clipboardRestoreFailed.description)
+        case .unavailable(.pasteUnverified):
+            statusChannel.report(SelectionWriteFailure.pasteUnverified.description)
+        case .unavailable(.clipboardSuperseded):
+            break
+        case .unavailable:
+            break
+        }
     }
 
     private func characterOffset(forUTF16Offset offset: Int, in text: String) -> Int? {

@@ -9,6 +9,7 @@ final class HengeCoordinator: ObservableObject {
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
     private let loginItemManager: LoginItemManaging
+    private let fixStatusChannel: FixTextStatusChannel
     private let presentSettings: @MainActor () -> Void
     private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
@@ -24,6 +25,7 @@ final class HengeCoordinator: ObservableObject {
         fixTextUseCase = environment.fixTextUseCase
         runtime = environment.runtime
         loginItemManager = environment.loginItemManager
+        fixStatusChannel = environment.fixStatusChannel
         self.presentSettings = presentSettings ?? {}
         self.terminateApplication = terminateApplication ?? {
             NSApplication.shared.terminate(nil)
@@ -348,5 +350,8 @@ final class HengeCoordinator: ObservableObject {
 
         state.lastProbeStatus = "Correction attempted."
         fixTextUseCase.execute(excludingApplicationBundleIdentifiers: excluded)
+        if let message = fixStatusChannel.take() {
+            state.lastProbeStatus = message
+        }
     }
 }

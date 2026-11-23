@@ -99,10 +99,11 @@ struct M4SafetyAndCompatibilityTests {
         let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
         let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
 
-        let didReplace = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
             poster.pastedText == "привет"
         }
-        #expect(didReplace)
+        #expect(result == .success)
+        #expect(pasteboard.lastTransientWrittenString == "привет")
         #expect(poster.copySucceeded)
         #expect(poster.pastedText == "привет")
         #expect(manager.restoredSnapshot == original)
@@ -118,7 +119,8 @@ struct M4SafetyAndCompatibilityTests {
         let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "different selection")
         let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
 
-        #expect(!replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { false }))
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { false })
+        #expect(result == .failed)
         #expect(manager.restoredSnapshot == original)
     }
 
@@ -130,12 +132,12 @@ struct M4SafetyAndCompatibilityTests {
         let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
         var verificationCount = 0
 
-        let didReplace = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
             verificationCount += 1
             return verificationCount == 3
         }
 
-        #expect(didReplace)
+        #expect(result == .success)
         #expect(verificationCount == 3)
         #expect(manager.restoredSnapshot == .empty)
     }
@@ -147,7 +149,8 @@ struct M4SafetyAndCompatibilityTests {
         let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
         let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
 
-        #expect(!replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true }))
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+        #expect(result == .restoreFailed)
         #expect(poster.pastedText == "привет")
         #expect(manager.restoredSnapshot == .empty)
     }
@@ -167,14 +170,89 @@ struct M4SafetyAndCompatibilityTests {
         let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
         let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
 
-        let didReplace = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
 
-        #expect(didReplace == false)
+        #expect(result == .failed)
         #expect(pasteboard.changeCount == initialChangeCount)
         #expect(pasteboard.string() == "original clipboard")
         #expect(poster.copySucceeded == false)
         #expect(poster.pastedText == nil)
         #expect(manager.restoredSnapshot == nil)
+    }
+
+    @Test
+    func replacementPasteIsMarkedTransient() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+
+        let replacementPasteboard = AppKitReplacementPasteboard(pasteboard: pasteboard)
+        let didWrite = replacementPasteboard.setTransientString("привет")
+
+        #expect(didWrite)
+        let item = pasteboard.pasteboardItems?.first
+        #expect(item != nil)
+        let types = Set(item?.types.map(\.rawValue) ?? [])
+        #expect(types.contains("org.nspasteboard.TransientType"))
+        #expect(types.contains("org.nspasteboard.ConcealedType"))
+        #expect(item?.string(forType: .string) == "привет")
+    }
+
+    @Test
+    func clipboardFallbackReportsUnverifiedPaste() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(
+            clipboardManager: manager,
+            pasteboard: pasteboard,
+            timeout: 0.05,
+            eventPoster: poster
+        )
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { false })
+
+        #expect(result == .pasteUnverified)
+        #expect(poster.pastedText == "привет")
+        #expect(manager.restoredSnapshot == original)
+    }
+
+    @Test
+    func restoreFailureIsReportedAsClipboardRestoreFailed() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original, restorationSucceeds: false)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет", verifyReplacement: { true })
+
+        #expect(result == .restoreFailed)
+        #expect(manager.restoredSnapshot == original)
+    }
+
+    @Test
+    func clipboardFallbackSkipsRestoreWhenClipboardIsSuperseded() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
+            _ = pasteboard.setString("user copied something else")
+            return true
+        }
+
+        #expect(result == .superseded)
+        #expect(manager.restoredSnapshot == nil)
+        #expect(pasteboard.string() == "user copied something else")
     }
 
     private func makeUseCase(_ runtime: M4RuntimeStub) -> LiveFixTextUseCase {
@@ -213,6 +291,7 @@ private final class TestClipboardEventPoster: ClipboardEventPosting {
 private final class TestReplacementPasteboard: ReplacementPasteboard {
     private(set) var changeCount = 0
     private var contents: String?
+    private(set) var lastTransientWrittenString: String?
 
     init(initialString: String?) {
         contents = initialString
@@ -226,6 +305,13 @@ private final class TestReplacementPasteboard: ReplacementPasteboard {
     }
 
     func setString(_ string: String) -> Bool {
+        contents = string
+        changeCount += 1
+        return true
+    }
+
+    func setTransientString(_ string: String) -> Bool {
+        lastTransientWrittenString = string
         contents = string
         changeCount += 1
         return true
