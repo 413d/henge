@@ -310,7 +310,8 @@ struct MenuBarActionsTests {
 
         #expect(runtime.preparedApplications == [notes])
         #expect(runtime.text == "Hello привет")
-        #expect(coordinator.lastProbeStatusText == "Correction attempted.")
+        #expect(coordinator.state.lastFixOutcome == .fixed(viaClipboard: false))
+        #expect(coordinator.lastProbeStatusText == "Text corrected.")
     }
 
     @Test
@@ -353,6 +354,7 @@ struct MenuBarActionsTests {
 
         #expect(runtime.preparedApplications.isEmpty)
         #expect(runtime.text == "ghbdtn")
+        #expect(coordinator.state.lastFixOutcome == nil)
         #expect(coordinator.lastProbeStatusText == nil)
     }
 
@@ -391,6 +393,7 @@ struct MenuBarActionsTests {
         #expect(runtime.preparedApplications == [safari])
         #expect(runtime.text == "ghbdtn")
         #expect(runtime.replaceCallCount == 0)
+        #expect(coordinator.state.lastFixOutcome == .secureField)
         #expect(coordinator.lastProbeStatusText?.contains("secure text field") == true)
     }
 
@@ -431,6 +434,7 @@ struct MenuBarActionsTests {
         #expect(coordinator.state.accessibilityGranted == false)
         #expect(runtime.preparedApplications.isEmpty)
         #expect(runtime.text == "ghbdtn")
+        #expect(coordinator.state.lastFixOutcome == .failed(.missingPermission))
         #expect(coordinator.lastProbeStatusText == FocusedElementProbeFailure.missingPermission.description)
     }
 

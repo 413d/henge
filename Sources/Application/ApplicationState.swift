@@ -3,7 +3,8 @@ struct ApplicationState: Equatable {
     var accessibilityGranted: Bool
     var hotkeyRegistered: Bool
     var hotkeyRegistrationError: String?
-    var lastProbeStatus: String?
+    var lastFixOutcome: FixOutcome?
+    var lastProbeSummary: String?
     var launchAtLoginEnabled: Bool
     var launchAtLoginError: String?
 }

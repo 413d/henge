@@ -10,7 +10,6 @@ final class HengeCoordinator: ObservableObject {
     private let fixTextUseCase: FixTextUseCaseProtocol
     private let runtime: AppRuntime
     private let loginItemManager: LoginItemManaging
-    private let fixStatusChannel: FixTextStatusChannel
     private let presentSettings: @MainActor () -> Void
     private let terminateApplication: @MainActor () -> Void
     private let exceptionManager = ExceptionManager()
@@ -27,7 +26,6 @@ final class HengeCoordinator: ObservableObject {
         fixTextUseCase = environment.fixTextUseCase
         runtime = environment.runtime
         loginItemManager = environment.loginItemManager
-        fixStatusChannel = environment.fixStatusChannel
         self.presentSettings = presentSettings ?? {}
         self.terminateApplication = terminateApplication ?? {
             NSApplication.shared.terminate(nil)
@@ -54,7 +52,8 @@ final class HengeCoordinator: ObservableObject {
             accessibilityGranted: environment.runtime.hasAccessibilityPermission,
             hotkeyRegistered: false,
             hotkeyRegistrationError: nil,
-            lastProbeStatus: nil,
+            lastFixOutcome: nil,
+            lastProbeSummary: nil,
             launchAtLoginEnabled: systemLaunchAtLogin,
             launchAtLoginError: nil
         )
@@ -119,7 +118,46 @@ final class HengeCoordinator: ObservableObject {
     }
 
     var lastProbeStatusText: String? {
-        state.lastProbeStatus
+        if let outcome = state.lastFixOutcome {
+            return Self.statusText(for: outcome)
+        }
+        return state.lastProbeSummary
+    }
+
+    static func statusText(for outcome: FixOutcome) -> String? {
+        switch outcome {
+        case .fixed(viaClipboard: false):
+            return "Text corrected."
+        case .fixed(viaClipboard: true):
+            return "Text corrected using the clipboard fallback."
+        case .nothingToFix:
+            return "Nothing to fix in the current text."
+        case .secureField:
+            return "Focused secure text field detected. Henge left the content untouched."
+        case .excluded:
+            return nil
+        case .unsupported:
+            return "The focused element does not support text replacement."
+        case .pasteUnverified:
+            return "Henge attempted clipboard replacement, but could not verify that the text changed."
+        case let .failed(reason):
+            switch reason {
+            case .noActiveApplication:
+                return "Henge could not identify the active application and left the text untouched."
+            case .missingPermission:
+                return "Accessibility access is required before Henge can inspect the focused element."
+            case .noFocusedElement:
+                return "No focused text element is currently available for Henge to inspect."
+            case let .accessibilityError(code):
+                return "Henge could not inspect or update the focused element (AXError \(code))."
+            case .clipboardRestoreFailed:
+                return "Henge could not restore the original clipboard contents after replacement."
+            case .clipboardSuperseded:
+                return "Clipboard contents changed before restoration, so Henge kept the new clipboard contents."
+            case let .focusLost(applicationName):
+                return "Henge could not restore focus to \(applicationName) and left the text untouched."
+            }
+        }
     }
 
     func applicationDisplayName(for bundleIdentifier: String) -> String {
@@ -178,7 +216,8 @@ final class HengeCoordinator: ObservableObject {
         let systemLaunchAtLogin = currentLaunchAtLoginEnabled()
         state.launchAtLoginEnabled = systemLaunchAtLogin
         state.configuration.launchAtLogin = systemLaunchAtLogin
-        state.lastProbeStatus = nil
+        state.lastFixOutcome = nil
+        state.lastProbeSummary = nil
         saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
     }
@@ -211,7 +250,8 @@ final class HengeCoordinator: ObservableObject {
 
         let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
-            state.lastProbeStatus = "Henge could not identify the active application and left the text untouched."
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = .failed(.noActiveApplication)
             return
         }
         guard !exceptionMatcher.contains(application, in: excluded) else {
@@ -221,7 +261,8 @@ final class HengeCoordinator: ObservableObject {
         let accessibilityGranted = runtime.hasAccessibilityPermission
         state.accessibilityGranted = accessibilityGranted
         guard accessibilityGranted else {
-            state.lastProbeStatus = FocusedElementProbeFailure.missingPermission.description
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = .failed(.missingPermission)
             return
         }
 
@@ -236,7 +277,8 @@ final class HengeCoordinator: ObservableObject {
 
             let prepared = await self.runtime.prepareTargetApplicationForFixText(application)
             guard prepared else {
-                self.state.lastProbeStatus = "Henge could not restore focus to \(application.displayName) and left the text untouched."
+                self.state.lastProbeSummary = nil
+                self.state.lastFixOutcome = .failed(.focusLost(applicationName: application.displayName))
                 return
             }
 
@@ -325,7 +367,8 @@ final class HengeCoordinator: ObservableObject {
             runtime.unregisterFixTextHotkey()
             state.hotkeyRegistered = false
             state.hotkeyRegistrationError = nil
-            state.lastProbeStatus = nil
+            state.lastFixOutcome = nil
+            state.lastProbeSummary = nil
             return
         }
 
@@ -363,7 +406,8 @@ final class HengeCoordinator: ObservableObject {
 
         let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
-            state.lastProbeStatus = "Henge could not identify the active application and left the text untouched."
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = .failed(.noActiveApplication)
             return
         }
         guard !exceptionMatcher.contains(application, in: excluded) else {
@@ -374,29 +418,46 @@ final class HengeCoordinator: ObservableObject {
         state.accessibilityGranted = accessibilityGranted
 
         guard accessibilityGranted else {
-            state.lastProbeStatus = FocusedElementProbeFailure.missingPermission.description
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = .failed(.missingPermission)
             return
         }
 
+        let focusedSnapshot: FocusedElementSnapshot
         switch runtime.inspectFocusedElement() {
         case let .unavailable(reason):
-            state.lastProbeStatus = reason.description
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = Self.outcome(from: reason)
             return
         case let .available(snapshot) where snapshot.isSecure:
-            state.lastProbeStatus = "Focused secure text field detected. Henge left the content untouched."
+            state.lastProbeSummary = nil
+            state.lastFixOutcome = .secureField
             return
         case let .available(snapshot):
-            state.lastProbeStatus = "Focused element resolved: \(snapshot.summary)."
+            focusedSnapshot = snapshot
         }
 
         guard canTriggerFixText else {
+            state.lastFixOutcome = nil
+            state.lastProbeSummary = "Focused element resolved: \(focusedSnapshot.summary)."
             return
         }
 
-        state.lastProbeStatus = "Correction attempted."
-        fixTextUseCase.execute(excludingApplicationBundleIdentifiers: excluded)
-        if let message = fixStatusChannel.take() {
-            state.lastProbeStatus = message
+        state.lastProbeSummary = nil
+        let outcome = fixTextUseCase.execute(
+            excludingApplicationBundleIdentifiers: state.configuration.excludedApplicationBundleIdentifiers
+        )
+        state.lastFixOutcome = outcome == .excluded ? nil : outcome
+    }
+
+    private static func outcome(from failure: FocusedElementProbeFailure) -> FixOutcome {
+        switch failure {
+        case .missingPermission:
+            return .failed(.missingPermission)
+        case .noFocusedElement:
+            return .failed(.noFocusedElement)
+        case let .accessibilityError(error):
+            return .failed(.accessibilityError(error.rawValue))
         }
     }
 }

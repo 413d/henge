@@ -12,8 +12,9 @@ struct M4SafetyAndCompatibilityTests {
         ))
         let useCase = makeUseCase(runtime)
 
-        useCase.execute()
+        let outcome = useCase.execute()
 
+        #expect(outcome == .fixed(viaClipboard: false))
         #expect(runtime.directRange == SelectionRangeSnapshot(location: 4, length: 6))
         #expect(runtime.directReplacement == "привет")
     }
@@ -29,8 +30,9 @@ struct M4SafetyAndCompatibilityTests {
         ))
         let useCase = makeUseCase(runtime)
 
-        useCase.execute()
+        let outcome = useCase.execute()
 
+        #expect(outcome == .fixed(viaClipboard: false))
         #expect(runtime.directRange == SelectionRangeSnapshot(location: 5, length: 6))
         #expect(runtime.directReplacement == "привет")
     }
@@ -42,8 +44,9 @@ struct M4SafetyAndCompatibilityTests {
         ))
         let useCase = makeUseCase(runtime)
 
-        useCase.execute(excludingApplicationBundleIdentifiers: ["test.application"])
+        let outcome = useCase.execute(excludingApplicationBundleIdentifiers: ["test.application"])
 
+        #expect(outcome == .excluded)
         #expect(runtime.contextReadCount == 0)
         #expect(runtime.directReplacement == nil)
     }
@@ -54,8 +57,9 @@ struct M4SafetyAndCompatibilityTests {
             context: .available(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
             directResult: .unavailable(.unsupported)
         )
-        makeUseCase(runtime).execute()
+        let outcome = makeUseCase(runtime).execute()
 
+        #expect(outcome == .fixed(viaClipboard: true))
         #expect(runtime.clipboardReplacement == "привет")
         #expect(runtime.clipboardCallCount == 1)
     }
@@ -63,8 +67,9 @@ struct M4SafetyAndCompatibilityTests {
     @Test
     func secureFieldNeverReachesReplacementPaths() {
         let runtime = M4RuntimeStub(context: .unavailable(.secureField))
-        makeUseCase(runtime).execute()
+        let outcome = makeUseCase(runtime).execute()
 
+        #expect(outcome == .secureField)
         #expect(runtime.directCallCount == 0)
         #expect(runtime.clipboardCallCount == 0)
     }

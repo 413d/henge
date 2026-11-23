@@ -434,7 +434,7 @@ struct HengeCoordinatorTests {
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.noSelection)
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
+        let useCase = SpyFixTextUseCase(availability: .available, returnedOutcome: .nothingToFix)
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -447,7 +447,8 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
+        #expect(coordinator.state.lastFixOutcome == .nothingToFix)
+        #expect(coordinator.lastProbeStatusText == HengeCoordinator.statusText(for: .nothingToFix))
         #expect(useCase.executionCount == 1)
         _ = coordinator
     }
@@ -458,7 +459,7 @@ struct HengeCoordinatorTests {
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.unsupported)
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
+        let useCase = SpyFixTextUseCase(availability: .available, returnedOutcome: .unsupported)
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -472,7 +473,8 @@ struct HengeCoordinatorTests {
         await Task.yield()
 
         #expect(useCase.executionCount == 1)
-        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
+        #expect(coordinator.state.lastFixOutcome == .unsupported)
+        #expect(coordinator.lastProbeStatusText == HengeCoordinator.statusText(for: .unsupported))
         _ = coordinator
     }
 
@@ -503,7 +505,8 @@ struct HengeCoordinatorTests {
         await Task.yield()
 
         #expect(useCase.executionCount == 1)
-        #expect(coordinator.lastProbeStatusText?.contains("Correction attempted") == true)
+        #expect(coordinator.state.lastFixOutcome == .fixed(viaClipboard: false))
+        #expect(coordinator.lastProbeStatusText == "Text corrected.")
         _ = coordinator
     }
 
@@ -709,8 +712,7 @@ struct HengeCoordinatorTests {
     }
 
     @Test
-    func coordinatorShowsReportedStatus() async {
-        let statusChannel = FixTextStatusChannel()
+    func coordinatorShowsReportedOutcome() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
             selectionProbe: .available(
@@ -722,16 +724,14 @@ struct HengeCoordinatorTests {
         )
         let useCase = SpyFixTextUseCase(
             availability: .available,
-            statusChannel: statusChannel,
-            reportedStatus: "Text corrected using the clipboard fallback."
+            returnedOutcome: .fixed(viaClipboard: true)
         )
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
                 fixTextUseCase: useCase,
                 runtime: runtime,
-                loginItemManager: InMemoryLoginItemManager(initialEnabled: true),
-                fixStatusChannel: statusChannel
+                loginItemManager: InMemoryLoginItemManager(initialEnabled: true)
             )
         )
 
@@ -742,7 +742,57 @@ struct HengeCoordinatorTests {
         await Task.yield()
 
         #expect(useCase.executionCount == 1)
-        #expect(coordinator.state.lastProbeStatus == "Text corrected using the clipboard fallback.")
+        #expect(coordinator.state.lastFixOutcome == .fixed(viaClipboard: true))
+        #expect(coordinator.lastProbeStatusText == "Text corrected using the clipboard fallback.")
+    }
+
+    @Test
+    func coordinatorLeavesStateCleanWhenUseCaseReturnsExcluded() async {
+        let runtime = StubRuntime(
+            hasAccessibilityPermission: true,
+            selectionProbe: .available(
+                SelectionSnapshot(
+                    text: "ghbdtn",
+                    range: SelectionRangeSnapshot(location: 0, length: 6)
+                )
+            )
+        )
+        let useCase = SpyFixTextUseCase(
+            availability: .available,
+            returnedOutcome: .excluded
+        )
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: useCase,
+                runtime: runtime
+            )
+        )
+
+        runtime.fireHotkey()
+        await Task.yield()
+
+        #expect(useCase.executionCount == 1)
+        #expect(coordinator.state.lastFixOutcome == nil)
+        #expect(coordinator.lastProbeStatusText == nil)
+    }
+
+    @Test
+    func statusTextFormatsAllFixOutcomesWithoutExposingUserText() {
+        #expect(HengeCoordinator.statusText(for: .fixed(viaClipboard: false)) == "Text corrected.")
+        #expect(HengeCoordinator.statusText(for: .fixed(viaClipboard: true)) == "Text corrected using the clipboard fallback.")
+        #expect(HengeCoordinator.statusText(for: .nothingToFix) == "Nothing to fix in the current text.")
+        #expect(HengeCoordinator.statusText(for: .secureField)?.contains("secure text field") == true)
+        #expect(HengeCoordinator.statusText(for: .excluded) == nil)
+        #expect(HengeCoordinator.statusText(for: .unsupported)?.isEmpty == false)
+        #expect(HengeCoordinator.statusText(for: .pasteUnverified) == SelectionWriteFailure.pasteUnverified.description)
+        #expect(HengeCoordinator.statusText(for: .failed(.noActiveApplication))?.contains("active application") == true)
+        #expect(HengeCoordinator.statusText(for: .failed(.missingPermission)) == FocusedElementProbeFailure.missingPermission.description)
+        #expect(HengeCoordinator.statusText(for: .failed(.noFocusedElement)) == FocusedElementProbeFailure.noFocusedElement.description)
+        #expect(HengeCoordinator.statusText(for: .failed(.accessibilityError(-25204)))?.contains("-25204") == true)
+        #expect(HengeCoordinator.statusText(for: .failed(.clipboardRestoreFailed)) == SelectionWriteFailure.clipboardRestoreFailed.description)
+        #expect(HengeCoordinator.statusText(for: .failed(.clipboardSuperseded)) == SelectionWriteFailure.clipboardSuperseded.description)
+        #expect(HengeCoordinator.statusText(for: .failed(.focusLost(applicationName: "Notes")))?.contains("Notes") == true)
     }
 }
 
@@ -932,24 +982,20 @@ private final class StubRuntime: AppRuntime {
 
 private final class SpyFixTextUseCase: FixTextUseCaseProtocol {
     let availability: FixTextAvailability
-    private let statusChannel: FixTextStatusChannel?
-    private let reportedStatus: String?
+    private let returnedOutcome: FixOutcome
     private(set) var executionCount = 0
 
     init(
         availability: FixTextAvailability,
-        statusChannel: FixTextStatusChannel? = nil,
-        reportedStatus: String? = nil
+        returnedOutcome: FixOutcome = .fixed(viaClipboard: false)
     ) {
         self.availability = availability
-        self.statusChannel = statusChannel
-        self.reportedStatus = reportedStatus
+        self.returnedOutcome = returnedOutcome
     }
 
-    func execute(excludingApplicationBundleIdentifiers: Set<String>) {
+    @discardableResult
+    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome {
         executionCount += 1
-        if let reportedStatus {
-            statusChannel?.report(reportedStatus)
-        }
+        return returnedOutcome
     }
 }

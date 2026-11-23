@@ -1,26 +1,5 @@
 import Foundation
 
-final class FixTextStatusChannel: @unchecked Sendable {
-    private let lock = NSLock()
-    private var latestMessage: String?
-
-    init() {}
-
-    func report(_ message: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        latestMessage = message
-    }
-
-    func take() -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        let message = latestMessage
-        latestMessage = nil
-        return message
-    }
-}
-
 enum FixTextAvailability: Equatable {
     case available
     case deferred(String)
@@ -29,11 +8,13 @@ enum FixTextAvailability: Equatable {
 protocol FixTextUseCaseProtocol {
     var availability: FixTextAvailability { get }
 
-    func execute(excludingApplicationBundleIdentifiers: Set<String>)
+    @discardableResult
+    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome
 }
 
 extension FixTextUseCaseProtocol {
-    func execute() {
+    @discardableResult
+    func execute() -> FixOutcome {
         execute(excludingApplicationBundleIdentifiers: [])
     }
 }
@@ -43,7 +24,9 @@ struct DeferredFixTextUseCase: FixTextUseCaseProtocol {
         "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated."
     )
 
-    func execute(excludingApplicationBundleIdentifiers: Set<String>) {
+    @discardableResult
+    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome {
+        .unsupported
     }
 }
 
@@ -54,29 +37,35 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
     private let transformer: TextTransforming
     private let wordBoundaryDetector: WordBoundaryDetecting
     private let exceptionMatcher: ExceptionMatcher
-    private let statusChannel: FixTextStatusChannel
 
     init(
         runtime: AppRuntime,
         transformer: TextTransforming,
         wordBoundaryDetector: WordBoundaryDetecting = DefaultWordBoundaryDetector(),
-        exceptionMatcher: ExceptionMatcher = ExceptionMatcher(),
-        statusChannel: FixTextStatusChannel = FixTextStatusChannel()
+        exceptionMatcher: ExceptionMatcher = ExceptionMatcher()
     ) {
         self.runtime = runtime
         self.transformer = transformer
         self.wordBoundaryDetector = wordBoundaryDetector
         self.exceptionMatcher = exceptionMatcher
-        self.statusChannel = statusChannel
     }
 
-    func execute(excludingApplicationBundleIdentifiers: Set<String>) {
-        guard let application = runtime.activeApplication,
-              !exceptionMatcher.contains(application, in: excludingApplicationBundleIdentifiers) else {
-            return
+    @discardableResult
+    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome {
+        guard let application = runtime.activeApplication else {
+            return .failed(.noActiveApplication)
+        }
+        guard !exceptionMatcher.contains(application, in: Set(excludingApplicationBundleIdentifiers)) else {
+            return .excluded
         }
 
-        guard case let .available(context) = runtime.inspectTextContext() else { return }
+        let context: SelectionSnapshot
+        switch runtime.inspectTextContext() {
+        case let .available(resolvedContext):
+            context = resolvedContext
+        case let .unavailable(reason):
+            return outcome(from: reason)
+        }
 
         let targetRange: SelectionRangeSnapshot
         let targetText: String
@@ -84,7 +73,7 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             guard let caretOffset = characterOffset(forUTF16Offset: context.range.location, in: context.text),
                   let boundary = wordBoundaryDetector.detect(in: context.text, caretOffset: caretOffset),
                   let range = utf16Range(forCharacterRange: boundary.range, in: context.text) else {
-                return
+                return .nothingToFix
             }
             targetRange = range
             targetText = boundary.text
@@ -93,7 +82,9 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             targetText = context.text
         }
 
-        guard case let .transformed(replacement) = transformer.transform(targetText) else { return }
+        guard case let .transformed(replacement) = transformer.transform(targetText) else {
+            return .nothingToFix
+        }
 
         let directResult = runtime.replaceText(
             in: targetRange,
@@ -104,12 +95,11 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         )
         switch directResult {
         case .success:
-            statusChannel.report("Text corrected.")
-            return
+            return .fixed(viaClipboard: false)
         case .unavailable(.unsupported):
             break
-        case .unavailable:
-            return
+        case let .unavailable(reason):
+            return outcome(from: reason)
         }
 
         let clipboardResult = runtime.replaceTextUsingClipboard(
@@ -121,15 +111,49 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         )
         switch clipboardResult {
         case .success:
-            statusChannel.report("Text corrected using the clipboard fallback.")
-        case .unavailable(.clipboardRestoreFailed):
-            statusChannel.report(SelectionWriteFailure.clipboardRestoreFailed.description)
-        case .unavailable(.pasteUnverified):
-            statusChannel.report(SelectionWriteFailure.pasteUnverified.description)
-        case .unavailable(.clipboardSuperseded):
-            break
-        case .unavailable:
-            break
+            return .fixed(viaClipboard: true)
+        case let .unavailable(reason):
+            return outcome(from: reason)
+        }
+    }
+
+    private func outcome(from failure: SelectionProbeFailure) -> FixOutcome {
+        switch failure {
+        case .missingPermission:
+            return .failed(.missingPermission)
+        case .noFocusedElement:
+            return .failed(.noFocusedElement)
+        case .secureField:
+            return .secureField
+        case .noSelection:
+            return .nothingToFix
+        case .unsupported:
+            return .unsupported
+        case let .accessibilityError(error):
+            return .failed(.accessibilityError(error.rawValue))
+        }
+    }
+
+    private func outcome(from failure: SelectionWriteFailure) -> FixOutcome {
+        switch failure {
+        case .missingPermission:
+            return .failed(.missingPermission)
+        case .noFocusedElement:
+            return .failed(.noFocusedElement)
+        case .secureField:
+            return .secureField
+        case .noSelection:
+            return .nothingToFix
+        case .unsupported:
+            return .unsupported
+        case let .accessibilityError(error):
+            return .failed(.accessibilityError(error.rawValue))
+        case .pasteUnverified:
+            return .pasteUnverified
+        case .clipboardRestoreFailed:
+            return .failed(.clipboardRestoreFailed)
+        case .clipboardSuperseded:
+            return .failed(.clipboardSuperseded)
         }
     }
 
