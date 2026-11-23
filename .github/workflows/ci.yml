@@ -50,6 +50,21 @@ jobs:
             swift test
           fi
 
+  xcode:
+    name: Build Xcode project
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate Xcode project
+        run: plutil -lint Henge.xcodeproj/project.pbxproj
+
+      - name: Build Xcode project
+        run: xcodebuild -project Henge.xcodeproj -scheme Henge -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
   package:
     name: Universal app bundle
     needs: test
