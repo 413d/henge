@@ -208,7 +208,7 @@ struct M4SafetyAndCompatibilityTests {
         let replacement = AppKitClipboardReplacement(
             clipboardManager: manager,
             pasteboard: pasteboard,
-            timeout: 0.05,
+            operationBudget: 0.05,
             eventPoster: poster
         )
 
@@ -322,6 +322,37 @@ struct M4SafetyAndCompatibilityTests {
         #expect(pasteboard.string() == "new")
     }
 
+    @Test
+    func clipboardFallbackDoesNotExceedSingleOperationBudget() {
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn", copyDelay: 0.08)
+        let replacement = AppKitClipboardReplacement(
+            clipboardManager: manager,
+            pasteboard: pasteboard,
+            operationBudget: 0.20,
+            eventPoster: poster
+        )
+        var verificationCalls = 0
+        let start = Date()
+
+        let result = replacement.replaceSelection(expectedText: "ghbdtn", with: "привет") {
+            verificationCalls += 1
+            return false
+        }
+
+        let elapsed = Date().timeIntervalSince(start)
+        #expect(result == .pasteUnverified)
+        #expect(poster.pasteCount == 1)
+        #expect(poster.pastedText == "привет")
+        #expect(verificationCalls >= 2)
+        #expect(elapsed < 0.26)
+        #expect(manager.restoredSnapshot == original)
+    }
+
     private func makeUseCase(_ runtime: M4RuntimeStub) -> LiveFixTextUseCase {
         LiveFixTextUseCase(
             runtime: runtime,
@@ -333,23 +364,37 @@ struct M4SafetyAndCompatibilityTests {
 private final class TestClipboardEventPoster: ClipboardEventPosting {
     private let pasteboard: TestReplacementPasteboard
     private let copiedText: String
+    private let copyDelay: TimeInterval
     private let afterPaste: (() -> Void)?
     private(set) var pastedText: String?
+    private(set) var pasteCount = 0
     private(set) var copySucceeded = false
 
-    init(pasteboard: TestReplacementPasteboard, copiedText: String, afterPaste: (() -> Void)? = nil) {
+    init(
+        pasteboard: TestReplacementPasteboard,
+        copiedText: String,
+        copyDelay: TimeInterval = 0,
+        afterPaste: (() -> Void)? = nil
+    ) {
         self.pasteboard = pasteboard
         self.copiedText = copiedText
+        self.copyDelay = copyDelay
         self.afterPaste = afterPaste
     }
 
     func postCommandKey(virtualKey: CGKeyCode) -> Bool {
         if virtualKey == 8 {
+            if copyDelay > 0 {
+                pasteboard.scheduleCopy(copiedText, after: copyDelay)
+                copySucceeded = true
+                return true
+            }
             pasteboard.clear()
             copySucceeded = pasteboard.setString(copiedText)
             return copySucceeded
         }
         if virtualKey == 9 {
+            pasteCount += 1
             pastedText = pasteboard.string()
             afterPaste?()
             return true
@@ -359,32 +404,55 @@ private final class TestClipboardEventPoster: ClipboardEventPosting {
 }
 
 private final class TestReplacementPasteboard: ReplacementPasteboard {
-    private(set) var changeCount = 0
+    private var storedChangeCount = 0
     private var contents: String?
+    private var pendingCopy: (text: String, readyAt: Date)?
     private(set) var lastTransientWrittenString: String?
+
+    var changeCount: Int {
+        flushPendingCopyIfReady()
+        return storedChangeCount
+    }
 
     init(initialString: String?) {
         contents = initialString
     }
 
-    func string() -> String? { contents }
+    func scheduleCopy(_ string: String, after delay: TimeInterval) {
+        pendingCopy = (string, Date().addingTimeInterval(delay))
+    }
+
+    func string() -> String? {
+        flushPendingCopyIfReady()
+        return contents
+    }
 
     func clear() {
+        pendingCopy = nil
         contents = nil
-        changeCount += 1
+        storedChangeCount += 1
     }
 
     func setString(_ string: String) -> Bool {
+        pendingCopy = nil
         contents = string
-        changeCount += 1
+        storedChangeCount += 1
         return true
     }
 
     func setTransientString(_ string: String) -> Bool {
+        pendingCopy = nil
         lastTransientWrittenString = string
         contents = string
-        changeCount += 1
+        storedChangeCount += 1
         return true
+    }
+
+    private func flushPendingCopyIfReady() {
+        guard let pendingCopy, Date() >= pendingCopy.readyAt else { return }
+        self.pendingCopy = nil
+        contents = pendingCopy.text
+        storedChangeCount += 1
     }
 }
 

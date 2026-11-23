@@ -93,19 +93,19 @@ struct SystemClipboardEventPoster: ClipboardEventPosting {
 final class AppKitClipboardReplacement: ClipboardReplacing {
     private let clipboardManager: ClipboardManaging
     private let pasteboard: ReplacementPasteboard
-    private let timeout: TimeInterval
+    private let operationBudget: TimeInterval
     private let eventPoster: ClipboardEventPosting
     private let logger = Diagnostics.logger(.clipboard)
 
     init(
         clipboardManager: ClipboardManaging,
         pasteboard: ReplacementPasteboard = AppKitReplacementPasteboard(pasteboard: .general),
-        timeout: TimeInterval = 0.6,
+        operationBudget: TimeInterval = 0.45,
         eventPoster: ClipboardEventPosting = SystemClipboardEventPoster()
     ) {
         self.clipboardManager = clipboardManager
         self.pasteboard = pasteboard
-        self.timeout = timeout
+        self.operationBudget = operationBudget
         self.eventPoster = eventPoster
     }
 
@@ -165,8 +165,13 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         validateTarget: () -> Bool,
         verifyReplacement: () -> Bool
     ) -> ClipboardReplacementResult {
+        let overallDeadline = Date().addingTimeInterval(operationBudget)
+        let copyBudget = operationBudget <= 0.25 ? operationBudget / 2 : min(0.20, operationBudget / 2)
+        let copyDeadline = min(overallDeadline, Date().addingTimeInterval(copyBudget))
+
         let beforeCopyChangeCount = pasteboard.changeCount
-        guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier), waitForClipboardChange(after: beforeCopyChangeCount),
+        guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier),
+              waitForClipboardChange(after: beforeCopyChangeCount, deadline: copyDeadline),
               validateTarget(), pasteboard.string() == expectedText else {
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=copy")
             return .failed
@@ -187,7 +192,7 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
             return .failed
         }
 
-        let verified = waitForReplacement(verifyReplacement)
+        let verified = waitForReplacement(verifyReplacement, deadline: overallDeadline)
         guard pasteboard.changeCount == ownedChangeCount else {
             return .superseded
         }
@@ -205,22 +210,24 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         return eventPoster.postCommandKey(virtualKey: virtualKey)
     }
 
-    private func waitForClipboardChange(after changeCount: Int) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
+    private func waitForClipboardChange(after changeCount: Int, deadline: Date) -> Bool {
         while Date() < deadline {
             if pasteboard.changeCount != changeCount {
                 return true
             }
-            Thread.sleep(forTimeInterval: 0.01)
+            let remaining = deadline.timeIntervalSinceNow
+            if remaining <= 0 { break }
+            Thread.sleep(forTimeInterval: min(0.01, remaining))
         }
-        return false
+        return pasteboard.changeCount != changeCount
     }
 
-    private func waitForReplacement(_ verifyReplacement: () -> Bool) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
+    private func waitForReplacement(_ verifyReplacement: () -> Bool, deadline: Date) -> Bool {
         while Date() < deadline {
             if verifyReplacement() { return true }
-            Thread.sleep(forTimeInterval: 0.01)
+            let remaining = deadline.timeIntervalSinceNow
+            if remaining <= 0 { break }
+            Thread.sleep(forTimeInterval: min(0.01, remaining))
         }
         return verifyReplacement()
     }
