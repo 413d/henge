@@ -7,6 +7,10 @@ enum HengeMain {
             exit(HengeProbeRunner.run(arguments: CommandLine.arguments))
         }
 
+        if SingleInstanceGuard.enforce() {
+            exit(0)
+        }
+
         HengeApp.main()
     }
 }

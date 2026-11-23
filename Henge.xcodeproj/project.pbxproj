@@ -10,6 +10,7 @@
 		8480A2002E00000000000001 /* HengeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1202E00000000000001 /* HengeApp.swift */; };
 		8480A2012E00000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1212E00000000000001 /* AppDelegate.swift */; };
 		8480A2022E00000000000001 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1222E00000000000001 /* AppEnvironment.swift */; };
+		8480A2332E00000000000001 /* SingleInstanceGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2342E00000000000001 /* SingleInstanceGuard.swift */; };
 		8480A2032E00000000000001 /* ApplicationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1232E00000000000001 /* ApplicationState.swift */; };
 		8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1242E00000000000001 /* FixTextUseCase.swift */; };
 		8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A1252E00000000000001 /* HengeCoordinator.swift */; };
@@ -49,6 +50,7 @@
 		8480A1202E00000000000001 /* HengeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeApp.swift; sourceTree = "<group>"; };
 		8480A1212E00000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		8480A1222E00000000000001 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		8480A2342E00000000000001 /* SingleInstanceGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceGuard.swift; sourceTree = "<group>"; };
 		8480A1232E00000000000001 /* ApplicationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationState.swift; sourceTree = "<group>"; };
 		8480A1242E00000000000001 /* FixTextUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixTextUseCase.swift; sourceTree = "<group>"; };
 		8480A1252E00000000000001 /* HengeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HengeCoordinator.swift; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 				8480A1202E00000000000001 /* HengeApp.swift */,
 				8480A1212E00000000000001 /* AppDelegate.swift */,
 				8480A1222E00000000000001 /* AppEnvironment.swift */,
+				8480A2342E00000000000001 /* SingleInstanceGuard.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -366,6 +369,7 @@
 				8480A2002E00000000000001 /* HengeApp.swift in Sources */,
 				8480A2012E00000000000001 /* AppDelegate.swift in Sources */,
 				8480A2022E00000000000001 /* AppEnvironment.swift in Sources */,
+				8480A2332E00000000000001 /* SingleInstanceGuard.swift in Sources */,
 				8480A2032E00000000000001 /* ApplicationState.swift in Sources */,
 				8480A2042E00000000000001 /* FixTextUseCase.swift in Sources */,
 				8480A2052E00000000000001 /* HengeCoordinator.swift in Sources */,
