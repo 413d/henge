@@ -49,7 +49,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             ),
@@ -74,7 +74,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             ),
@@ -101,7 +101,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             ),
@@ -125,7 +125,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             ),
@@ -162,7 +162,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             )
@@ -183,7 +183,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             )
@@ -213,7 +213,7 @@ struct OnboardingTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: OnboardingTestLoginItemManager(status: .disabled)
             ),
@@ -285,7 +285,7 @@ private final class OnboardingTestLoginItemManager: LoginItemManaging, @unchecke
 private final class OnboardingTestRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
     var activeApplication: ApplicationIdentity?
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
     private(set) var requestAccessibilityPermissionCallCount = 0
 

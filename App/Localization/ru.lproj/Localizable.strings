@@ -72,8 +72,7 @@
 "launch_at_login.status.requires_approval" = "Требуется подтверждение в «Системных настройках» → «Объекты входа».";
 "launch_at_login.error.unverified" = "Не удалось подтвердить состояние запуска при входе в систему.";
 
-/* Fix Text Availability & Outcomes */
-"fix_text.availability.deferred" = "Исправление текста пока недоступно, пока проверяются системные интеграции горячих клавиш и работы с текстом.";
+/* Fix Text Outcomes */
 "fix_outcome.fixed_direct" = "Текст исправлен.";
 "fix_outcome.fixed_clipboard" = "Текст исправлен через резервный буфер обмена.";
 "fix_outcome.nothing_to_fix" = "В текущем тексте нечего исправлять.";

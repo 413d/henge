@@ -49,6 +49,7 @@
 		8480A24C2E00000000000001 /* HotkeyRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A24D2E00000000000001 /* HotkeyRegistrar.swift */; };
 		8480A24E2E00000000000001 /* KeyboardLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A24F2E00000000000001 /* KeyboardLabel.swift */; };
 		8480A2502E00000000000001 /* ApplicationActivator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2512E00000000000001 /* ApplicationActivator.swift */; };
+		8480A2522E00000000000001 /* StatusPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2532E00000000000001 /* StatusPresenter.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
 		8480A2392E00000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8480A23A2E00000000000001 /* Localizable.strings */; };
@@ -104,6 +105,7 @@
 		8480A24D2E00000000000001 /* HotkeyRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRegistrar.swift; sourceTree = "<group>"; };
 		8480A24F2E00000000000001 /* KeyboardLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLabel.swift; sourceTree = "<group>"; };
 		8480A2512E00000000000001 /* ApplicationActivator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationActivator.swift; sourceTree = "<group>"; };
+		8480A2532E00000000000001 /* StatusPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +168,7 @@
 				8480A1242E00000000000001 /* FixTextUseCase.swift */,
 				8480A1252E00000000000001 /* HengeCoordinator.swift */,
 				8480A2382E00000000000001 /* Localization.swift */,
+				8480A2532E00000000000001 /* StatusPresenter.swift */,
 			);
 			path = Application;
 			sourceTree = "<group>";
@@ -468,6 +471,7 @@
 				8480A24C2E00000000000001 /* HotkeyRegistrar.swift in Sources */,
 				8480A24E2E00000000000001 /* KeyboardLabel.swift in Sources */,
 				8480A2502E00000000000001 /* ApplicationActivator.swift in Sources */,
+				8480A2522E00000000000001 /* StatusPresenter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

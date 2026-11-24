@@ -101,4 +101,26 @@ struct CarbonHotkeyTests {
         #expect(CarbonHotkey.displayKey(forKeyCode: UInt32(kVK_F13)) == nil)
         #expect(CarbonHotkey.displayKey(forKeyCode: UInt32(kVK_Escape)) == nil)
     }
+
+    @Test
+    func displayKeyUsesInjectedAsciiLabelAndFallsBackToAnsi() {
+        var calledWith: [UInt16] = []
+        let resolved = CarbonHotkey.displayKey(forKeyCode: UInt32(kVK_ANSI_Z)) { code in
+            calledWith.append(code)
+            return "Y"
+        }
+        #expect(resolved == "Y")
+        #expect(calledWith == [UInt16(kVK_ANSI_Z)])
+
+        let fallback = CarbonHotkey.displayKey(forKeyCode: UInt32(kVK_ANSI_X)) { _ in nil }
+        #expect(fallback == "X")
+
+        var specialCalled = false
+        let special = CarbonHotkey.displayKey(forKeyCode: UInt32(kVK_Space)) { _ in
+            specialCalled = true
+            return "SPACE"
+        }
+        #expect(special == "Space")
+        #expect(specialCalled == false)
+    }
 }

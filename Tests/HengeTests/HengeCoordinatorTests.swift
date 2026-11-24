@@ -13,7 +13,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -29,7 +29,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -48,7 +48,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: loginItemManager
             )
@@ -75,7 +75,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -95,7 +95,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: FakeLoginItemManager(currentStatus: .disabled)
             )
@@ -114,7 +114,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true)
             )
         )
@@ -130,7 +130,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true)
             )
         )
@@ -144,7 +144,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: false)
             )
         )
@@ -158,7 +158,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(
                     hasAccessibilityPermission: true,
                     registrationError: HotkeyRegistrationError.unsupportedShortcut("X")
@@ -178,7 +178,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(
                     hasAccessibilityPermission: false,
                     registrationError: HotkeyRegistrationError.unsupportedShortcut("X")
@@ -197,7 +197,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -217,7 +217,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -230,19 +230,23 @@ struct HengeCoordinatorTests {
     }
 
     @Test
-    func deferredFixTextCannotBeTriggeredFromSkeleton() {
+    func disabledCoordinatorCannotTriggerFixText() {
         let store = InMemoryConfigurationStore()
         let runtime = StubRuntime(hasAccessibilityPermission: true)
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
 
-        #expect(coordinator.canTriggerFixText == false)
+        #expect(coordinator.canTriggerFixText == true)
         #expect(runtime.registeredShortcuts == [.defaultFixText])
+
+        coordinator.setEnabled(false)
+
+        #expect(coordinator.canTriggerFixText == false)
     }
 
     @Test
@@ -252,7 +256,7 @@ struct HengeCoordinatorTests {
         _ = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -271,50 +275,7 @@ struct HengeCoordinatorTests {
                 )
             )
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
-
-        let coordinator = HengeCoordinator(
-            environment: AppEnvironment(
-                configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: useCase,
-                runtime: runtime
-            )
-        )
-
-        #expect(coordinator.canTriggerFixText == true)
-
-        runtime.fireHotkey()
-        await Task.yield()
-
-        #expect(useCase.executionCount == 1)
-        _ = coordinator
-    }
-
-    @Test
-    func disabledHotkeyDoesNotExecuteUseCaseWhenFired() async {
-        let runtime = StubRuntime(hasAccessibilityPermission: true)
-        let useCase = SpyFixTextUseCase(availability: .deferred("Still spiking native integrations."))
-
-        let coordinator = HengeCoordinator(
-            environment: AppEnvironment(
-                configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: useCase,
-                runtime: runtime
-            )
-        )
-
-        coordinator.setEnabled(false)
-        runtime.fireHotkey()
-        await Task.yield()
-
-        #expect(useCase.executionCount == 0)
-        _ = coordinator
-    }
-
-    @Test
-    func revokedAccessibilityPermissionBlocksHotkeyExecution() async {
-        let runtime = StubRuntime(hasAccessibilityPermission: true)
-        let useCase = SpyFixTextUseCase(availability: .deferred("Still spiking native integrations."))
+        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -344,7 +305,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -362,7 +323,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -380,7 +341,7 @@ struct HengeCoordinatorTests {
                 FocusedElementSnapshot(role: "AXTextField", subrole: "AXSecureTextField", isSecure: true)
             )
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
+        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -404,7 +365,7 @@ struct HengeCoordinatorTests {
             hasAccessibilityPermission: true,
             focusedElementProbe: .unavailable(.noFocusedElement)
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
+        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -423,7 +384,7 @@ struct HengeCoordinatorTests {
     }
 
     @Test
-    func statusReportsFocusedElementWithoutUserText() async {
+    func statusReportsOutcomeWithoutUserText() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
             selectionProbe: .available(
@@ -433,7 +394,7 @@ struct HengeCoordinatorTests {
                 )
             )
         )
-        let useCase = SpyFixTextUseCase(availability: .deferred("Still spiking native integrations."))
+        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -446,9 +407,9 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(coordinator.lastProbeStatusText?.contains("Focused element resolved") == true)
+        #expect(coordinator.lastProbeStatusText == "Text corrected.")
         #expect(coordinator.lastProbeStatusText?.contains("ghbdtn") == false)
-        #expect(useCase.executionCount == 0)
+        #expect(useCase.executionCount == 1)
         _ = coordinator
     }
 
@@ -458,7 +419,7 @@ struct HengeCoordinatorTests {
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.noSelection)
         )
-        let useCase = SpyFixTextUseCase(availability: .available, returnedOutcome: .nothingToFix)
+        let useCase = SpyFixTextUseCase(returnedOutcome: .nothingToFix)
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -483,7 +444,7 @@ struct HengeCoordinatorTests {
             hasAccessibilityPermission: true,
             selectionProbe: .unavailable(.unsupported)
         )
-        let useCase = SpyFixTextUseCase(availability: .available, returnedOutcome: .unsupported)
+        let useCase = SpyFixTextUseCase(returnedOutcome: .unsupported)
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -513,7 +474,7 @@ struct HengeCoordinatorTests {
                 )
             )
         )
-        let useCase = SpyFixTextUseCase(availability: .available)
+        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -535,37 +496,6 @@ struct HengeCoordinatorTests {
     }
 
     @Test
-    func deferredUseCaseIsNotExecutedEvenWithResolvedSelection() async {
-        let runtime = StubRuntime(
-            hasAccessibilityPermission: true,
-            selectionProbe: .available(
-                SelectionSnapshot(
-                    text: "ghbdtn",
-                    range: SelectionRangeSnapshot(location: 6, length: 6)
-                )
-            )
-        )
-        let useCase = SpyFixTextUseCase(availability: .deferred("Still spiking native integrations."))
-
-        let coordinator = HengeCoordinator(
-            environment: AppEnvironment(
-                configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: useCase,
-                runtime: runtime
-            )
-        )
-
-        #expect(coordinator.canTriggerFixText == false)
-
-        runtime.fireHotkey()
-        await Task.yield()
-
-        #expect(useCase.executionCount == 0)
-        #expect(coordinator.lastProbeStatusText?.contains("Focused element resolved") == true)
-        _ = coordinator
-    }
-
-    @Test
     func coordinatorSyncsLaunchAtLoginStateFromSystemReality() {
         let store = InMemoryConfigurationStore()
         store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
@@ -573,7 +503,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: FakeLoginItemManager(currentStatus: .disabled)
             )
@@ -591,7 +521,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: FailingLoginItemManager(currentStatus: .enabled)
             )
@@ -613,7 +543,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -635,7 +565,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -659,7 +589,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -684,7 +614,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -718,7 +648,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -765,7 +695,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -795,7 +725,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: StubRuntime(hasAccessibilityPermission: true),
                 loginItemManager: loginItemManager
             )
@@ -815,7 +745,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: FakeLoginItemManager(currentStatus: .enabled)
             ),
@@ -845,7 +775,6 @@ struct HengeCoordinatorTests {
             )
         )
         let useCase = SpyFixTextUseCase(
-            availability: .available,
             returnedOutcome: .fixed(viaClipboard: true)
         )
         let coordinator = HengeCoordinator(
@@ -880,7 +809,6 @@ struct HengeCoordinatorTests {
             )
         )
         let useCase = SpyFixTextUseCase(
-            availability: .available,
             returnedOutcome: .excluded
         )
         let coordinator = HengeCoordinator(
@@ -926,7 +854,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -947,7 +875,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             ),
             selfBundleIdentifier: "com.custom.Henge"
@@ -979,7 +907,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -1005,7 +933,7 @@ struct HengeCoordinatorTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime
             )
         )
@@ -1155,7 +1083,7 @@ private final class StubRuntime: AppRuntime {
             FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
         ),
         selectionProbe: SelectionProbe = .unavailable(.noSelection),
-        layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper(),
+        layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled(),
         clipboardManager: ClipboardManaging = MockClipboardManager()
     ) {
         self.hasAccessibilityPermission = hasAccessibilityPermission
@@ -1215,16 +1143,20 @@ private final class StubRuntime: AppRuntime {
     }
 }
 
+struct NoopFixTextUseCase: FixTextUseCaseProtocol {
+    @discardableResult
+    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome {
+        .nothingToFix
+    }
+}
+
 private final class SpyFixTextUseCase: FixTextUseCaseProtocol {
-    let availability: FixTextAvailability
     private let returnedOutcome: FixOutcome
     private(set) var executionCount = 0
 
     init(
-        availability: FixTextAvailability,
         returnedOutcome: FixOutcome = .fixed(viaClipboard: false)
     ) {
-        self.availability = availability
         self.returnedOutcome = returnedOutcome
     }
 

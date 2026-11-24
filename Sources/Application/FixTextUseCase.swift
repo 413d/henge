@@ -1,13 +1,6 @@
 import Foundation
 
-enum FixTextAvailability: Equatable {
-    case available
-    case deferred(String)
-}
-
 protocol FixTextUseCaseProtocol {
-    var availability: FixTextAvailability { get }
-
     @discardableResult
     func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome
 }
@@ -19,23 +12,7 @@ extension FixTextUseCaseProtocol {
     }
 }
 
-struct DeferredFixTextUseCase: FixTextUseCaseProtocol {
-    let availability: FixTextAvailability = .deferred(
-        L10n.string(
-            "fix_text.availability.deferred",
-            defaultValue: "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated."
-        )
-    )
-
-    @discardableResult
-    func execute(excludingApplicationBundleIdentifiers: [String]) -> FixOutcome {
-        .unsupported
-    }
-}
-
 struct LiveFixTextUseCase: FixTextUseCaseProtocol {
-    let availability: FixTextAvailability = .available
-
     private let runtime: AppRuntime
     private let transformer: TextTransforming
     private let wordBoundaryDetector: WordBoundaryDetecting

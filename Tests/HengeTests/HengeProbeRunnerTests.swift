@@ -27,7 +27,7 @@ struct HengeProbeRunnerTests {
 
     @Test
     func layoutProbeTranslatesRussianToEnglish() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         let output = HengeProbeRunner.runLayoutProbe(mapper: mapper)
         #expect(output.contains("ghbdtn"))
         #expect(output.contains("привет"))
@@ -35,7 +35,7 @@ struct HengeProbeRunnerTests {
 
     @Test
     func layoutProbeReportsAllSamples() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         let output = HengeProbeRunner.runLayoutProbe(mapper: mapper)
         #expect(output.contains("RU -> EN"))
         #expect(output.contains("EN -> RU"))
@@ -161,7 +161,7 @@ private enum ProbeRegistrationError: Error {
 private final class ProbeStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
     var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private let fireOnRegister: Bool

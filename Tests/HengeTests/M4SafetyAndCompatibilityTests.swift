@@ -646,7 +646,7 @@ private final class TestReplacementClipboardManager: ClipboardManaging, @uncheck
 private final class M4RuntimeStub: AppRuntime {
     var hasAccessibilityPermission = true
     var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test")
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
     private let context: SelectionProbe
     private let directResult: SelectionWriteResult

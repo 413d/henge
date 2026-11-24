@@ -103,15 +103,10 @@ struct MenuBarView: View {
     }
 
     private var fixTextStatusText: String {
-        switch coordinator.fixTextAvailability {
-        case .available:
-            return L10n.string(
-                "menubar.text_correction.ready",
-                defaultValue: "Ready to run with the current focused text context."
-            )
-        case let .deferred(message):
-            return message
-        }
+        L10n.string(
+            "menubar.text_correction.ready",
+            defaultValue: "Ready to run with the current focused text context."
+        )
     }
 }
 

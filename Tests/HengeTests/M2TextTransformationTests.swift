@@ -41,7 +41,7 @@ struct M2TextTransformationTests {
     func transformerMapsEnglishToRussian() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("ghbdtn") == .transformed("привет"))
@@ -51,7 +51,7 @@ struct M2TextTransformationTests {
     func transformerMapsRussianToEnglish() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("привет") == .transformed("ghbdtn"))
@@ -61,7 +61,7 @@ struct M2TextTransformationTests {
     func transformerPreservesTitleCaseThroughIntegration() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("Ghbdtn") == .transformed("Привет"))
@@ -81,7 +81,7 @@ struct M2TextTransformationTests {
     func transformerReturnsNoOpForEmptyText() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("") == .noOp(.emptyText))
@@ -91,7 +91,7 @@ struct M2TextTransformationTests {
     func transformerReturnsNoOpForNeutralText() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("12345") == .noOp(.neutralText))
@@ -101,7 +101,7 @@ struct M2TextTransformationTests {
     func transformerReturnsNoOpForAmbiguousDirection() {
         let transformer = SimpleTextTransformer(
             detector: MajorityLayoutDetector(),
-            mapper: NativeKeyboardLayoutMapper()
+            mapper: NativeKeyboardLayoutMapper.bundled()
         )
 
         #expect(transformer.transform("abвг") == .noOp(.ambiguousDirection))
@@ -187,7 +187,7 @@ struct M2TextTransformationTests {
 final class SelectionStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
     var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private let selection: SelectionProbe

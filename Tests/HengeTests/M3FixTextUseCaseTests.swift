@@ -461,7 +461,7 @@ struct M3FixTextUseCaseTests {
 private final class OutcomeStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
     var activeApplication: ApplicationIdentity?
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private let selection: SelectionProbe
@@ -528,7 +528,7 @@ private final class RecordingWordBoundaryDetector: WordBoundaryDetecting, @unche
 private final class RecordingStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
     var activeApplication: ApplicationIdentity?
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private let selection: SelectionProbe

@@ -15,7 +15,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: loginItemManager
             ),
@@ -56,7 +56,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             ),
@@ -444,7 +444,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: InMemoryConfigurationStore(),
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             )
@@ -602,7 +602,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             )
@@ -632,7 +632,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             )
@@ -682,7 +682,7 @@ struct MenuBarActionsTests {
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
                 configurationStore: store,
-                fixTextUseCase: DeferredFixTextUseCase(),
+                fixTextUseCase: NoopFixTextUseCase(),
                 runtime: runtime,
                 loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
             ),
@@ -738,7 +738,7 @@ private final class MenuBarTestRuntime: AppRuntime {
         bundleIdentifier: "com.apple.Notes",
         displayName: "Notes"
     )
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
     var activationHandler: (@Sendable () -> Void)?
 
@@ -885,7 +885,7 @@ private final class FakeWorkspaceApplicationSource: WorkspaceApplicationSource, 
 private final class MenuBarEditorRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool
     var activeApplication: ApplicationIdentity?
-    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
+    let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private var isTargetFocused: Bool

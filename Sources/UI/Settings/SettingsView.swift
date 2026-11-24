@@ -203,15 +203,10 @@ struct SettingsView: View {
     }
 
     private var fixTextStatusText: String {
-        switch coordinator.fixTextAvailability {
-        case .available:
-            return L10n.string(
-                "settings.text_correction.available",
-                defaultValue: "Text correction is available."
-            )
-        case let .deferred(message):
-            return message
-        }
+        L10n.string(
+            "settings.text_correction.available",
+            defaultValue: "Text correction is available."
+        )
     }
 }
 
@@ -260,7 +255,10 @@ private final class ShortcutCaptureView: NSView {
 
         let keyCode = UInt32(event.keyCode)
         guard !modifiers.isEmpty,
-              let key = CarbonHotkey.displayKey(forKeyCode: keyCode) else {
+              let key = CarbonHotkey.displayKey(
+                  forKeyCode: keyCode,
+                  asciiLabel: CarbonHotkey.systemASCIICapableLabel
+              ) else {
             onCapture?(nil)
             return
         }

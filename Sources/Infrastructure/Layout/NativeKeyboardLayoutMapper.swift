@@ -13,6 +13,12 @@ public final class NativeKeyboardLayoutMapper: LayoutMapping, @unchecked Sendabl
     private static let lock = NSLock()
     nonisolated(unsafe) private static var cachedSystemTables: (enToRu: [Character: Character], ruToEn: [Character: Character])?
 
+    /// Creates a mapper backed by the bundled ANSI fallback tables without
+    /// querying Carbon TIS or `UCKeyTranslate`.
+    public static func bundled() -> NativeKeyboardLayoutMapper {
+        NativeKeyboardLayoutMapper(layoutData: [:])
+    }
+
     /// Creates a mapper with dynamically resolved system layouts, or with injected
     /// layout data for testing.
     ///
@@ -39,34 +45,12 @@ public final class NativeKeyboardLayoutMapper: LayoutMapping, @unchecked Sendabl
         self.ruToEn = systemTables.ruToEn
     }
 
-    private static var isRunningInTestingEnvironment: Bool {
-        let processName = ProcessInfo.processInfo.processName.lowercased()
-        if processName.contains("test") || processName.contains("testing-helper") {
-            return true
-        }
-        for arg in ProcessInfo.processInfo.arguments {
-            let lower = arg.lowercased()
-            if lower.contains("testing-helper") || lower.contains(".xctest") {
-                return true
-            }
-        }
-        return false
-    }
-
     private static func getOrBuildSystemTables() -> (enToRu: [Character: Character], ruToEn: [Character: Character]) {
         lock.lock()
         defer { lock.unlock() }
 
         if let cached = cachedSystemTables {
             return cached
-        }
-
-        // Carbon TIS APIs require WindowServer / pboard and are unsafe on background test worker threads.
-        // In headless testing environments, immediately use the bundled ANSI standard tables.
-        if isRunningInTestingEnvironment {
-            let tables = fallbackTables()
-            cachedSystemTables = tables
-            return tables
         }
 
         let tables: (enToRu: [Character: Character], ruToEn: [Character: Character])

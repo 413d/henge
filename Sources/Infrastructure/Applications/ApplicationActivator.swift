@@ -119,8 +119,4 @@ final class ApplicationActivator {
 
         return applicationProvider.isFrontmost(application)
     }
-
-    func waitForActivation(of application: ApplicationIdentity, timeout: TimeInterval) async {
-        await applicationProvider.waitForActivation(of: application, timeout: timeout)
-    }
 }

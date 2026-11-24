@@ -72,8 +72,7 @@
 "launch_at_login.status.requires_approval" = "Approval required in System Settings → Login Items.";
 "launch_at_login.error.unverified" = "Launch at Login state could not be verified.";
 
-/* Fix Text Availability & Outcomes */
-"fix_text.availability.deferred" = "Text correction remains unavailable while Milestone 1 native hotkey and text-integration spikes are being validated.";
+/* Fix Text Outcomes */
 "fix_outcome.fixed_direct" = "Text corrected.";
 "fix_outcome.fixed_clipboard" = "Text corrected using the clipboard fallback.";
 "fix_outcome.nothing_to_fix" = "Nothing to fix in the current text.";

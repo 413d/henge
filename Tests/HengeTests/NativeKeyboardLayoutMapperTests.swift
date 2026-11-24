@@ -4,7 +4,7 @@ import Testing
 struct NativeKeyboardLayoutMapperTests {
     @Test
     func mapsBasicEnglishToRussianAlphabet() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map("q", from: .english, to: .russian) == "й")
         #expect(mapper.map("w", from: .english, to: .russian) == "ц")
         #expect(mapper.map("e", from: .english, to: .russian) == "у")
@@ -13,7 +13,7 @@ struct NativeKeyboardLayoutMapperTests {
 
     @Test
     func mapsBasicRussianToEnglishAlphabet() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map("й", from: .russian, to: .english) == "q")
         #expect(mapper.map("ц", from: .russian, to: .english) == "w")
         #expect(mapper.map("у", from: .russian, to: .english) == "e")
@@ -21,7 +21,7 @@ struct NativeKeyboardLayoutMapperTests {
 
     @Test
     func mapsUppercasePreservingCase() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map("Q", from: .english, to: .russian) == "Й")
         #expect(mapper.map("W", from: .english, to: .russian) == "Ц")
         #expect(mapper.map("Й", from: .russian, to: .english) == "Q")
@@ -29,7 +29,7 @@ struct NativeKeyboardLayoutMapperTests {
 
     @Test
     func mapsPunctuationAndBrackets() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map("[", from: .english, to: .russian) == "х")
         #expect(mapper.map("]", from: .english, to: .russian) == "ъ")
         #expect(mapper.map(";", from: .english, to: .russian) == "ж")
@@ -40,7 +40,7 @@ struct NativeKeyboardLayoutMapperTests {
 
     @Test
     func mapsFullStrings() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map(text: "ghbdtn", from: .english, to: .russian) == "привет")
         #expect(mapper.map(text: "ghbdtn, vbh!", from: .english, to: .russian) == "привет, мир!")
         #expect(mapper.map(text: "ghbdtn_123", from: .english, to: .russian) == "привет_123")
@@ -49,7 +49,7 @@ struct NativeKeyboardLayoutMapperTests {
 
     @Test
     func preservesUnmappedCharacters() {
-        let mapper = NativeKeyboardLayoutMapper()
+        let mapper = NativeKeyboardLayoutMapper.bundled()
         #expect(mapper.map("1", from: .english, to: .russian) == "1")
         #expect(mapper.map(" ", from: .english, to: .russian) == " ")
         #expect(mapper.map("🎉", from: .english, to: .russian) == nil)

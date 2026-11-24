@@ -94,7 +94,10 @@ struct CarbonHotkey {
         return keyCode(for: shortcut.key) != nil
     }
 
-    static func displayKey(forKeyCode keyCode: UInt32) -> String? {
+    static func displayKey(
+        forKeyCode keyCode: UInt32,
+        asciiLabel: ((UInt16) -> String?)? = nil
+    ) -> String? {
         if let special = specialKeyLabels[keyCode] {
             return special
         }
@@ -103,7 +106,7 @@ struct CarbonHotkey {
             return nil
         }
 
-        return asciiCapableKeyLabel(forKeyCode: UInt16(keyCode)) ?? fallback
+        return asciiLabel?(UInt16(keyCode)) ?? fallback
     }
 
     init(shortcut: Shortcut) throws {
@@ -123,19 +126,8 @@ struct CarbonHotkey {
         modifiers = Self.modifiers(for: shortcut.modifiers)
     }
 
-    private static var isRunningInTestingEnvironment: Bool {
-        let processName = ProcessInfo.processInfo.processName.lowercased()
-        if processName.contains("test") || processName.contains("testing-helper") {
-            return true
-        }
-        return ProcessInfo.processInfo.arguments.contains {
-            let lower = $0.lowercased()
-            return lower.contains("testing-helper") || lower.contains(".xctest")
-        }
-    }
-
-    private static func asciiCapableKeyLabel(forKeyCode keyCode: UInt16) -> String? {
-        guard !isRunningInTestingEnvironment, Thread.isMainThread else {
+    static func systemASCIICapableLabel(forKeyCode keyCode: UInt16) -> String? {
+        guard Thread.isMainThread else {
             return nil
         }
         guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
