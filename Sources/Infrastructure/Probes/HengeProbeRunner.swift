@@ -159,11 +159,15 @@ enum HengeProbeRunner {
             lines.append("Focused element subrole: \(snapshot.subrole ?? "<none>")")
             lines.append("Secure field detected: false")
 
-            switch runtime.inspectSelection() {
-            case let .available(selection):
-                lines.append("Selection: \(selection.text.count) chars at [\(selection.range.location), \(selection.range.length)]")
-            case let .unavailable(reason):
-                lines.append("Selection: unavailable — \(reason.description)")
+            if let activeApplication = runtime.activeApplication {
+                switch runtime.inspectTextContext(in: activeApplication) {
+                case let .available(context) where !context.selection.isCaretContext:
+                    lines.append("Selection: \(context.selection.text.count) chars at [\(context.selection.range.location), \(context.selection.range.length)]")
+                case .available:
+                    lines.append("Selection: unavailable — \(SelectionProbeFailure.noSelection.description)")
+                case let .unavailable(reason):
+                    lines.append("Selection: unavailable — \(reason.description)")
+                }
             }
         }
 

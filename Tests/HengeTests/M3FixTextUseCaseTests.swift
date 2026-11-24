@@ -423,6 +423,30 @@ struct M3FixTextUseCaseTests {
         #expect(runtime.recordedReplacements.isEmpty)
     }
 
+    @Test
+    func caretContextOperationPassesTextTargetWithActiveApplication() {
+        let snapshot = SelectionSnapshot(
+            text: "hello ghbdtn",
+            range: SelectionRangeSnapshot(location: 12, length: 0),
+            isCaretContext: true
+        )
+        let expectedApplication = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let runtime = RecordingStubRuntime(activeApplication: expectedApplication, selection: .available(snapshot))
+        let useCase = LiveFixTextUseCase(
+            runtime: runtime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: runtime.layoutMapper
+            )
+        )
+
+        let outcome = useCase.execute()
+
+        #expect(outcome == .fixed(viaClipboard: false))
+        #expect(runtime.recordedReplacements.count == 1)
+        #expect(runtime.recordedTargets.first?.application == expectedApplication)
+    }
+
     private func makeUseCase(_ runtime: OutcomeStubRuntime) -> LiveFixTextUseCase {
         LiveFixTextUseCase(
             runtime: runtime,
@@ -462,21 +486,22 @@ private final class OutcomeStubRuntime: AppRuntime {
     func inspectFocusedElement() -> FocusedElementProbe {
         .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false))
     }
-    func inspectSelection() -> SelectionProbe { selection }
-    func replaceSelection(with text: String) -> SelectionWriteResult { directResult }
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
+        makeTestTextContext(selection, in: application)
+    }
     func replaceText(
-        in range: SelectionRangeSnapshot,
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
         context: SelectionSnapshot,
         expectedText: String,
-        with text: String,
-        in application: ApplicationIdentity
+        with text: String
     ) -> SelectionWriteResult { directResult }
     func replaceTextUsingClipboard(
-        in range: SelectionRangeSnapshot,
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
         context: SelectionSnapshot,
         expectedText: String,
-        with text: String,
-        in application: ApplicationIdentity
+        with text: String
     ) -> SelectionWriteResult { clipboardResult }
 }
 
@@ -502,14 +527,19 @@ private final class RecordingWordBoundaryDetector: WordBoundaryDetecting, @unche
 
 private final class RecordingStubRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool { true }
-    var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application")
+    var activeApplication: ApplicationIdentity?
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
     private let selection: SelectionProbe
     private(set) var recordedReplacements: [RecordedReplacement] = []
+    private(set) var recordedTargets: [TextTarget] = []
 
-    init(selection: SelectionProbe) {
+    init(
+        activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application"),
+        selection: SelectionProbe
+    ) {
+        self.activeApplication = activeApplication
         self.selection = selection
     }
 
@@ -519,15 +549,17 @@ private final class RecordingStubRuntime: AppRuntime {
     func inspectFocusedElement() -> FocusedElementProbe {
         .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false))
     }
-    func inspectSelection() -> SelectionProbe { selection }
-    func replaceSelection(with text: String) -> SelectionWriteResult { .unavailable(.unsupported) }
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
+        makeTestTextContext(selection, in: application)
+    }
     func replaceText(
-        in range: SelectionRangeSnapshot,
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
         context: SelectionSnapshot,
         expectedText: String,
-        with text: String,
-        in application: ApplicationIdentity
+        with text: String
     ) -> SelectionWriteResult {
+        recordedTargets.append(target)
         recordedReplacements.append(RecordedReplacement(
             range: range,
             context: context,

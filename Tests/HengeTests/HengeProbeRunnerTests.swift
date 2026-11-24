@@ -137,6 +137,21 @@ struct HengeProbeRunnerTests {
         #expect(output.contains("Selection: unavailable"))
         #expect(runtime.selectionInspectionCount == 1)
     }
+
+    @Test
+    func accessibilityProbeSkipsSelectionWhenNoActiveApplication() {
+        let runtime = ProbeStubRuntime(
+            hasAccessibilityPermission: true,
+            focusedElementProbe: .available(
+                FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+            )
+        )
+        runtime.activeApplication = nil
+        let output = HengeProbeRunner.runAccessibilityProbe(runtime: runtime)
+        #expect(output.contains("Secure field detected: false"))
+        #expect(!output.contains("Selection:"))
+        #expect(runtime.selectionInspectionCount == 0)
+    }
 }
 
 private enum ProbeRegistrationError: Error {
@@ -188,12 +203,18 @@ private final class ProbeStubRuntime: AppRuntime {
         focusedElementProbe
     }
 
-    func inspectSelection() -> SelectionProbe {
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         selectionInspectionCount += 1
         return .unavailable(.noSelection)
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         .unavailable(.noSelection)
     }
 }

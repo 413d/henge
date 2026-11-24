@@ -758,11 +758,17 @@ private final class MenuBarTestRuntime: AppRuntime {
         .available(FocusedElementSnapshot(role: "AXTextArea", subrole: nil, isSecure: false))
     }
 
-    func inspectSelection() -> SelectionProbe {
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         .unavailable(.noSelection)
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         .unavailable(.unsupported)
     }
 }
@@ -932,54 +938,7 @@ private final class MenuBarEditorRuntime: AppRuntime {
         )
     }
 
-    func inspectSelection() -> SelectionProbe {
-        guard hasAccessibilityPermission else {
-            return .unavailable(.missingPermission)
-        }
-        guard isTargetFocused else {
-            return .unavailable(.noFocusedElement)
-        }
-        guard !isSecure else {
-            return .unavailable(.secureField)
-        }
-        guard selectedRange.length > 0 else {
-            return .unavailable(.noSelection)
-        }
-        let nsText = text as NSString
-        let substring = nsText.substring(with: NSRange(location: selectedRange.location, length: selectedRange.length))
-        return .available(SelectionSnapshot(text: substring, range: selectedRange))
-    }
-
-    func inspectTextContext() -> TextContextProbe {
-        guard hasAccessibilityPermission else {
-            return .unavailable(.missingPermission)
-        }
-        guard isTargetFocused else {
-            return .unavailable(.noFocusedElement)
-        }
-        guard !isSecure else {
-            return .unavailable(.secureField)
-        }
-        if selectedRange.length > 0 {
-            let nsText = text as NSString
-            let substring = nsText.substring(with: NSRange(location: selectedRange.location, length: selectedRange.length))
-            return .available(SelectionSnapshot(text: substring, range: selectedRange))
-        }
-        return .available(SelectionSnapshot(text: text, range: selectedRange, isCaretContext: true))
-    }
-
-    func replaceSelection(with replacement: String) -> SelectionWriteResult {
-        .unavailable(.unsupported)
-    }
-
-    func replaceText(
-        in range: SelectionRangeSnapshot,
-        context: SelectionSnapshot,
-        expectedText: String,
-        with replacement: String,
-        in application: ApplicationIdentity
-    ) -> SelectionWriteResult {
-        replaceCallCount += 1
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         guard hasAccessibilityPermission else {
             return .unavailable(.missingPermission)
         }
@@ -987,6 +946,39 @@ private final class MenuBarEditorRuntime: AppRuntime {
             return .unavailable(.noFocusedElement)
         }
         guard !isSecure else {
+            return .unavailable(.secureField)
+        }
+        let snapshot = FocusedElementSnapshot(
+            role: isSecure ? "AXSecureTextField" : "AXTextArea",
+            subrole: isSecure ? "AXSecureTextField" : nil,
+            isSecure: isSecure
+        )
+        let selection: SelectionSnapshot
+        if selectedRange.length > 0 {
+            let nsText = text as NSString
+            let substring = nsText.substring(with: NSRange(location: selectedRange.location, length: selectedRange.length))
+            selection = SelectionSnapshot(text: substring, range: selectedRange)
+        } else {
+            selection = SelectionSnapshot(text: text, range: selectedRange, isCaretContext: true)
+        }
+        return makeTestTextContext(.available(selection), in: application, snapshot: snapshot)
+    }
+
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with replacement: String
+    ) -> SelectionWriteResult {
+        replaceCallCount += 1
+        guard hasAccessibilityPermission else {
+            return .unavailable(.missingPermission)
+        }
+        guard isTargetFocused, activeApplication == target.application else {
+            return .unavailable(.noFocusedElement)
+        }
+        guard !target.snapshot.isSecure, !isSecure else {
             return .unavailable(.secureField)
         }
         let nsText = text as NSString

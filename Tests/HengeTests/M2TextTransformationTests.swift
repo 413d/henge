@@ -210,11 +210,17 @@ final class SelectionStubRuntime: AppRuntime {
         .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false))
     }
 
-    func inspectSelection() -> SelectionProbe {
-        selection
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
+        makeTestTextContext(selection, in: application)
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         replacedText = text
         replaceCallCount += 1
 
@@ -228,6 +234,31 @@ final class SelectionStubRuntime: AppRuntime {
         case let .unavailable(reason):
             return .unavailable(.init(from: reason))
         }
+    }
+}
+
+func makeTestTextTarget(
+    application: ApplicationIdentity,
+    snapshot: FocusedElementSnapshot = FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+) -> TextTarget {
+    TextTarget(application: application, snapshot: snapshot)
+}
+
+func makeTestTextContext(
+    _ selection: SelectionProbe,
+    in application: ApplicationIdentity,
+    snapshot: FocusedElementSnapshot = FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+) -> TextContextProbe {
+    switch selection {
+    case let .available(selectionSnapshot):
+        return .available(
+            TextContext(
+                target: makeTestTextTarget(application: application, snapshot: snapshot),
+                selection: selectionSnapshot
+            )
+        )
+    case let .unavailable(reason):
+        return .unavailable(reason)
     }
 }
 

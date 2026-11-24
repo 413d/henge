@@ -1,3 +1,4 @@
+import ApplicationServices
 import Foundation
 import AppKit
 import CoreGraphics
@@ -358,6 +359,169 @@ struct M4SafetyAndCompatibilityTests {
         #expect(manager.restoredSnapshot == original)
     }
 
+    @Test
+    func inspectionRejectsElementWhosePIDBelongsToDifferentApplication() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let otherPID: pid_t = 9002
+        let otherElement = AXUIElementCreateApplication(otherPID)
+        let spyClipboard = SpyClipboardReplacement()
+        let runtime = LiveAppRuntime(
+            clipboardManager: MockClipboardManager(),
+            clipboardReplacement: spyClipboard,
+            applicationProvider: StubM4ApplicationProvider(activeApp: notes, pid: 4100),
+            permissionProbe: AccessibilityPermissionProbe(isTrustedProvider: { true }),
+            focusedElementResolver: {
+                .success(ResolvedFocusedElement(
+                    element: otherElement,
+                    snapshot: FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+                ))
+            }
+        )
+
+        let probe = runtime.inspectTextContext(in: notes)
+        #expect(probe == .unavailable(.noFocusedElement))
+
+        let useCase = LiveFixTextUseCase(
+            runtime: runtime,
+            transformer: SimpleTextTransformer(detector: MajorityLayoutDetector(), mapper: runtime.layoutMapper)
+        )
+        let outcome = useCase.execute()
+        #expect(outcome == .failed(.noFocusedElement))
+        #expect(spyClipboard.callCount == 0)
+    }
+
+    @Test
+    func secureSnapshotNeverReachesWriteOrReadsAXValue() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let element = AXUIElementCreateApplication(4100)
+        let spyClipboard = SpyClipboardReplacement()
+        var resolveCount = 0
+        let runtime = LiveAppRuntime(
+            clipboardManager: MockClipboardManager(),
+            clipboardReplacement: spyClipboard,
+            applicationProvider: StubM4ApplicationProvider(activeApp: notes, pid: 4100),
+            permissionProbe: AccessibilityPermissionProbe(isTrustedProvider: { true }),
+            focusedElementResolver: {
+                resolveCount += 1
+                return .success(ResolvedFocusedElement(
+                    element: element,
+                    snapshot: FocusedElementSnapshot(role: "AXSecureTextField", subrole: "AXSecureTextField", isSecure: true)
+                ))
+            }
+        )
+
+        let probe = runtime.inspectTextContext(in: notes)
+        #expect(probe == .unavailable(.secureField))
+        #expect(resolveCount == 1)
+
+        let secureTarget = TextTarget(
+            application: notes,
+            snapshot: FocusedElementSnapshot(role: "AXSecureTextField", subrole: "AXSecureTextField", isSecure: true),
+            element: element
+        )
+        let snapshot = SelectionSnapshot(text: "secret", range: SelectionRangeSnapshot(location: 0, length: 6))
+        let directResult = runtime.replaceText(
+            secureTarget,
+            range: snapshot.range,
+            context: snapshot,
+            expectedText: "secret",
+            with: "ыускуе"
+        )
+        let clipboardResult = runtime.replaceTextUsingClipboard(
+            secureTarget,
+            range: snapshot.range,
+            context: snapshot,
+            expectedText: "secret",
+            with: "ыускуе"
+        )
+        #expect(directResult == .unavailable(.secureField))
+        #expect(clipboardResult == .unavailable(.secureField))
+        #expect(resolveCount == 1)
+        #expect(spyClipboard.callCount == 0)
+
+        let stub = M4RuntimeStub(context: .unavailable(.secureField))
+        let outcome = makeUseCase(stub).execute()
+        #expect(outcome == .secureField)
+        #expect(stub.axValueReadCount == 0)
+        #expect(stub.directCallCount == 0)
+        #expect(stub.clipboardCallCount == 0)
+    }
+
+    @Test
+    func elementSwappedBetweenInspectionAndWriteFailsDirectWriteAndClipboardValidation() {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let originalElement = AXUIElementCreateApplication(4100)
+        let swappedElement = AXUIElementCreateApplication(4101)
+        let spyClipboard = SpyClipboardReplacement()
+        var currentFocused = originalElement
+        let runtime = LiveAppRuntime(
+            clipboardManager: MockClipboardManager(),
+            clipboardReplacement: spyClipboard,
+            applicationProvider: StubM4ApplicationProvider(activeApp: notes, pid: 4100),
+            permissionProbe: AccessibilityPermissionProbe(isTrustedProvider: { true }),
+            focusedElementResolver: {
+                .success(ResolvedFocusedElement(
+                    element: currentFocused,
+                    snapshot: FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
+                ))
+            }
+        )
+
+        let target = TextTarget(
+            application: notes,
+            snapshot: FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false),
+            element: originalElement
+        )
+        let snapshot = SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
+
+        // Element swaps before write
+        currentFocused = swappedElement
+
+        let directResult = runtime.replaceText(
+            target,
+            range: snapshot.range,
+            context: snapshot,
+            expectedText: "ghbdtn",
+            with: "привет"
+        )
+        #expect(directResult == .unavailable(.unsupported))
+
+        let clipboardResult = runtime.replaceTextUsingClipboard(
+            target,
+            range: snapshot.range,
+            context: snapshot,
+            expectedText: "ghbdtn",
+            with: "привет"
+        )
+        #expect(clipboardResult == .unavailable(.unsupported))
+        #expect(spyClipboard.callCount == 0)
+
+        // Also verify validateTarget aborting mid-clipboard-replacement prevents paste
+        let pasteboard = TestReplacementPasteboard(initialString: "original clipboard")
+        let original = ClipboardSnapshot(changeCount: 0, items: [PasteboardItemSnapshot(representations: [
+            NSPasteboard.PasteboardType.string.rawValue: Data("original clipboard".utf8)
+        ])])
+        let manager = TestReplacementClipboardManager(snapshot: original)
+        let poster = TestClipboardEventPoster(pasteboard: pasteboard, copiedText: "ghbdtn")
+        let replacement = AppKitClipboardReplacement(clipboardManager: manager, pasteboard: pasteboard, eventPoster: poster)
+        var validationCalls = 0
+        let pasteResult = replacement.replaceSelection(
+            expectedText: "ghbdtn",
+            with: "привет",
+            processIdentifier: 4100,
+            validateTarget: {
+                validationCalls += 1
+                // Pass copy checks (1 & 2), fail paste check (3) after element swaps mid-flight
+                return validationCalls < 3
+            },
+            verifyReplacement: { true }
+        )
+        #expect(pasteResult == .failed)
+        #expect(poster.pasteCount == 0)
+        #expect(poster.pastedText == nil)
+        #expect(manager.restoredSnapshot == original)
+    }
+
     private func makeUseCase(_ runtime: M4RuntimeStub) -> LiveFixTextUseCase {
         LiveFixTextUseCase(
             runtime: runtime,
@@ -484,16 +648,17 @@ private final class M4RuntimeStub: AppRuntime {
     var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test")
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
-    private let context: TextContextProbe
+    private let context: SelectionProbe
     private let directResult: SelectionWriteResult
     private(set) var contextReadCount = 0
+    private(set) var axValueReadCount = 0
     private(set) var directCallCount = 0
     private(set) var clipboardCallCount = 0
     private(set) var directRange: SelectionRangeSnapshot?
     private(set) var directReplacement: String?
     private(set) var clipboardReplacement: String?
 
-    init(context: TextContextProbe, directResult: SelectionWriteResult = .success(SelectionRangeSnapshot(location: 0, length: 0))) {
+    init(context: SelectionProbe, directResult: SelectionWriteResult = .success(SelectionRangeSnapshot(location: 0, length: 0))) {
         self.context = context
         self.directResult = directResult
     }
@@ -502,23 +667,51 @@ private final class M4RuntimeStub: AppRuntime {
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws {}
     func unregisterFixTextHotkey() {}
     func inspectFocusedElement() -> FocusedElementProbe { .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)) }
-    func inspectSelection() -> SelectionProbe { .unavailable(.noSelection) }
-    func inspectTextContext() -> TextContextProbe {
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         contextReadCount += 1
-        return context
+        if case .available = context {
+            axValueReadCount += 1
+        }
+        return makeTestTextContext(context, in: application)
     }
-    func replaceSelection(with text: String) -> SelectionWriteResult { directResult }
 
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+    func replaceText(_ target: TextTarget, range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
         directCallCount += 1
         directRange = range
         directReplacement = text
         return directResult
     }
 
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+    func replaceTextUsingClipboard(_ target: TextTarget, range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
         clipboardCallCount += 1
         clipboardReplacement = text
         return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
+    }
+}
+
+private final class SpyClipboardReplacement: ClipboardReplacing {
+    private(set) var callCount = 0
+
+    func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
+        callCount += 1
+        return .failed
+    }
+}
+
+private final class StubM4ApplicationProvider: ActiveApplicationProviding, @unchecked Sendable {
+    private let activeApp: ApplicationIdentity
+    private let pid: pid_t
+
+    init(activeApp: ApplicationIdentity, pid: pid_t) {
+        self.activeApp = activeApp
+        self.pid = pid
+    }
+
+    func activeApplication() -> ApplicationIdentity? { activeApp }
+    func application(bundleIdentifier: String) -> ApplicationIdentity? {
+        activeApp.bundleIdentifier == bundleIdentifier ? activeApp : nil
+    }
+    func activeProcessIdentifier(for application: ApplicationIdentity) -> pid_t? {
+        application.bundleIdentifier == activeApp.bundleIdentifier ? pid : nil
     }
 }

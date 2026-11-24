@@ -1191,29 +1191,22 @@ private final class StubRuntime: AppRuntime {
         focusedElementProbe
     }
 
-    func inspectSelection() -> SelectionProbe {
-        selectionProbe
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
+        makeTestTextContext(selectionProbe, in: application)
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         switch selectionProbe {
         case let .available(snapshot):
             return .success(snapshot.range)
         case let .unavailable(reason):
-            switch reason {
-            case .missingPermission:
-                return .unavailable(.missingPermission)
-            case .noFocusedElement:
-                return .unavailable(.noFocusedElement)
-            case .secureField:
-                return .unavailable(.secureField)
-            case .noSelection:
-                return .unavailable(.noSelection)
-            case .unsupported:
-                return .unavailable(.unsupported)
-            case let .accessibilityError(error):
-                return .unavailable(.accessibilityError(error))
-            }
+            return .unavailable(.init(from: reason))
         }
     }
 

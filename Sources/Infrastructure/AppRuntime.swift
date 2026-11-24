@@ -118,9 +118,9 @@ struct SelectionSnapshot: Equatable {
 
 enum TextContextProbe: Equatable {
     case unavailable(SelectionProbeFailure)
-    /// For a selection, `text` is selected text and range is non-empty. Without
-    /// a selection, `text` is the element value and range is the caret offset.
-    case available(SelectionSnapshot)
+    /// For a selection, `selection.text` is selected text and range is non-empty. Without
+    /// a selection, `selection.text` is the element value and range is the caret offset.
+    case available(TextContext)
 }
 
 struct SelectionRangeSnapshot: Equatable {
@@ -211,13 +211,21 @@ protocol AppRuntime {
     func registerFixTextHotkey(_ shortcut: Shortcut, handler: @escaping () -> Void) throws
     func unregisterFixTextHotkey()
     func inspectFocusedElement() -> FocusedElementProbe
-    func inspectSelection() -> SelectionProbe
-    func inspectTextContext() -> TextContextProbe
-    func replaceSelection(with text: String) -> SelectionWriteResult
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult
+    func replaceTextUsingClipboard(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult
 }
 
 extension AppRuntime {
@@ -236,27 +244,14 @@ extension AppRuntime {
         ApplicationIdentity(bundleIdentifier: bundleIdentifier, displayName: bundleIdentifier)
     }
 
-    func inspectTextContext() -> TextContextProbe {
-        switch inspectSelection() {
-        case let .available(selection): return .available(selection)
-        case let .unavailable(reason): return .unavailable(reason)
-        }
-    }
-
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
-        replaceSelection(with: text)
-    }
-
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
+    func replaceTextUsingClipboard(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         .unavailable(.unsupported)
-    }
-
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
-        replaceText(in: range, context: context, expectedText: expectedText, with: text)
-    }
-
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
-        replaceTextUsingClipboard(in: range, context: context, expectedText: expectedText, with: text)
     }
 }
 
@@ -301,6 +296,7 @@ final class LiveAppRuntime: AppRuntime {
     private let clipboardReplacement: ClipboardReplacing
     private let applicationProvider: ActiveApplicationProviding
     private let permissionProbe: AccessibilityPermissionProbe
+    private let focusedElementResolver: (() -> Result<ResolvedFocusedElement, FocusedElementProbeFailure>)?
     private let globalHotkeyCenter = GlobalHotkeyCenter()
 
     var activeApplication: ApplicationIdentity? {
@@ -329,13 +325,15 @@ final class LiveAppRuntime: AppRuntime {
         clipboardManager: ClipboardManaging = AppKitClipboardManager(),
         clipboardReplacement: ClipboardReplacing? = nil,
         applicationProvider: ActiveApplicationProviding = WorkspaceActiveApplicationProvider(),
-        permissionProbe: AccessibilityPermissionProbe = AccessibilityPermissionProbe()
+        permissionProbe: AccessibilityPermissionProbe = AccessibilityPermissionProbe(),
+        focusedElementResolver: (() -> Result<ResolvedFocusedElement, FocusedElementProbeFailure>)? = nil
     ) {
         self.layoutMapper = layoutMapper
         self.clipboardManager = clipboardManager
         self.clipboardReplacement = clipboardReplacement ?? AppKitClipboardReplacement(clipboardManager: clipboardManager)
         self.applicationProvider = applicationProvider
         self.permissionProbe = permissionProbe
+        self.focusedElementResolver = focusedElementResolver
     }
 
     func openAccessibilitySettings() {
@@ -423,24 +421,16 @@ final class LiveAppRuntime: AppRuntime {
         }
     }
 
-    func inspectSelection() -> SelectionProbe {
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         switch resolveFocusedElement() {
         case let .failure(reason):
             return .unavailable(selectionFailure(from: reason))
         case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
             return .unavailable(.secureField)
         case let .success(resolvedElement):
-            return readSelection(from: resolvedElement.element)
-        }
-    }
-
-    func inspectTextContext() -> TextContextProbe {
-        switch resolveFocusedElement() {
-        case let .failure(reason):
-            return .unavailable(selectionFailure(from: reason))
-        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
-            return .unavailable(.secureField)
-        case let .success(resolvedElement):
+            guard validatedProcessIdentifier(for: resolvedElement.element, in: application) != nil else {
+                return .unavailable(.noFocusedElement)
+            }
             let rangeResult = copySelectedTextRange(from: resolvedElement.element)
             guard case let .success(range) = rangeResult else {
                 if case let .failure(error) = rangeResult {
@@ -451,152 +441,121 @@ final class LiveAppRuntime: AppRuntime {
 
             if range.length > 0 {
                 switch readSelectedText(from: resolvedElement.element, range: range) {
-                case let .available(snapshot): return .available(snapshot)
-                case let .unavailable(reason): return .unavailable(reason)
+                case let .available(snapshot):
+                    let target = TextTarget(
+                        application: application,
+                        snapshot: resolvedElement.snapshot,
+                        element: resolvedElement.element
+                    )
+                    return .available(TextContext(target: target, selection: snapshot))
+                case let .unavailable(reason):
+                    return .unavailable(reason)
                 }
             }
 
             guard let text = copyStringAttribute(kAXValueAttribute as CFString, from: resolvedElement.element) else {
                 return .unavailable(.unsupported)
             }
-            return .available(SelectionSnapshot(text: text, range: range, isCaretContext: true))
+            let target = TextTarget(
+                application: application,
+                snapshot: resolvedElement.snapshot,
+                element: resolvedElement.element
+            )
+            return .available(
+                TextContext(
+                    target: target,
+                    selection: SelectionSnapshot(text: text, range: range, isCaretContext: true)
+                )
+            )
         }
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
-        switch resolveFocusedElement() {
-        case let .failure(reason):
-            return .unavailable(selectionWriteFailure(from: reason))
-        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
-            return .unavailable(.secureField)
-        case let .success(resolvedElement):
-            let selection = readSelection(from: resolvedElement.element)
-
-            guard case let .available(snapshot) = selection else {
-                if case let .unavailable(reason) = selection {
-                    return .unavailable(selectionWriteFailure(fromSelectionFailure: reason))
-                }
-
-                return .unavailable(.unsupported)
-            }
-
-            let status = AXUIElementSetAttributeValue(
-                resolvedElement.element,
-                kAXSelectedTextAttribute as CFString,
-                text as CFString
-            )
-
-            guard status == .success else {
-                switch status {
-                case .attributeUnsupported:
-                    return .unavailable(.unsupported)
-                case .noValue:
-                    return .unavailable(.noSelection)
-                default:
-                    return .unavailable(.accessibilityError(status))
-                }
-            }
-
-            return .success(snapshot.range)
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
+        guard let element = target.element else { return .unavailable(.unsupported) }
+        guard !target.snapshot.isSecure else { return .unavailable(.secureField) }
+        guard isFocusedElement(element, in: target.application) else { return .unavailable(.unsupported) }
+        guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: element) else {
+            return .unavailable(.unsupported)
         }
+
+        let rangeStatus = context.isCaretContext || range != context.range
+            ? setSelectedTextRange(range, on: element)
+            : .success
+        guard rangeStatus == .success else {
+            return .unavailable(writeFailure(from: rangeStatus))
+        }
+
+        let status = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFString
+        )
+        guard status == .success else {
+            _ = setSelectedTextRange(context.range, on: element)
+            return .unavailable(writeFailure(from: status))
+        }
+        _ = setSelectedTextRange(
+            SelectionRangeSnapshot(location: range.location + text.utf16.count, length: 0),
+            on: element
+        )
+        return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
     }
 
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
-        guard let application = activeApplication else { return .unavailable(.unsupported) }
-        return replaceText(in: range, context: context, expectedText: expectedText, with: text, in: application)
-    }
+    func replaceTextUsingClipboard(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
+        guard let element = target.element else { return .unavailable(.unsupported) }
+        guard !target.snapshot.isSecure else { return .unavailable(.secureField) }
+        guard isFocusedElement(element, in: target.application) else { return .unavailable(.unsupported) }
+        guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: element) else {
+            return .unavailable(.unsupported)
+        }
 
-    func replaceText(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
-        switch resolveFocusedElement() {
-        case let .failure(reason):
-            return .unavailable(selectionWriteFailure(from: reason))
-        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
-            return .unavailable(.secureField)
-        case let .success(resolvedElement):
-            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
-            guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
-                return .unavailable(.unsupported)
+        let rangeStatus = context.isCaretContext || range != context.range
+            ? setSelectedTextRange(range, on: element)
+            : .success
+        guard rangeStatus == .success else {
+            return .unavailable(.unsupported)
+        }
+        guard let targetPID = validatedProcessIdentifier(for: element, in: target.application) else {
+            return .unavailable(.unsupported)
+        }
+        let replacementResult = clipboardReplacement.replaceSelection(
+            expectedText: expectedText,
+            with: text,
+            processIdentifier: targetPID,
+            validateTarget: { [self] in isFocusedElement(element, in: target.application) },
+            verifyReplacement: { [self] in
+                guard let currentText = copyStringAttribute(kAXValueAttribute as CFString, from: element) else {
+                    return false
+                }
+                return substring(
+                    in: SelectionRangeSnapshot(location: range.location, length: text.utf16.count),
+                    of: currentText
+                ) == text
             }
-            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
-
-            let rangeStatus = context.isCaretContext || range != context.range
-                ? setSelectedTextRange(range, on: resolvedElement.element)
-                : .success
-            guard rangeStatus == .success else {
-                return .unavailable(writeFailure(from: rangeStatus))
-            }
-
-            let status = AXUIElementSetAttributeValue(
-                resolvedElement.element,
-                kAXSelectedTextAttribute as CFString,
-                text as CFString
-            )
-            guard status == .success else {
-                _ = setSelectedTextRange(context.range, on: resolvedElement.element)
-                return .unavailable(writeFailure(from: status))
-            }
-            _ = setSelectedTextRange(
-                SelectionRangeSnapshot(location: range.location + text.utf16.count, length: 0),
-                on: resolvedElement.element
-            )
+        )
+        switch replacementResult {
+        case .success:
             return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
-        }
-    }
-
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
-        guard let application = activeApplication else { return .unavailable(.unsupported) }
-        return replaceTextUsingClipboard(in: range, context: context, expectedText: expectedText, with: text, in: application)
-    }
-
-    func replaceTextUsingClipboard(in range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String, in application: ApplicationIdentity) -> SelectionWriteResult {
-        switch resolveFocusedElement() {
-        case let .failure(reason):
-            return .unavailable(selectionWriteFailure(from: reason))
-        case let .success(resolvedElement) where resolvedElement.snapshot.isSecure:
-            return .unavailable(.secureField)
-        case let .success(resolvedElement):
-            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
-            guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: resolvedElement.element) else {
-                return .unavailable(.unsupported)
-            }
-
-            let rangeStatus = context.isCaretContext || range != context.range
-                ? setSelectedTextRange(range, on: resolvedElement.element)
-                : .success
-            guard rangeStatus == .success else {
-                return .unavailable(.unsupported)
-            }
-            guard isFocusedElement(resolvedElement.element, in: application) else { return .unavailable(.unsupported) }
-            guard let targetPID = validatedProcessIdentifier(for: resolvedElement.element, in: application) else {
-                return .unavailable(.unsupported)
-            }
-            let replacementResult = clipboardReplacement.replaceSelection(
-                expectedText: expectedText,
-                with: text,
-                processIdentifier: targetPID,
-                validateTarget: { [self] in isFocusedElement(resolvedElement.element, in: application) },
-                verifyReplacement: { [self] in
-                    guard let currentText = copyStringAttribute(kAXValueAttribute as CFString, from: resolvedElement.element) else {
-                        return false
-                    }
-                    return substring(
-                        in: SelectionRangeSnapshot(location: range.location, length: text.utf16.count),
-                        of: currentText
-                    ) == text
-                }
-            )
-            switch replacementResult {
-            case .success:
-                return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
-            case .pasteUnverified:
-                return .unavailable(.pasteUnverified)
-            case .restoreFailed:
-                return .unavailable(.clipboardRestoreFailed)
-            case .superseded:
-                return .unavailable(.clipboardSuperseded)
-            case .failed:
-                return .unavailable(.unsupported)
-            }
+        case .pasteUnverified:
+            return .unavailable(.pasteUnverified)
+        case .restoreFailed:
+            return .unavailable(.clipboardRestoreFailed)
+        case .superseded:
+            return .unavailable(.clipboardSuperseded)
+        case .failed:
+            return .unavailable(.unsupported)
         }
     }
 
@@ -651,6 +610,10 @@ final class LiveAppRuntime: AppRuntime {
     }
 
     private func resolveFocusedElement() -> Result<ResolvedFocusedElement, FocusedElementProbeFailure> {
+        if let focusedElementResolver {
+            return focusedElementResolver()
+        }
+
         guard hasAccessibilityPermission else {
             return .failure(.missingPermission)
         }
@@ -697,19 +660,6 @@ final class LiveAppRuntime: AppRuntime {
             return .failure(.noFocusedElement)
         default:
             return .failure(.accessibilityError(status))
-        }
-    }
-
-    private func readSelection(from element: AXUIElement) -> SelectionProbe {
-        let rangeStatus = copySelectedTextRange(from: element)
-
-        switch rangeStatus {
-        case let .failure(error):
-            return .unavailable(error)
-        case let .success(range) where range.length <= 0:
-            return .unavailable(.noSelection)
-        case let .success(range):
-            return readSelectedText(from: element, range: range)
         }
     }
 
@@ -829,37 +779,9 @@ final class LiveAppRuntime: AppRuntime {
             return .accessibilityError(error)
         }
     }
-
-    private func selectionWriteFailure(from focusedElementFailure: FocusedElementProbeFailure) -> SelectionWriteFailure {
-        switch focusedElementFailure {
-        case .missingPermission:
-            return .missingPermission
-        case .noFocusedElement:
-            return .noFocusedElement
-        case let .accessibilityError(error):
-            return .accessibilityError(error)
-        }
-    }
-
-    private func selectionWriteFailure(fromSelectionFailure selectionFailure: SelectionProbeFailure) -> SelectionWriteFailure {
-        switch selectionFailure {
-        case .missingPermission:
-            return .missingPermission
-        case .noFocusedElement:
-            return .noFocusedElement
-        case .secureField:
-            return .secureField
-        case .noSelection:
-            return .noSelection
-        case .unsupported:
-            return .unsupported
-        case let .accessibilityError(error):
-            return .accessibilityError(error)
-        }
-    }
 }
 
-private struct ResolvedFocusedElement {
+struct ResolvedFocusedElement {
     let element: AXUIElement
     let snapshot: FocusedElementSnapshot
 }

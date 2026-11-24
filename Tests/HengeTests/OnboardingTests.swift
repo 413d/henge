@@ -306,11 +306,17 @@ private final class OnboardingTestRuntime: AppRuntime {
         .unavailable(.noFocusedElement)
     }
 
-    func inspectSelection() -> SelectionProbe {
+    func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         .unavailable(.noSelection)
     }
 
-    func replaceSelection(with text: String) -> SelectionWriteResult {
+    func replaceText(
+        _ target: TextTarget,
+        range: SelectionRangeSnapshot,
+        context: SelectionSnapshot,
+        expectedText: String,
+        with text: String
+    ) -> SelectionWriteResult {
         .unavailable(.unsupported)
     }
 }

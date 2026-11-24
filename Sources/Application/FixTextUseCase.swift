@@ -62,14 +62,15 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             return .excluded
         }
 
-        let context: SelectionSnapshot
-        switch runtime.inspectTextContext() {
-        case let .available(resolvedContext):
-            context = resolvedContext
+        let resolvedContext: TextContext
+        switch runtime.inspectTextContext(in: application) {
+        case let .available(context):
+            resolvedContext = context
         case let .unavailable(reason):
             return outcome(from: reason)
         }
 
+        let context = resolvedContext.selection
         let targetRange: SelectionRangeSnapshot
         let targetText: String
         if context.isCaretContext {
@@ -90,11 +91,11 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         }
 
         let directResult = runtime.replaceText(
-            in: targetRange,
+            resolvedContext.target,
+            range: targetRange,
             context: context,
             expectedText: targetText,
-            with: replacement,
-            in: application
+            with: replacement
         )
         switch directResult {
         case .success:
@@ -106,11 +107,11 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         }
 
         let clipboardResult = runtime.replaceTextUsingClipboard(
-            in: targetRange,
+            resolvedContext.target,
+            range: targetRange,
             context: context,
             expectedText: targetText,
-            with: replacement,
-            in: application
+            with: replacement
         )
         switch clipboardResult {
         case .success:
