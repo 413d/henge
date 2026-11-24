@@ -13,10 +13,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    name: Test and validate
-    runs-on: macos-15
-    timeout-minutes: 20
+  release:
+    name: Test, build, and publish GitHub Release
+    runs-on: macos-14
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      archive_sha256: ${{ steps.publish.outputs.archive_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +31,7 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
-      - name: Validate scripts and Info.plist
+      - name: Validate scripts, Cask, and Info.plist
         run: |
           bash -n scripts/build.sh scripts/package.sh scripts/install.sh scripts/release/update-cask.sh scripts/dev/build-local.sh
           test -x scripts/build.sh
@@ -45,22 +51,6 @@ jobs:
           else
             swift test
           fi
-
-  release:
-    name: Build and publish GitHub Release
-    needs: test
-    runs-on: macos-15
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    outputs:
-      app_version: ${{ steps.meta.outputs.app_version }}
-      prerelease: ${{ steps.meta.outputs.prerelease }}
-      archive_sha256: ${{ steps.publish.outputs.archive_sha256 }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Derive release version and archive name
         id: meta

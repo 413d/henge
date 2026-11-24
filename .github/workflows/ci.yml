@@ -6,10 +6,18 @@ on:
     paths-ignore:
       - 'site/**'
       - 'site-tests/**'
+      - 'docs/**'
+      - '*.md'
+      - 'Casks/**'
+      - '.github/workflows/pages.yml'
   pull_request:
     paths-ignore:
       - 'site/**'
       - 'site-tests/**'
+      - 'docs/**'
+      - '*.md'
+      - 'Casks/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -20,10 +28,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test and validate
-    runs-on: macos-15
-    timeout-minutes: 20
+  ci:
+    name: Test, build, and package
+    runs-on: macos-14
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,12 +40,12 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
-      - name: Validate scripts and Info.plist
+      - name: Validate scripts, Info.plist, and Xcode project
         run: |
           bash -n scripts/build.sh scripts/package.sh scripts/dev/build-local.sh
           test -x scripts/build.sh
           test -x scripts/package.sh
-          plutil -lint App/Info.plist
+          plutil -lint App/Info.plist Henge.xcodeproj/project.pbxproj
 
       - name: Run tests (arm64)
         run: swift test
@@ -50,30 +58,8 @@ jobs:
             swift test
           fi
 
-  xcode:
-    name: Build Xcode project
-    runs-on: macos-15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Validate Xcode project
-        run: plutil -lint Henge.xcodeproj/project.pbxproj
-
       - name: Build Xcode project
         run: xcodebuild -project Henge.xcodeproj -scheme Henge -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-
-  package:
-    name: Universal app bundle
-    needs: [test, xcode]
-    runs-on: macos-15
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Build universal app and package
         run: ./scripts/package.sh
