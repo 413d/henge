@@ -306,7 +306,19 @@ final class AccessibilityTextService {
     }
 
     private func substring(in range: SelectionRangeSnapshot, of text: String) -> String? {
+        Self.substring(in: range, of: text)
+    }
+
+    /// Extracts the UTF-16 range from `text`, returning `nil` when the range is
+    /// negative, out of bounds, or does not land on character boundaries. The
+    /// upper-bound check matters: `String.Index(utf16Offset:in:)` traps when the
+    /// offset exceeds the string's UTF-16 length, and the text polled during
+    /// paste verification can be shorter than the range captured before the paste.
+    static func substring(in range: SelectionRangeSnapshot, of text: String) -> String? {
+        let utf16Count = text.utf16.count
         guard range.location >= 0, range.length >= 0,
+              range.location <= utf16Count,
+              range.length <= utf16Count - range.location,
               let start = String.Index(utf16Offset: range.location, in: text).samePosition(in: text),
               let end = String.Index(utf16Offset: range.location + range.length, in: text).samePosition(in: text),
               start <= end else { return nil }
