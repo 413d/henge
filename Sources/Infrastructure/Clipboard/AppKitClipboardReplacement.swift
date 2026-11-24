@@ -13,38 +13,22 @@ enum ClipboardReplacementResult: Equatable {
 protocol ClipboardReplacing {
     /// Copies the current selection, verifies it matches the expected source,
     /// pastes the replacement, and restores the original full-fidelity clipboard.
-    func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
-    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
-    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult
-}
-
-extension ClipboardReplacing {
-    func replaceSelection(expectedText: String, with replacement: String, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
-        guard validateTarget() else { return .failed }
-        return replaceSelection(expectedText: expectedText, with: replacement, verifyReplacement: verifyReplacement)
-    }
-
-    func replaceSelection(expectedText: String, with replacement: String, processIdentifier: pid_t, validateTarget: () -> Bool, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
-        replaceSelection(expectedText: expectedText, with: replacement, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
-    }
+    func replaceSelection(
+        expectedText: String,
+        with replacement: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool
+    ) -> ClipboardReplacementResult
 }
 
 protocol ClipboardEventPosting {
-    func postCommandKey(virtualKey: CGKeyCode) -> Bool
     func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool
-}
-
-extension ClipboardEventPosting {
-    func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool {
-        postCommandKey(virtualKey: virtualKey)
-    }
 }
 
 protocol ReplacementPasteboard {
     var changeCount: Int { get }
     func string() -> String?
-    func clear()
-    func setString(_ string: String) -> Bool
     /// Writes plain text along with org.nspasteboard.TransientType and org.nspasteboard.ConcealedType markers.
     func setTransientString(_ string: String) -> Bool
 }
@@ -54,8 +38,6 @@ struct AppKitReplacementPasteboard: ReplacementPasteboard {
 
     var changeCount: Int { pasteboard.changeCount }
     func string() -> String? { pasteboard.string(forType: .string) }
-    func clear() { pasteboard.clearContents() }
-    func setString(_ string: String) -> Bool { pasteboard.setString(string, forType: .string) }
 
     func setTransientString(_ string: String) -> Bool {
         let item = NSPasteboardItem()
@@ -68,10 +50,6 @@ struct AppKitReplacementPasteboard: ReplacementPasteboard {
 }
 
 struct SystemClipboardEventPoster: ClipboardEventPosting {
-    func postCommandKey(virtualKey: CGKeyCode) -> Bool {
-        postCommandKey(virtualKey: virtualKey, to: 0)
-    }
-
     func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool {
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: virtualKey, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: virtualKey, keyDown: false) else {
@@ -112,25 +90,8 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
     func replaceSelection(
         expectedText: String,
         with replacement: String,
-        verifyReplacement: () -> Bool
-    ) -> ClipboardReplacementResult {
-        replaceSelection(expectedText: expectedText, with: replacement, validateTarget: { true }, verifyReplacement: verifyReplacement)
-    }
-
-    func replaceSelection(
-        expectedText: String,
-        with replacement: String,
-        validateTarget: () -> Bool,
-        verifyReplacement: () -> Bool
-    ) -> ClipboardReplacementResult {
-        replaceSelection(expectedText: expectedText, with: replacement, processIdentifier: 0, validateTarget: validateTarget, verifyReplacement: verifyReplacement)
-    }
-
-    func replaceSelection(
-        expectedText: String,
-        with replacement: String,
-        processIdentifier: pid_t,
-        validateTarget: () -> Bool,
+        processIdentifier: pid_t = 0,
+        validateTarget: () -> Bool = { true },
         verifyReplacement: () -> Bool
     ) -> ClipboardReplacementResult {
         let original = clipboardManager.snapshot()
@@ -169,30 +130,65 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         let copyBudget = operationBudget <= 0.25 ? operationBudget / 2 : min(0.20, operationBudget / 2)
         let copyDeadline = min(overallDeadline, Date().addingTimeInterval(copyBudget))
 
-        let beforeCopyChangeCount = pasteboard.changeCount
-        guard validateTarget(), postCommandKey(virtualKey: 8, processIdentifier: processIdentifier),
-              waitForClipboardChange(after: beforeCopyChangeCount, deadline: copyDeadline),
-              validateTarget(), pasteboard.string() == expectedText else {
-            logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=copy")
+        guard copyAndVerifySelection(
+            expectedText: expectedText,
+            processIdentifier: processIdentifier,
+            validateTarget: validateTarget,
+            deadline: copyDeadline
+        ) else {
             return .failed
         }
 
+        return writeTransientAndPaste(
+            replacement: replacement,
+            processIdentifier: processIdentifier,
+            validateTarget: validateTarget,
+            verifyReplacement: verifyReplacement,
+            deadline: overallDeadline
+        )
+    }
+
+    private func copyAndVerifySelection(
+        expectedText: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        deadline: Date
+    ) -> Bool {
+        let beforeCopyChangeCount = pasteboard.changeCount
+        guard validateTarget(),
+              eventPoster.postCommandKey(virtualKey: 8, to: processIdentifier),
+              poll(until: { [pasteboard] in pasteboard.changeCount != beforeCopyChangeCount }, deadline: deadline),
+              validateTarget(),
+              pasteboard.string() == expectedText else {
+            logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=copy")
+            return false
+        }
+        return true
+    }
+
+    private func writeTransientAndPaste(
+        replacement: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool,
+        deadline: Date
+    ) -> ClipboardReplacementResult {
         guard pasteboard.setTransientString(replacement) else {
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=write")
             return .failed
         }
         let ownedChangeCount = pasteboard.changeCount
 
-        guard validateTarget(), postCommandKey(virtualKey: 9, processIdentifier: processIdentifier) else {
-            if pasteboard.changeCount != ownedChangeCount {
+        guard validateTarget(), eventPoster.postCommandKey(virtualKey: 9, to: processIdentifier) else {
+            if isSuperseded(ownedChangeCount: ownedChangeCount) {
                 return .superseded
             }
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=paste")
             return .failed
         }
 
-        let verified = waitForReplacement(verifyReplacement, deadline: overallDeadline)
-        guard pasteboard.changeCount == ownedChangeCount else {
+        let verified = poll(until: verifyReplacement, deadline: deadline)
+        guard !isSuperseded(ownedChangeCount: ownedChangeCount) else {
             return .superseded
         }
         if !verified {
@@ -202,33 +198,20 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
         return .success
     }
 
-    private func postCommandKey(virtualKey: CGKeyCode, processIdentifier: pid_t) -> Bool {
-        if processIdentifier > 0 {
-            return eventPoster.postCommandKey(virtualKey: virtualKey, to: processIdentifier)
-        }
-        return eventPoster.postCommandKey(virtualKey: virtualKey)
+    private func isSuperseded(ownedChangeCount: Int) -> Bool {
+        pasteboard.changeCount != ownedChangeCount
     }
 
-    private func waitForClipboardChange(after changeCount: Int, deadline: Date) -> Bool {
+    private func poll(until condition: () -> Bool, deadline: Date) -> Bool {
         while Date() < deadline {
-            if pasteboard.changeCount != changeCount {
+            if condition() {
                 return true
             }
             let remaining = deadline.timeIntervalSinceNow
             if remaining <= 0 { break }
             Thread.sleep(forTimeInterval: min(0.01, remaining))
         }
-        return pasteboard.changeCount != changeCount
-    }
-
-    private func waitForReplacement(_ verifyReplacement: () -> Bool, deadline: Date) -> Bool {
-        while Date() < deadline {
-            if verifyReplacement() { return true }
-            let remaining = deadline.timeIntervalSinceNow
-            if remaining <= 0 { break }
-            Thread.sleep(forTimeInterval: min(0.01, remaining))
-        }
-        return verifyReplacement()
+        return condition()
     }
 
 }

@@ -552,7 +552,7 @@ private final class TestClipboardEventPoster: ClipboardEventPosting {
         self.afterPaste = afterPaste
     }
 
-    func postCommandKey(virtualKey: CGKeyCode) -> Bool {
+    func postCommandKey(virtualKey: CGKeyCode, to processIdentifier: pid_t) -> Bool {
         if virtualKey == 8 {
             if copyDelay > 0 {
                 pasteboard.scheduleCopy(copiedText, after: copyDelay)
@@ -692,7 +692,13 @@ private final class M4RuntimeStub: AppRuntime {
 private final class SpyClipboardReplacement: ClipboardReplacing {
     private(set) var callCount = 0
 
-    func replaceSelection(expectedText: String, with replacement: String, verifyReplacement: () -> Bool) -> ClipboardReplacementResult {
+    func replaceSelection(
+        expectedText: String,
+        with replacement: String,
+        processIdentifier: pid_t,
+        validateTarget: () -> Bool,
+        verifyReplacement: () -> Bool
+    ) -> ClipboardReplacementResult {
         callCount += 1
         return .failed
     }
