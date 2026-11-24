@@ -160,22 +160,24 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         }
     }
 
+    /// Converts a UTF-16 offset (as reported by the Accessibility API) into a character
+    /// offset, or `nil` when the offset does not land on a character boundary.
     private func characterOffset(forUTF16Offset offset: Int, in text: String) -> Int? {
-        guard offset >= 0 else { return nil }
-        var utf16Offset = 0
-        for (characterOffset, character) in text.enumerated() {
-            if utf16Offset == offset { return characterOffset }
-            utf16Offset += String(character).utf16.count
-            if utf16Offset > offset { return nil }
-        }
-        return utf16Offset == offset ? text.count : nil
+        guard offset >= 0, offset <= text.utf16.count else { return nil }
+        let utf16Index = String.Index(utf16Offset: offset, in: text)
+        guard let characterIndex = utf16Index.samePosition(in: text) else { return nil }
+        return text.distance(from: text.startIndex, to: characterIndex)
     }
 
+    /// Converts a character range into a UTF-16 `SelectionRangeSnapshot` without
+    /// materializing the text as an array.
     private func utf16Range(forCharacterRange range: Range<Int>, in text: String) -> SelectionRangeSnapshot? {
-        let characters = Array(text)
-        guard range.lowerBound >= 0, range.upperBound <= characters.count else { return nil }
-        let location = characters[..<range.lowerBound].reduce(0) { $0 + String($1).utf16.count }
-        let length = characters[range].reduce(0) { $0 + String($1).utf16.count }
+        guard range.lowerBound >= 0, range.upperBound <= text.count else { return nil }
+        let start = text.index(text.startIndex, offsetBy: range.lowerBound)
+        let end = text.index(start, offsetBy: range.count)
+        let location = start.utf16Offset(in: text)
+        let length = end.utf16Offset(in: text) - location
+        guard location >= 0, length >= 0 else { return nil }
         return SelectionRangeSnapshot(location: location, length: length)
     }
 }
