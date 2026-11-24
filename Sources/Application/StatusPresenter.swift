@@ -73,14 +73,6 @@ struct StatusPresenter {
         return lastProbeSummary
     }
 
-    static func focusedElementResolvedText(summary: String) -> String {
-        L10n.format(
-            "probe.status.focused_element_resolved",
-            defaultValue: "Focused element resolved: %@.",
-            summary
-        )
-    }
-
     static func statusText(for outcome: FixOutcome) -> String? {
         switch outcome {
         case .fixed(viaClipboard: false):

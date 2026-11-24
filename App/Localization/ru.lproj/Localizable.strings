@@ -88,7 +88,6 @@
 "fix_outcome.failed.focus_lost" = "Henge не смог вернуть фокус в %@ и оставил текст без изменений.";
 
 /* Probes */
-"probe.status.focused_element_resolved" = "Активный элемент определён: %@.";
 "probe.focused_element.accessibility_error" = "Henge не смог проверить активный элемент (AXError %d).";
 "probe.focused_element.unknown_role" = "неизвестная роль";
 "probe.selection.missing_permission" = "Для проверки текущего выделения Henge требуется доступ к Универсальному доступу.";

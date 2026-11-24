@@ -80,13 +80,6 @@ struct StatusPresenterTests {
     }
 
     @Test
-    func focusedElementResolvedTextFormatsSummary() {
-        #expect(
-            StatusPresenter.focusedElementResolvedText(summary: "AXTextField") == "Focused element resolved: AXTextField."
-        )
-    }
-
-    @Test
     func statusItemStateAndSymbolNameDeriveExpectedStates() {
         let disabled = StatusPresenter.statusItemState(
             isEnabled: false,

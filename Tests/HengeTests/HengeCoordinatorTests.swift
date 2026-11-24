@@ -250,6 +250,27 @@ struct HengeCoordinatorTests {
     }
 
     @Test
+    func disabledHotkeyDoesNotExecuteUseCaseWhenFired() async {
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let useCase = SpyFixTextUseCase()
+
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: useCase,
+                runtime: runtime
+            )
+        )
+
+        coordinator.setEnabled(false)
+        runtime.fireHotkey()
+        await Task.yield()
+
+        #expect(useCase.executionCount == 0)
+        _ = coordinator
+    }
+
+    @Test
     func coordinatorRegistersDefaultHotkeyWhenEnabled() {
         let runtime = StubRuntime(hasAccessibilityPermission: true)
 

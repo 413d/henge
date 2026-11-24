@@ -88,7 +88,6 @@
 "fix_outcome.failed.focus_lost" = "Henge could not restore focus to %@ and left the text untouched.";
 
 /* Probes */
-"probe.status.focused_element_resolved" = "Focused element resolved: %@.";
 "probe.focused_element.accessibility_error" = "Henge could not inspect the focused element (AXError %d).";
 "probe.focused_element.unknown_role" = "unknown role";
 "probe.selection.missing_permission" = "Accessibility access is required before Henge can inspect the current selection.";
