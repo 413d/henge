@@ -49,4 +49,14 @@ final class AccessibilityPermissionProbe: @unchecked Sendable {
         cachedAt = nil
         lock.unlock()
     }
+
+    func requestPermission() {
+        if !AXIsProcessTrusted() {
+            // kAXTrustedCheckOptionPrompt is the literal "AXTrustedCheckOptionPrompt"
+            // (Swift 6 concurrency: the exported var is not sendable-safe).
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+        }
+        invalidate()
+    }
 }
