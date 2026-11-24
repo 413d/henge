@@ -64,6 +64,7 @@ struct MenuBarActionsTests {
                 controller.showWindow()
             }
         )
+        #expect(controller.showWindow() == nil)
         controller.bind(coordinator: coordinator)
 
         let firstWindow = controller.showWindow()
@@ -71,6 +72,7 @@ struct MenuBarActionsTests {
 
         #expect(firstWindow != nil)
         #expect(firstWindow?.title == "Henge Settings")
+        #expect(firstWindow?.styleMask.contains(.miniaturizable) == true)
         #expect(firstWindow?.isReleasedWhenClosed == false)
         #expect(activationCount == 1)
         #expect(orderedWindows.count == 1)

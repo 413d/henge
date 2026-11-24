@@ -220,68 +220,6 @@ struct SettingsView: View {
     }
 }
 
-enum ShortcutCaptureResult: Equatable {
-    case captured(Shortcut)
-    case cancelled
-    case missingModifiers
-    case unsupportedKey(String)
-}
-
-enum ShortcutCaptureEvaluator {
-    static func evaluate(
-        keyCode: UInt16,
-        modifiers: Shortcut.Modifiers,
-        charactersIgnoringModifiers: String?,
-        asciiLabel: @escaping (UInt16) -> String? = CarbonHotkey.systemASCIICapableLabel
-    ) -> ShortcutCaptureResult {
-        if keyCode == 53 {
-            return .cancelled
-        }
-
-        if modifiers.isEmpty {
-            return .missingModifiers
-        }
-
-        let carbonKeyCode = UInt32(keyCode)
-        if let key = CarbonHotkey.displayKey(forKeyCode: carbonKeyCode, asciiLabel: asciiLabel) {
-            let shortcut = Shortcut(key: key, modifiers: modifiers, keyCode: carbonKeyCode)
-            if CarbonHotkey.isSupported(shortcut: shortcut) {
-                return .captured(shortcut)
-            }
-            return .unsupportedKey(Shortcut(key: key, modifiers: modifiers).displayString)
-        }
-
-        let rawKey = unsupportedKeyLabel(
-            forKeyCode: keyCode,
-            charactersIgnoringModifiers: charactersIgnoringModifiers
-        )
-        return .unsupportedKey(Shortcut(key: rawKey, modifiers: modifiers).displayString)
-    }
-
-    private static func unsupportedKeyLabel(
-        forKeyCode keyCode: UInt16,
-        charactersIgnoringModifiers: String?
-    ) -> String {
-        switch keyCode {
-        case 48:
-            return "⇥"
-        case 51:
-            return "⌫"
-        case 117:
-            return "⌦"
-        default:
-            if let chars = charactersIgnoringModifiers?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !chars.isEmpty,
-               !chars.unicodeScalars.contains(where: {
-                   CharacterSet.controlCharacters.contains($0) || $0.properties.generalCategory == .privateUse
-               }) {
-                return chars.uppercased()
-            }
-            return "#\(keyCode)"
-        }
-    }
-}
-
 private struct ShortcutRecorder: NSViewRepresentable {
     let onCapture: (ShortcutCaptureResult) -> Void
 
@@ -331,73 +269,31 @@ private final class ShortcutCaptureView: NSView {
 
 @MainActor
 final class SettingsWindowController {
-    private weak var coordinator: HengeCoordinator?
-    private var window: NSWindow?
-    private let activateApplication: @MainActor () -> Void
-    private let presentWindow: @MainActor (NSWindow) -> Void
+    private let windowController: SingletonWindowController<SettingsView>
 
     init(
         coordinator: HengeCoordinator? = nil,
         activateApplication: (@MainActor () -> Void)? = nil,
         presentWindow: (@MainActor (NSWindow) -> Void)? = nil
     ) {
-        self.coordinator = coordinator
-        self.activateApplication = activateApplication ?? {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
-        self.presentWindow = presentWindow ?? { window in
-            window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
-        }
+        windowController = SingletonWindowController(
+            coordinator: coordinator,
+            title: L10n.string("settings.window.title", defaultValue: "Henge Settings"),
+            styleMask: [.titled, .closable, .miniaturizable],
+            contentSize: NSSize(width: 520, height: 460),
+            activateApplication: activateApplication,
+            presentWindow: presentWindow,
+            makeContent: { SettingsView() }
+        )
     }
 
     func bind(coordinator: HengeCoordinator) {
-        self.coordinator = coordinator
+        windowController.bind(coordinator: coordinator)
     }
 
     @discardableResult
     func showWindow() -> NSWindow? {
-        guard let coordinator else {
-            return nil
-        }
-
-        let targetWindow: NSWindow
-        if let existingWindow = window {
-            targetWindow = existingWindow
-        } else {
-            let hostingController = NSHostingController(
-                rootView: SettingsView().environmentObject(coordinator)
-            )
-            let createdWindow = NSWindow(contentViewController: hostingController)
-            createdWindow.title = L10n.string("settings.window.title", defaultValue: "Henge Settings")
-            createdWindow.styleMask = [.titled, .closable, .miniaturizable]
-            createdWindow.isReleasedWhenClosed = false
-            createdWindow.setContentSize(NSSize(width: 520, height: 460))
-            createdWindow.center()
-            window = createdWindow
-            targetWindow = createdWindow
-        }
-
-        bringCurrentWindowToFront()
-
-        if RunLoop.main.currentMode == .eventTracking {
-            RunLoop.main.perform(inModes: [.default]) { [weak self] in
-                Task { @MainActor [weak self] in
-                    self?.bringCurrentWindowToFront()
-                }
-            }
-        }
-
-        return targetWindow
-    }
-
-    private func bringCurrentWindowToFront() {
-        guard let window else {
-            return
-        }
-
-        activateApplication()
-        presentWindow(window)
+        windowController.showWindow()
     }
 }
 

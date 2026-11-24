@@ -118,6 +118,30 @@ struct ShortcutTests {
         )
         #expect(
             ShortcutCaptureEvaluator.evaluate(
+                keyCode: 117,
+                modifiers: [.option],
+                charactersIgnoringModifiers: nil,
+                asciiLabel: { _ in nil }
+            ) == .unsupportedKey("⌥⌦")
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 200,
+                modifiers: [.option],
+                charactersIgnoringModifiers: "§",
+                asciiLabel: { _ in nil }
+            ) == .unsupportedKey("⌥§")
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 200,
+                modifiers: [.option],
+                charactersIgnoringModifiers: nil,
+                asciiLabel: { _ in nil }
+            ) == .unsupportedKey("⌥#200")
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
                 keyCode: 7,
                 modifiers: [.option],
                 charactersIgnoringModifiers: "ч",

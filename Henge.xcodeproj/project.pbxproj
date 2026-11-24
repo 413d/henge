@@ -50,6 +50,8 @@
 		8480A24E2E00000000000001 /* KeyboardLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A24F2E00000000000001 /* KeyboardLabel.swift */; };
 		8480A2502E00000000000001 /* ApplicationActivator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2512E00000000000001 /* ApplicationActivator.swift */; };
 		8480A2522E00000000000001 /* StatusPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2532E00000000000001 /* StatusPresenter.swift */; };
+		8480A2552E00000000000001 /* ShortcutCaptureEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2562E00000000000001 /* ShortcutCaptureEvaluator.swift */; };
+		8480A2572E00000000000001 /* SingletonWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2582E00000000000001 /* SingletonWindowController.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
 		8480A2392E00000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8480A23A2E00000000000001 /* Localizable.strings */; };
@@ -106,6 +108,8 @@
 		8480A24F2E00000000000001 /* KeyboardLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLabel.swift; sourceTree = "<group>"; };
 		8480A2512E00000000000001 /* ApplicationActivator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationActivator.swift; sourceTree = "<group>"; };
 		8480A2532E00000000000001 /* StatusPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenter.swift; sourceTree = "<group>"; };
+		8480A2562E00000000000001 /* ShortcutCaptureEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutCaptureEvaluator.swift; sourceTree = "<group>"; };
+		8480A2582E00000000000001 /* SingletonWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingletonWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -282,6 +286,7 @@
 			children = (
 				8480A24D2E00000000000001 /* HotkeyRegistrar.swift */,
 				8480A24F2E00000000000001 /* KeyboardLabel.swift */,
+				8480A2562E00000000000001 /* ShortcutCaptureEvaluator.swift */,
 			);
 			path = Hotkey;
 			sourceTree = "<group>";
@@ -315,11 +320,20 @@
 		8480A1112E00000000000001 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				8480A2592E00000000000001 /* Components */,
 				8480A1122E00000000000001 /* MenuBar */,
 				8480A23F2E00000000000001 /* Onboarding */,
 				8480A1132E00000000000001 /* Settings */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		8480A2592E00000000000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				8480A2582E00000000000001 /* SingletonWindowController.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		8480A23F2E00000000000001 /* Onboarding */ = {
@@ -472,6 +486,8 @@
 				8480A24E2E00000000000001 /* KeyboardLabel.swift in Sources */,
 				8480A2502E00000000000001 /* ApplicationActivator.swift in Sources */,
 				8480A2522E00000000000001 /* StatusPresenter.swift in Sources */,
+				8480A2552E00000000000001 /* ShortcutCaptureEvaluator.swift in Sources */,
+				8480A2572E00000000000001 /* SingletonWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

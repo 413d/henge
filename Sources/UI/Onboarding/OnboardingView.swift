@@ -215,100 +215,49 @@ struct OnboardingView: View {
 }
 
 @MainActor
-final class OnboardingWindowController: NSObject, NSWindowDelegate {
-    private weak var coordinator: HengeCoordinator?
-    private var window: NSWindow?
+final class OnboardingWindowController {
     private let windowState = OnboardingWindowState()
-    private var isClosingWindow = false
-    private let activateApplication: @MainActor () -> Void
-    private let presentWindow: @MainActor (NSWindow) -> Void
+    private let windowController: SingletonWindowController<OnboardingView>
 
     init(
         coordinator: HengeCoordinator? = nil,
         activateApplication: (@MainActor () -> Void)? = nil,
         presentWindow: (@MainActor (NSWindow) -> Void)? = nil
     ) {
-        self.coordinator = coordinator
-        self.activateApplication = activateApplication ?? {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
-        self.presentWindow = presentWindow ?? { window in
-            window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
-        }
-        super.init()
+        let windowState = windowState
+        windowController = SingletonWindowController(
+            coordinator: coordinator,
+            title: L10n.string(
+                "onboarding.window.title",
+                defaultValue: "Welcome to Henge"
+            ),
+            styleMask: [.titled, .closable],
+            activateApplication: activateApplication,
+            presentWindow: presentWindow,
+            onShow: {
+                windowState.isVisible = true
+            },
+            onWillClose: { coordinator in
+                windowState.isVisible = false
+                coordinator?.completeOnboarding()
+            },
+            makeContent: {
+                OnboardingView(windowState: windowState)
+            }
+        )
     }
 
     func bind(coordinator: HengeCoordinator) {
-        self.coordinator = coordinator
+        windowController.bind(coordinator: coordinator)
     }
 
     @discardableResult
     func showWindow() -> NSWindow? {
-        guard let coordinator else {
-            return nil
-        }
-
-        let targetWindow: NSWindow
-        if let existingWindow = window {
-            targetWindow = existingWindow
-        } else {
-            let hostingController = NSHostingController(
-                rootView: OnboardingView(windowState: windowState).environmentObject(coordinator)
-            )
-            let createdWindow = NSWindow(contentViewController: hostingController)
-            createdWindow.title = L10n.string(
-                "onboarding.window.title",
-                defaultValue: "Welcome to Henge"
-            )
-            createdWindow.styleMask = [.titled, .closable]
-            createdWindow.isReleasedWhenClosed = false
-            createdWindow.delegate = self
-            createdWindow.center()
-            window = createdWindow
-            targetWindow = createdWindow
-        }
-
-        windowState.isVisible = true
-        bringCurrentWindowToFront()
-
-        if RunLoop.main.currentMode == .eventTracking {
-            RunLoop.main.perform(inModes: [.default]) { [weak self] in
-                Task { @MainActor [weak self] in
-                    self?.bringCurrentWindowToFront()
-                }
-            }
-        }
-
-        return targetWindow
+        windowController.showWindow()
     }
 
     func closeWindow() {
         windowState.isVisible = false
-        guard !isClosingWindow, let window else {
-            return
-        }
-        isClosingWindow = true
-        defer { isClosingWindow = false }
-        window.close()
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        windowState.isVisible = false
-        guard !isClosingWindow else {
-            return
-        }
-        isClosingWindow = true
-        defer { isClosingWindow = false }
-        coordinator?.completeOnboarding()
-    }
-
-    private func bringCurrentWindowToFront() {
-        guard let window else {
-            return
-        }
-
-        activateApplication()
-        presentWindow(window)
+        windowController.closeWindow()
     }
 }

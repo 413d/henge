@@ -224,6 +224,7 @@ struct OnboardingTests {
                 controller.closeWindow()
             }
         )
+        #expect(controller.showWindow() == nil)
         controller.bind(coordinator: coordinator)
 
         coordinator.startOnboardingIfNeeded()
@@ -238,15 +239,20 @@ struct OnboardingTests {
         #expect(activationCount == 1)
         #expect(coordinator.state.configuration.hasCompletedOnboarding == false)
 
+        let savesBeforeClose = store.saveCount
         firstWindow.close()
 
         #expect(coordinator.state.configuration.hasCompletedOnboarding == true)
         #expect(store.load().hasCompletedOnboarding == true)
+        #expect(store.saveCount == savesBeforeClose + 1)
 
         let reopenedWindow = controller.showWindow()
         #expect(reopenedWindow === firstWindow)
         #expect(activationCount == 2)
         #expect(presentedWindows.count == 2)
+
+        controller.closeWindow()
+        #expect(store.saveCount == savesBeforeClose + 1)
     }
 }
 
