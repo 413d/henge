@@ -1,6 +1,6 @@
 cask "henge" do
   version "0.2.0"
-  sha256 "98cb527252198532a608dc57007c7bf050a2be539a32f9e10e305fbeb483dfdc"
+  sha256 "0fc1befbbaeddcc674841ceecdc869fb3054c7d2e98e237a16a79abd641f3920"
 
   url "https://github.com/413d/henge/releases/download/v#{version}/Henge-v#{version}-universal.zip"
   name "Henge"
