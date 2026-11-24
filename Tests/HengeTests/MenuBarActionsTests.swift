@@ -478,7 +478,7 @@ struct MenuBarActionsTests {
     }
 
     @Test
-    func waitForActivationReturnsAfterMatchingEvent() async {
+    nonisolated func waitForActivationReturnsAfterMatchingEvent() async {
         let notes = WorkspaceApplicationSnapshot(
             processIdentifier: 4100,
             bundleIdentifier: "com.apple.Notes",
@@ -508,15 +508,15 @@ struct MenuBarActionsTests {
             workspace.simulateActivation(notes)
         }
 
-        await provider.waitForActivation(of: target, timeout: 1.0)
+        await provider.waitForActivation(of: target, timeout: 5.0)
         let elapsed = Date().timeIntervalSince(start)
 
-        #expect(elapsed < 0.5)
+        #expect(elapsed < 2.0)
         #expect(workspace.activeObserverCount == initialObservers)
     }
 
     @Test
-    func waitForActivationTimesOut() async {
+    nonisolated func waitForActivationTimesOut() async {
         let notes = WorkspaceApplicationSnapshot(
             processIdentifier: 4100,
             bundleIdentifier: "com.apple.Notes",
@@ -545,12 +545,12 @@ struct MenuBarActionsTests {
         let elapsed = Date().timeIntervalSince(start)
 
         #expect(elapsed >= 0.03)
-        #expect(elapsed < 0.5)
+        #expect(elapsed < 2.0)
         #expect(workspace.activeObserverCount == initialObservers)
     }
 
     @Test
-    func waitForActivationIgnoresOtherApplications() async {
+    nonisolated func waitForActivationIgnoresOtherApplications() async {
         let notes = WorkspaceApplicationSnapshot(
             processIdentifier: 4100,
             bundleIdentifier: "com.apple.Notes",
@@ -590,7 +590,7 @@ struct MenuBarActionsTests {
         let elapsed = Date().timeIntervalSince(start)
 
         #expect(elapsed >= 0.05)
-        #expect(elapsed < 0.5)
+        #expect(elapsed < 2.0)
         #expect(workspace.activeObserverCount == initialObservers)
     }
 

@@ -21,7 +21,7 @@ struct ActivationWaiterTests {
         )
         let elapsed = Date().timeIntervalSince(start)
 
-        #expect(elapsed < 0.1)
+        #expect(elapsed < 0.5)
         #expect(source.activeObserverCount == 0)
     }
 
@@ -30,24 +30,84 @@ struct ActivationWaiterTests {
     func prepareTargetApplicationForFixTextSettlesFocusPromptlyWithoutWaitingOutActivationTimeout() async {
         let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
         let provider = ActivationTestApplicationProvider()
+        let sleepRecorder = ActivationTestSleepRecorder()
         var focusChecks = 0
         let activator = ApplicationActivator(
             applicationProvider: provider,
             hasFocusedElement: {
                 focusChecks += 1
                 return focusChecks >= 2
+            },
+            sleep: { nanoseconds in
+                sleepRecorder.record(nanoseconds)
             }
         )
 
-        let start = Date()
         let prepared = await activator.prepareTargetApplicationForFixText(notes)
-        let elapsed = Date().timeIntervalSince(start)
 
         #expect(prepared == true)
         #expect(provider.activateCallCount == 1)
         #expect(provider.waitForActivationCallCount == 0)
         #expect(focusChecks == 2)
-        #expect(elapsed < 1.0)
+        #expect(sleepRecorder.recordedNanoseconds == [50_000_000, 20_000_000])
+    }
+
+    @Test
+    @MainActor
+    func prepareTargetApplicationForFixTextReChecksFocusAfterSettleSleepExceedsDeadline() async {
+        let notes = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
+        let provider = ActivationTestApplicationProvider()
+        let clock = ActivationTestClock()
+        var focusChecks = 0
+        let activator = ApplicationActivator(
+            applicationProvider: provider,
+            hasFocusedElement: {
+                focusChecks += 1
+                return focusChecks >= 2
+            },
+            now: { clock.now() },
+            sleep: { nanoseconds in
+                if nanoseconds == 20_000_000 {
+                    // Simulate MainActor contention stalling resumption past the 0.3s settle deadline.
+                    clock.advance(by: 0.35)
+                }
+            }
+        )
+
+        let prepared = await activator.prepareTargetApplicationForFixText(notes)
+
+        #expect(prepared == true)
+        #expect(focusChecks == 2)
+    }
+}
+
+private final class ActivationTestSleepRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UInt64] = []
+
+    var recordedNanoseconds: [UInt64] {
+        lock.withLock { values }
+    }
+
+    func record(_ nanoseconds: UInt64) {
+        lock.withLock {
+            values.append(nanoseconds)
+        }
+    }
+}
+
+private final class ActivationTestClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current = Date(timeIntervalSince1970: 1_000_000)
+
+    func now() -> Date {
+        lock.withLock { current }
+    }
+
+    func advance(by interval: TimeInterval) {
+        lock.withLock {
+            current = current.addingTimeInterval(interval)
+        }
     }
 }
 

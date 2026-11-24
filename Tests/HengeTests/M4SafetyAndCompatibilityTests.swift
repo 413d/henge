@@ -355,7 +355,8 @@ struct M4SafetyAndCompatibilityTests {
         #expect(poster.pasteCount == 1)
         #expect(poster.pastedText == "привет")
         #expect(verificationCalls >= 2)
-        #expect(elapsed < 0.26)
+        // Strictly below the old triple-budget behavior (3 * 0.20s = 0.60s) with CI scheduling margin.
+        #expect(elapsed < 0.50)
         #expect(manager.restoredSnapshot == original)
     }
 

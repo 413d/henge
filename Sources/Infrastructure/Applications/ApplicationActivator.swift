@@ -81,13 +81,21 @@ enum ActivationWaiter {
 final class ApplicationActivator {
     private let applicationProvider: ActiveApplicationProviding
     private let hasFocusedElement: () -> Bool
+    private let now: () -> Date
+    private let sleep: @Sendable (UInt64) async -> Void
 
     init(
         applicationProvider: ActiveApplicationProviding,
-        hasFocusedElement: @escaping () -> Bool
+        hasFocusedElement: @escaping () -> Bool,
+        now: @escaping () -> Date = Date.init,
+        sleep: @escaping @Sendable (UInt64) async -> Void = { nanoseconds in
+            try? await Task.sleep(nanoseconds: nanoseconds)
+        }
     ) {
         self.applicationProvider = applicationProvider
         self.hasFocusedElement = hasFocusedElement
+        self.now = now
+        self.sleep = sleep
     }
 
     @MainActor
@@ -100,7 +108,7 @@ final class ApplicationActivator {
             }
         }
 
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        await sleep(50_000_000)
 
         if applicationProvider.isFrontmost(application),
            NSApplication.shared.isActive == false,
@@ -112,21 +120,21 @@ final class ApplicationActivator {
             return false
         }
 
-        let deadline = Date().addingTimeInterval(0.3)
-        while Date() < deadline {
+        let deadline = now().addingTimeInterval(0.3)
+        while true {
             let isFrontmost = applicationProvider.isFrontmost(application)
             if isFrontmost && hasFocusedElement() {
                 return true
             }
-            let remaining = deadline.timeIntervalSinceNow
-            guard remaining > 0 else { break }
+            let remaining = deadline.timeIntervalSince(now())
+            guard remaining > 0 else {
+                return isFrontmost
+            }
             if isFrontmost {
-                try? await Task.sleep(nanoseconds: ActivationWaiter.sleepNanoseconds(for: min(0.02, remaining)))
+                await sleep(ActivationWaiter.sleepNanoseconds(for: min(0.02, remaining)))
             } else {
                 await applicationProvider.waitForActivation(of: application, timeout: remaining)
             }
         }
-
-        return applicationProvider.isFrontmost(application)
     }
 }
