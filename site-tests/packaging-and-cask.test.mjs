@@ -83,8 +83,10 @@ test('Casks/henge.rb is valid Ruby, loads in Homebrew Cask, and strips quarantin
   const cask = readFileSync('Casks/henge.rb', 'utf8');
 
   assert.match(cask, /cask\s+"henge"\s+do/);
-  assert.match(cask, /version\s+"0\.1\.1"/);
-  assert.match(cask, /sha256\s+"db86781356f2fb4f58263bea82b0196b8a0620ad4042939c2795813e0ec088bc"/);
+  const versionMatch = cask.match(/^\s*version\s+"([0-9]+\.[0-9]+\.[0-9]+)"/m);
+  assert.ok(versionMatch, 'Expected Casks/henge.rb to declare a SemVer X.Y.Z version');
+  const expectedVersion = versionMatch[1];
+  assert.match(cask, /^\s*sha256\s+"[0-9a-f]{64}"/m);
   assert.match(cask, /url\s+"https:\/\/github\.com\/413d\/henge\/releases\/download\/v#\{version\}\/Henge-v#\{version\}-universal\.zip"/);
   assert.match(cask, /depends_on\s+macos:\s*:ventura/);
   assert.match(cask, /app\s+"Henge\.app"/);
@@ -126,10 +128,10 @@ test('Casks/henge.rb is valid Ruby, loads in Homebrew Cask, and strips quarantin
       );
       const parsed = JSON.parse(infoJson.trim());
       assert.equal(parsed.token, 'henge');
-      assert.equal(parsed.version, '0.1.1');
+      assert.equal(parsed.version, expectedVersion);
       assert.equal(
         parsed.url,
-        'https://github.com/413d/henge/releases/download/v0.1.1/Henge-v0.1.1-universal.zip'
+        `https://github.com/413d/henge/releases/download/v${expectedVersion}/Henge-v${expectedVersion}-universal.zip`
       );
 
       const remainingAttrs = execFileSync('xattr', [dummyInstalledApp], {
@@ -167,6 +169,58 @@ test('scripts/release/update-cask.sh updates version and sha256 and rejects malf
     assert.throws(
       () => execFileSync('bash', ['scripts/release/update-cask.sh', '0.2.0', 'not-a-sha256', tempCask], { env: TEST_ENV, stdio: 'pipe' }),
       'Expected invalid sha256 to fail'
+    );
+  } finally {
+    rmSync(workDir, { recursive: true, force: true });
+  }
+});
+
+test('scripts/release/update-cask.sh --no-downgrade compares numeric SemVer, skips older versions, and allows same-version SHA updates', () => {
+  const workDir = mkdtempSync(join(tmpdir(), 'henge-cask-nodowngrade-'));
+  try {
+    const tempCask = join(workDir, 'henge.rb');
+    copyFileSync('Casks/henge.rb', tempCask);
+
+    const sha020 = '1111111111111111111111111111111111111111111111111111111111111111';
+    const sha0100 = '2222222222222222222222222222222222222222222222222222222222222222';
+    const shaOlderAttempt = '3333333333333333333333333333333333333333333333333333333333333333';
+    const sha0100Rebuilt = '4444444444444444444444444444444444444444444444444444444444444444';
+
+    execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', 'v0.2.0', sha020, tempCask], {
+      env: TEST_ENV
+    });
+    assert.match(readFileSync(tempCask, 'utf8'), /version\s+"0\.2\.0"/);
+
+    // Multi-digit SemVer: 0.10.0 is numerically newer than 0.2.0 (even though '0.10.0' < '0.2.0' lexicographically)
+    execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', 'v0.10.0', sha0100, tempCask], {
+      env: TEST_ENV
+    });
+    const afterUpgrade = readFileSync(tempCask, 'utf8');
+    assert.match(afterUpgrade, /version\s+"0\.10\.0"/);
+    assert.match(afterUpgrade, new RegExp(`sha256\\s+"${sha0100}"`));
+
+    // Older version 0.2.0 must be skipped cleanly (exit 0, file untouched)
+    execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', '0.2.0', shaOlderAttempt, tempCask], {
+      env: TEST_ENV
+    });
+    assert.equal(readFileSync(tempCask, 'utf8'), afterUpgrade);
+
+    // Same version with identical SHA leaves file byte-for-byte identical
+    execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', '0.10.0', sha0100, tempCask], {
+      env: TEST_ENV
+    });
+    assert.equal(readFileSync(tempCask, 'utf8'), afterUpgrade);
+
+    // Same version with rebuilt SHA updates sha256
+    execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', '0.10.0', sha0100Rebuilt, tempCask], {
+      env: TEST_ENV
+    });
+    assert.match(readFileSync(tempCask, 'utf8'), new RegExp(`sha256\\s+"${sha0100Rebuilt}"`));
+
+    // Pre-release strings must always fail
+    assert.throws(
+      () => execFileSync('bash', ['scripts/release/update-cask.sh', '--no-downgrade', '0.11.0-rc.1', sha0100Rebuilt, tempCask], { env: TEST_ENV, stdio: 'pipe' }),
+      'Expected prerelease version to be rejected'
     );
   } finally {
     rmSync(workDir, { recursive: true, force: true });

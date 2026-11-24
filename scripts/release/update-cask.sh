@@ -2,7 +2,7 @@
 # Update version and sha256 in Casks/henge.rb after publishing a GitHub Release.
 #
 # Usage:
-#   scripts/release/update-cask.sh <version> <sha256> [cask_path]
+#   scripts/release/update-cask.sh [--no-downgrade] <version> <sha256> [cask_path]
 set -euo pipefail
 
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
@@ -10,8 +10,14 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+NO_DOWNGRADE="false"
+if [[ "${1:-}" == "--no-downgrade" ]]; then
+    NO_DOWNGRADE="true"
+    shift
+fi
+
 if [[ $# -lt 2 || $# -gt 3 ]]; then
-    echo "Usage: $0 <version> <sha256> [cask_path]" >&2
+    echo "Usage: $0 [--no-downgrade] <version> <sha256> [cask_path]" >&2
     exit 2
 fi
 
@@ -33,6 +39,31 @@ fi
 if [[ ! -f "${CASK_PATH}" ]]; then
     echo "error: cask file not found at ${CASK_PATH}" >&2
     exit 1
+fi
+
+semver_is_older() {
+    local cand_maj cand_min cand_pat cur_maj cur_min cur_pat
+    IFS='.' read -r cand_maj cand_min cand_pat <<< "$1"
+    IFS='.' read -r cur_maj cur_min cur_pat <<< "$2"
+    if (( 10#${cand_maj} != 10#${cur_maj} )); then
+        if (( 10#${cand_maj} < 10#${cur_maj} )); then return 0; else return 1; fi
+    fi
+    if (( 10#${cand_min} != 10#${cur_min} )); then
+        if (( 10#${cand_min} < 10#${cur_min} )); then return 0; else return 1; fi
+    fi
+    if (( 10#${cand_pat} < 10#${cur_pat} )); then return 0; else return 1; fi
+}
+
+if [[ "${NO_DOWNGRADE}" == "true" ]]; then
+    CURRENT_VERSION="$(sed -nE 's/^[[:space:]]*version[[:space:]]+"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' "${CASK_PATH}" | head -n 1)"
+    if [[ -z "${CURRENT_VERSION}" ]]; then
+        echo "error: could not parse current SemVer version from ${CASK_PATH}" >&2
+        exit 1
+    fi
+    if semver_is_older "${VERSION}" "${CURRENT_VERSION}"; then
+        echo "Skipping cask update: target ${VERSION} is older than current ${CURRENT_VERSION}"
+        exit 0
+    fi
 fi
 
 TMP_FILE="$(mktemp "${TMPDIR:-/tmp}/henge-cask.XXXXXX")"
