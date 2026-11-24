@@ -240,16 +240,24 @@ final class WorkspaceActiveApplicationProvider: ActiveApplicationProviding, @unc
     }
 
     private func recordActivation(_ snapshot: WorkspaceApplicationSnapshot) {
-        guard !snapshot.isTerminated,
-              let identity = externalIdentity(from: snapshot) else {
+        guard !snapshot.isTerminated else {
             return
         }
 
-        storeTracked(TrackedApplication(identity: identity, processIdentifier: snapshot.processIdentifier))
-        lock.lock()
-        let handler = activationHandler
-        lock.unlock()
-        handler?()
+        if let identity = externalIdentity(from: snapshot) {
+            storeTracked(TrackedApplication(identity: identity, processIdentifier: snapshot.processIdentifier))
+            lock.lock()
+            let handler = activationHandler
+            lock.unlock()
+            handler?()
+        } else if let selfBundleIdentifier,
+                  !selfBundleIdentifier.isEmpty,
+                  snapshot.bundleIdentifier == selfBundleIdentifier {
+            lock.lock()
+            let handler = activationHandler
+            lock.unlock()
+            handler?()
+        }
     }
 
     private func externalIdentity(from snapshot: WorkspaceApplicationSnapshot) -> ApplicationIdentity? {

@@ -58,23 +58,15 @@ struct StatusPresenterTests {
     }
 
     @Test
-    func lastProbeStatusTextPrefersFixOutcomeOverSummary() {
+    func lastProbeStatusTextFormatsFixOutcomeAndNil() {
         #expect(
             StatusPresenter.lastProbeStatusText(
-                lastFixOutcome: .fixed(viaClipboard: false),
-                lastProbeSummary: "Summary"
+                lastFixOutcome: .fixed(viaClipboard: false)
             ) == "Text corrected."
         )
         #expect(
             StatusPresenter.lastProbeStatusText(
-                lastFixOutcome: nil,
-                lastProbeSummary: "Summary"
-            ) == "Summary"
-        )
-        #expect(
-            StatusPresenter.lastProbeStatusText(
-                lastFixOutcome: nil,
-                lastProbeSummary: nil
+                lastFixOutcome: nil
             ) == nil
         )
     }

@@ -36,16 +36,26 @@ struct SettingsView: View {
                 }
 
                 if isRecordingShortcut {
-                    ShortcutRecorder { shortcut in
+                    ShortcutRecorder { result in
                         isRecordingShortcut = false
-                        guard let shortcut else {
+                        switch result {
+                        case let .captured(shortcut):
+                            shortcutCaptureMessage = nil
+                            coordinator.setShortcut(shortcut)
+                        case .cancelled:
+                            shortcutCaptureMessage = nil
+                        case .missingModifiers:
                             shortcutCaptureMessage = L10n.string(
                                 "settings.shortcut.error_modifiers",
                                 defaultValue: "Use a key together with ⌘, ⌥, ⌃, or ⇧."
                             )
-                            return
+                        case let .unsupportedKey(keyLabel):
+                            shortcutCaptureMessage = L10n.format(
+                                "hotkey.error.unsupported_shortcut",
+                                defaultValue: "The shortcut key %@ is not supported by the current global hotkey backend.",
+                                keyLabel
+                            )
                         }
-                        coordinator.setShortcut(shortcut)
                     }
                     .frame(height: 30)
                     Text(
@@ -210,8 +220,70 @@ struct SettingsView: View {
     }
 }
 
+enum ShortcutCaptureResult: Equatable {
+    case captured(Shortcut)
+    case cancelled
+    case missingModifiers
+    case unsupportedKey(String)
+}
+
+enum ShortcutCaptureEvaluator {
+    static func evaluate(
+        keyCode: UInt16,
+        modifiers: Shortcut.Modifiers,
+        charactersIgnoringModifiers: String?,
+        asciiLabel: @escaping (UInt16) -> String? = CarbonHotkey.systemASCIICapableLabel
+    ) -> ShortcutCaptureResult {
+        if keyCode == 53 {
+            return .cancelled
+        }
+
+        if modifiers.isEmpty {
+            return .missingModifiers
+        }
+
+        let carbonKeyCode = UInt32(keyCode)
+        if let key = CarbonHotkey.displayKey(forKeyCode: carbonKeyCode, asciiLabel: asciiLabel) {
+            let shortcut = Shortcut(key: key, modifiers: modifiers, keyCode: carbonKeyCode)
+            if CarbonHotkey.isSupported(shortcut: shortcut) {
+                return .captured(shortcut)
+            }
+            return .unsupportedKey(Shortcut(key: key, modifiers: modifiers).displayString)
+        }
+
+        let rawKey = unsupportedKeyLabel(
+            forKeyCode: keyCode,
+            charactersIgnoringModifiers: charactersIgnoringModifiers
+        )
+        return .unsupportedKey(Shortcut(key: rawKey, modifiers: modifiers).displayString)
+    }
+
+    private static func unsupportedKeyLabel(
+        forKeyCode keyCode: UInt16,
+        charactersIgnoringModifiers: String?
+    ) -> String {
+        switch keyCode {
+        case 48:
+            return "⇥"
+        case 51:
+            return "⌫"
+        case 117:
+            return "⌦"
+        default:
+            if let chars = charactersIgnoringModifiers?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !chars.isEmpty,
+               !chars.unicodeScalars.contains(where: {
+                   CharacterSet.controlCharacters.contains($0) || $0.properties.generalCategory == .privateUse
+               }) {
+                return chars.uppercased()
+            }
+            return "#\(keyCode)"
+        }
+    }
+}
+
 private struct ShortcutRecorder: NSViewRepresentable {
-    let onCapture: (Shortcut?) -> Void
+    let onCapture: (ShortcutCaptureResult) -> Void
 
     func makeNSView(context: Context) -> ShortcutCaptureView {
         let view = ShortcutCaptureView()
@@ -226,7 +298,7 @@ private struct ShortcutRecorder: NSViewRepresentable {
 }
 
 private final class ShortcutCaptureView: NSView {
-    var onCapture: ((Shortcut?) -> Void)?
+    var onCapture: ((ShortcutCaptureResult) -> Void)?
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -241,11 +313,6 @@ private final class ShortcutCaptureView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 {
-            onCapture?(nil)
-            return
-        }
-
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         var modifiers: Shortcut.Modifiers = []
         if flags.contains(.command) { modifiers.insert(.command) }
@@ -253,23 +320,12 @@ private final class ShortcutCaptureView: NSView {
         if flags.contains(.control) { modifiers.insert(.control) }
         if flags.contains(.shift) { modifiers.insert(.shift) }
 
-        let keyCode = UInt32(event.keyCode)
-        guard !modifiers.isEmpty,
-              let key = CarbonHotkey.displayKey(
-                  forKeyCode: keyCode,
-                  asciiLabel: CarbonHotkey.systemASCIICapableLabel
-              ) else {
-            onCapture?(nil)
-            return
-        }
-
-        let shortcut = Shortcut(key: key, modifiers: modifiers, keyCode: keyCode)
-        guard CarbonHotkey.isSupported(shortcut: shortcut) else {
-            onCapture?(nil)
-            return
-        }
-
-        onCapture?(shortcut)
+        let result = ShortcutCaptureEvaluator.evaluate(
+            keyCode: event.keyCode,
+            modifiers: modifiers,
+            charactersIgnoringModifiers: event.charactersIgnoringModifiers
+        )
+        onCapture?(result)
     }
 }
 

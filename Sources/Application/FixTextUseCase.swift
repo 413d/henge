@@ -150,9 +150,11 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
     /// Converts a character range into a UTF-16 `SelectionRangeSnapshot` without
     /// materializing the text as an array.
     private func utf16Range(forCharacterRange range: Range<Int>, in text: String) -> SelectionRangeSnapshot? {
-        guard range.lowerBound >= 0, range.upperBound <= text.count else { return nil }
-        let start = text.index(text.startIndex, offsetBy: range.lowerBound)
-        let end = text.index(start, offsetBy: range.count)
+        guard range.lowerBound >= 0,
+              let start = text.index(text.startIndex, offsetBy: range.lowerBound, limitedBy: text.endIndex),
+              let end = text.index(start, offsetBy: range.count, limitedBy: text.endIndex) else {
+            return nil
+        }
         let location = start.utf16Offset(in: text)
         let length = end.utf16Offset(in: text) - location
         guard location >= 0, length >= 0 else { return nil }

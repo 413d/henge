@@ -65,4 +65,56 @@ struct ShortcutTests {
         #expect(withSeven != withEight)
         #expect(withSeven != withoutKeyCode)
     }
+
+    @Test
+    func shortcutCaptureEvaluatorHandlesEscapeMissingModifiersUnsupportedAndValidKeys() {
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 53,
+                modifiers: [],
+                charactersIgnoringModifiers: "\u{1B}",
+                asciiLabel: { _ in nil }
+            ) == .cancelled
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 53,
+                modifiers: [.option],
+                charactersIgnoringModifiers: "\u{1B}",
+                asciiLabel: { _ in nil }
+            ) == .cancelled
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 7,
+                modifiers: [],
+                charactersIgnoringModifiers: "x",
+                asciiLabel: { _ in "X" }
+            ) == .missingModifiers
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 51,
+                modifiers: [.option],
+                charactersIgnoringModifiers: "\u{7F}",
+                asciiLabel: { _ in nil }
+            ) == .unsupportedKey("⌥⌫")
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 48,
+                modifiers: [.option],
+                charactersIgnoringModifiers: "\t",
+                asciiLabel: { _ in nil }
+            ) == .unsupportedKey("⌥⇥")
+        )
+        #expect(
+            ShortcutCaptureEvaluator.evaluate(
+                keyCode: 7,
+                modifiers: [.option],
+                charactersIgnoringModifiers: "ч",
+                asciiLabel: { _ in "X" }
+            ) == .captured(Shortcut(key: "X", modifiers: [.option], keyCode: 7))
+        )
+    }
 }

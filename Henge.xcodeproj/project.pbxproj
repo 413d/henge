@@ -255,7 +255,7 @@
 			children = (
 				8480A1292E00000000000001 /* AppRuntime.swift */,
 				8480A2422E00000000000001 /* Accessibility */,
-				8480A2202E00000000000001 /* Applications */,
+				8480A2542E00000000000001 /* Applications */,
 				8480A1362E00000000000001 /* Clipboard */,
 				8480A2322E00000000000001 /* Diagnostics */,
 				8480A24B2E00000000000001 /* Hotkey */,
@@ -303,7 +303,7 @@
 			path = Lifecycle;
 			sourceTree = "<group>";
 		};
-		8480A2202E00000000000001 /* Applications */ = {
+		8480A2542E00000000000001 /* Applications */ = {
 			isa = PBXGroup;
 			children = (
 				8480A21C2E00000000000001 /* ActiveApplicationProvider.swift */,

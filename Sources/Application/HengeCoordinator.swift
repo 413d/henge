@@ -75,7 +75,6 @@ final class HengeCoordinator: ObservableObject {
             hotkeyRegistered: false,
             hotkeyRegistrationError: nil,
             lastFixOutcome: nil,
-            lastProbeSummary: nil,
             launchAtLoginEnabled: systemLaunchAtLoginEnabled,
             launchAtLoginStatus: systemLaunchAtLoginStatus,
             launchAtLoginError: nil
@@ -123,10 +122,7 @@ final class HengeCoordinator: ObservableObject {
     }
 
     var lastProbeStatusText: String? {
-        StatusPresenter.lastProbeStatusText(
-            lastFixOutcome: state.lastFixOutcome,
-            lastProbeSummary: state.lastProbeSummary
-        )
+        StatusPresenter.lastProbeStatusText(lastFixOutcome: state.lastFixOutcome)
     }
 
     static func statusText(for outcome: FixOutcome) -> String? {
@@ -218,7 +214,6 @@ final class HengeCoordinator: ObservableObject {
             state.configuration.launchAtLogin = previousConfiguration.launchAtLogin
         }
         state.lastFixOutcome = nil
-        state.lastProbeSummary = nil
         saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
         lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
@@ -252,7 +247,6 @@ final class HengeCoordinator: ObservableObject {
 
         let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
-            state.lastProbeSummary = nil
             state.lastFixOutcome = .failed(.noActiveApplication)
             return
         }
@@ -263,7 +257,6 @@ final class HengeCoordinator: ObservableObject {
         let accessibilityGranted = runtime.hasAccessibilityPermission
         state.accessibilityGranted = accessibilityGranted
         guard accessibilityGranted else {
-            state.lastProbeSummary = nil
             state.lastFixOutcome = .failed(.missingPermission)
             return
         }
@@ -279,7 +272,6 @@ final class HengeCoordinator: ObservableObject {
 
             let prepared = await self.runtime.prepareTargetApplicationForFixText(application)
             guard prepared else {
-                self.state.lastProbeSummary = nil
                 self.state.lastFixOutcome = .failed(.focusLost(applicationName: application.displayName))
                 return
             }
@@ -424,7 +416,6 @@ final class HengeCoordinator: ObservableObject {
             state.hotkeyRegistered = false
             state.hotkeyRegistrationError = nil
             state.lastFixOutcome = nil
-            state.lastProbeSummary = nil
             return
         }
 
@@ -462,7 +453,6 @@ final class HengeCoordinator: ObservableObject {
 
         let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
-            state.lastProbeSummary = nil
             state.lastFixOutcome = .failed(.noActiveApplication)
             return
         }
@@ -474,25 +464,10 @@ final class HengeCoordinator: ObservableObject {
         state.accessibilityGranted = accessibilityGranted
 
         guard accessibilityGranted else {
-            state.lastProbeSummary = nil
             state.lastFixOutcome = .failed(.missingPermission)
             return
         }
 
-        switch runtime.inspectFocusedElement() {
-        case let .unavailable(reason):
-            state.lastProbeSummary = nil
-            state.lastFixOutcome = Self.outcome(from: reason)
-            return
-        case let .available(snapshot) where snapshot.isSecure:
-            state.lastProbeSummary = nil
-            state.lastFixOutcome = .secureField
-            return
-        case .available:
-            break
-        }
-
-        state.lastProbeSummary = nil
         let outcome = fixTextUseCase.execute(
             excludingApplicationBundleIdentifiers: state.configuration.excludedApplicationBundleIdentifiers
         )
@@ -543,16 +518,5 @@ final class HengeCoordinator: ObservableObject {
         }
 
         return false
-    }
-
-    private static func outcome(from failure: FocusedElementProbeFailure) -> FixOutcome {
-        switch failure {
-        case .missingPermission:
-            return .failed(.missingPermission)
-        case .noFocusedElement:
-            return .failed(.noFocusedElement)
-        case let .accessibilityError(error):
-            return .failed(.accessibilityError(error.rawValue))
-        }
     }
 }

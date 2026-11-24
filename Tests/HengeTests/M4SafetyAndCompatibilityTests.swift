@@ -484,7 +484,7 @@ struct M4SafetyAndCompatibilityTests {
             expectedText: "ghbdtn",
             with: "привет"
         )
-        #expect(directResult == .unavailable(.unsupported))
+        #expect(directResult == .unavailable(.noFocusedElement))
 
         let clipboardResult = runtime.replaceTextUsingClipboard(
             target,

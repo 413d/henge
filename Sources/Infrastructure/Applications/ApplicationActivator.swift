@@ -56,6 +56,12 @@ enum ActivationWaiter {
         }
         defer { source.stopObserving(token) }
 
+        if let frontmost = source.frontmostApplication(),
+           !frontmost.isTerminated,
+           frontmost.bundleIdentifier == bundleIdentifier {
+            return
+        }
+
         let timeoutTask = Task {
             try? await Task.sleep(nanoseconds: nanoseconds)
             gate.resume()
@@ -108,13 +114,17 @@ final class ApplicationActivator {
 
         let deadline = Date().addingTimeInterval(0.3)
         while Date() < deadline {
-            if applicationProvider.isFrontmost(application),
-               hasFocusedElement() {
+            let isFrontmost = applicationProvider.isFrontmost(application)
+            if isFrontmost && hasFocusedElement() {
                 return true
             }
             let remaining = deadline.timeIntervalSinceNow
             guard remaining > 0 else { break }
-            await applicationProvider.waitForActivation(of: application, timeout: remaining)
+            if isFrontmost {
+                try? await Task.sleep(nanoseconds: ActivationWaiter.sleepNanoseconds(for: min(0.02, remaining)))
+            } else {
+                await applicationProvider.waitForActivation(of: application, timeout: remaining)
+            }
         }
 
         return applicationProvider.isFrontmost(application)

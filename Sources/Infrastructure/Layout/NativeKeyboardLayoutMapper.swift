@@ -53,6 +53,10 @@ public final class NativeKeyboardLayoutMapper: LayoutMapping, @unchecked Sendabl
             return cached
         }
 
+        guard Thread.isMainThread else {
+            return fallbackTables()
+        }
+
         let tables: (enToRu: [Character: Character], ruToEn: [Character: Character])
         if let usData = loadSystemLayoutData(sourceID: "com.apple.keylayout.US"),
            let ruData = loadSystemLayoutData(sourceID: "com.apple.keylayout.Russian")

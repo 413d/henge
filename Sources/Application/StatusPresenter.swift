@@ -63,14 +63,8 @@ struct StatusPresenter {
         }
     }
 
-    static func lastProbeStatusText(
-        lastFixOutcome: FixOutcome?,
-        lastProbeSummary: String?
-    ) -> String? {
-        if let outcome = lastFixOutcome {
-            return statusText(for: outcome)
-        }
-        return lastProbeSummary
+    static func lastProbeStatusText(lastFixOutcome: FixOutcome?) -> String? {
+        lastFixOutcome.flatMap(statusText(for:))
     }
 
     static func statusText(for outcome: FixOutcome) -> String? {

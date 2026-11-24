@@ -271,10 +271,12 @@ struct MenuBarActionsTests {
         }
 
         workspace.simulateActivation(henge)
-        #expect(counter.count == 0)
+        #expect(counter.count == 1)
+        #expect(provider.activeApplication() == nil)
 
         workspace.simulateActivation(notes)
-        #expect(counter.count == 1)
+        #expect(counter.count == 2)
+        #expect(provider.activeApplication()?.bundleIdentifier == "com.apple.Notes")
     }
 
     @Test
@@ -647,6 +649,68 @@ struct MenuBarActionsTests {
         )
         #expect(coordinator.frontmostExcludableApplication == nil)
         #expect(coordinator.excludeFrontmostApplication() == false)
+    }
+
+    @Test
+    func selfActivationPreservesTrackedExternalAppAndRefreshesPermissions() async {
+        let notes = WorkspaceApplicationSnapshot(
+            processIdentifier: 4100,
+            bundleIdentifier: "com.apple.Notes",
+            localizedName: "Notes",
+            isTerminated: false
+        )
+        let henge = WorkspaceApplicationSnapshot(
+            processIdentifier: 97735,
+            bundleIdentifier: "io.github.413d.Henge",
+            localizedName: "Henge",
+            isTerminated: false
+        )
+        let workspace = FakeWorkspaceApplicationSource(
+            frontmost: notes,
+            running: [notes, henge]
+        )
+        let provider = WorkspaceActiveApplicationProvider(
+            workspace: workspace,
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+        final class TrustBox: @unchecked Sendable {
+            private let lock = NSLock()
+            var value = false
+            func get() -> Bool { lock.withLock { value } }
+            func set(_ newValue: Bool) { lock.withLock { value = newValue } }
+        }
+        let trusted = TrustBox()
+        let probe = AccessibilityPermissionProbe(
+            timeToLive: 60.0,
+            isTrustedProvider: { trusted.get() }
+        )
+        let runtime = LiveAppRuntime(
+            applicationProvider: provider,
+            permissionProbe: probe,
+            hotkeyRegistrar: HotkeyRegistrar()
+        )
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: NoopFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: MenuBarTestLoginItemManager(currentStatus: .disabled)
+            ),
+            selfBundleIdentifier: "io.github.413d.Henge"
+        )
+
+        #expect(coordinator.state.accessibilityGranted == false)
+        #expect(provider.activeApplication()?.bundleIdentifier == "com.apple.Notes")
+
+        trusted.set(true)
+        workspace.simulateActivation(henge)
+
+        for _ in 0..<20 where !coordinator.state.accessibilityGranted {
+            await Task.yield()
+        }
+
+        #expect(provider.activeApplication()?.bundleIdentifier == "com.apple.Notes")
+        #expect(coordinator.state.accessibilityGranted == true)
     }
 
     @Test

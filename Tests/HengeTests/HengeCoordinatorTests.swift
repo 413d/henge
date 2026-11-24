@@ -358,11 +358,16 @@ struct HengeCoordinatorTests {
     func secureFocusedElementBlocksExecutionAndUpdatesProbeStatus() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            focusedElementProbe: .available(
-                FocusedElementSnapshot(role: "AXTextField", subrole: "AXSecureTextField", isSecure: true)
+            textContextResult: .unavailable(.secureField)
+        )
+        let useCase = LiveFixTextUseCase(
+            runtime: runtime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: runtime.layoutMapper,
+                casePreserver: DefaultCasePreserver()
             )
         )
-        let useCase = SpyFixTextUseCase()
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -375,7 +380,10 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(useCase.executionCount == 0)
+        #expect(runtime.inspectFocusedElementCallCount == 0)
+        #expect(runtime.inspectTextContextCallCount == 1)
+        #expect(runtime.replaceTextCallCount == 0)
+        #expect(coordinator.state.lastFixOutcome == .secureField)
         #expect(coordinator.lastProbeStatusText?.contains("secure text field") == true)
         _ = coordinator
     }
@@ -384,9 +392,16 @@ struct HengeCoordinatorTests {
     func missingFocusedElementBlocksExecutionAndUpdatesProbeStatus() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            focusedElementProbe: .unavailable(.noFocusedElement)
+            textContextResult: .unavailable(.noFocusedElement)
         )
-        let useCase = SpyFixTextUseCase()
+        let useCase = LiveFixTextUseCase(
+            runtime: runtime,
+            transformer: SimpleTextTransformer(
+                detector: MajorityLayoutDetector(),
+                mapper: runtime.layoutMapper,
+                casePreserver: DefaultCasePreserver()
+            )
+        )
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -399,7 +414,10 @@ struct HengeCoordinatorTests {
         runtime.fireHotkey()
         await Task.yield()
 
-        #expect(useCase.executionCount == 0)
+        #expect(runtime.inspectFocusedElementCallCount == 0)
+        #expect(runtime.inspectTextContextCallCount == 1)
+        #expect(runtime.replaceTextCallCount == 0)
+        #expect(coordinator.state.lastFixOutcome == .failed(.noFocusedElement))
         #expect(coordinator.lastProbeStatusText?.contains("No focused text element") == true)
         _ = coordinator
     }
@@ -1092,9 +1110,13 @@ private final class StubRuntime: AppRuntime {
     private let registrationError: Error?
     private let focusedElementProbe: FocusedElementProbe
     private let selectionProbe: SelectionProbe
+    private let textContextResult: TextContextProbe?
 
     private(set) var registeredShortcuts: [Shortcut] = []
     private(set) var unregisterCount = 0
+    private(set) var inspectFocusedElementCallCount = 0
+    private(set) var inspectTextContextCallCount = 0
+    private(set) var replaceTextCallCount = 0
     private var hotkeyHandler: (() -> Void)?
 
     init(
@@ -1104,6 +1126,7 @@ private final class StubRuntime: AppRuntime {
             FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
         ),
         selectionProbe: SelectionProbe = .unavailable(.noSelection),
+        textContextResult: TextContextProbe? = nil,
         layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled(),
         clipboardManager: ClipboardManaging = MockClipboardManager()
     ) {
@@ -1111,6 +1134,7 @@ private final class StubRuntime: AppRuntime {
         self.registrationError = registrationError
         self.focusedElementProbe = focusedElementProbe
         self.selectionProbe = selectionProbe
+        self.textContextResult = textContextResult
         self.layoutMapper = layoutMapper
         self.clipboardManager = clipboardManager
     }
@@ -1137,11 +1161,13 @@ private final class StubRuntime: AppRuntime {
     }
 
     func inspectFocusedElement() -> FocusedElementProbe {
-        focusedElementProbe
+        inspectFocusedElementCallCount += 1
+        return focusedElementProbe
     }
 
     func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
-        makeTestTextContext(selectionProbe, in: application)
+        inspectTextContextCallCount += 1
+        return textContextResult ?? makeTestTextContext(selectionProbe, in: application)
     }
 
     func replaceText(
@@ -1151,6 +1177,7 @@ private final class StubRuntime: AppRuntime {
         expectedText: String,
         with text: String
     ) -> SelectionWriteResult {
+        replaceTextCallCount += 1
         switch selectionProbe {
         case let .available(snapshot):
             return .success(snapshot.range)

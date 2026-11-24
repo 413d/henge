@@ -48,14 +48,14 @@ final class AccessibilityTextService {
 
             if range.length > 0 {
                 switch readSelectedText(from: resolvedElement.element, range: range) {
-                case let .available(snapshot):
+                case let .success(snapshot):
                     let target = TextTarget(
                         application: application,
                         snapshot: resolvedElement.snapshot,
                         element: resolvedElement.element
                     )
                     return .available(TextContext(target: target, selection: snapshot))
-                case let .unavailable(reason):
+                case let .failure(reason):
                     return .unavailable(reason)
                 }
             }
@@ -86,9 +86,11 @@ final class AccessibilityTextService {
     ) -> SelectionWriteResult {
         guard let element = target.element else { return .unavailable(.unsupported) }
         guard !target.snapshot.isSecure else { return .unavailable(.secureField) }
-        guard isFocusedElement(element, in: target.application) else { return .unavailable(.unsupported) }
+        if let focusFailure = validateFocus(for: element, in: target.application) {
+            return .unavailable(focusFailure)
+        }
         guard isCurrentTextContext(context: context, targetRange: range, expectedText: expectedText, element: element) else {
-            return .unavailable(.unsupported)
+            return .unavailable(.noSelection)
         }
 
         let rangeStatus = context.isCaretContext || range != context.range
@@ -220,12 +222,34 @@ final class AccessibilityTextService {
         }
     }
 
+    private func validateFocus(for element: AXUIElement, in application: ApplicationIdentity) -> SelectionWriteFailure? {
+        guard validatedProcessIdentifier(for: element, in: application) != nil else {
+            return .noFocusedElement
+        }
+        switch resolveFocusedElement() {
+        case let .failure(reason):
+            switch reason {
+            case .missingPermission:
+                return .missingPermission
+            case .noFocusedElement:
+                return .noFocusedElement
+            case let .accessibilityError(error):
+                return .accessibilityError(error)
+            }
+        case let .success(currentElement):
+            if currentElement.snapshot.isSecure {
+                return .secureField
+            }
+            guard CFEqual(element, currentElement.element),
+                  applicationProvider.activeApplication()?.bundleIdentifier == application.bundleIdentifier else {
+                return .noFocusedElement
+            }
+            return nil
+        }
+    }
+
     private func isFocusedElement(_ element: AXUIElement, in application: ApplicationIdentity) -> Bool {
-        guard validatedProcessIdentifier(for: element, in: application) != nil else { return false }
-        guard case let .success(currentElement) = resolveFocusedElement(),
-              !currentElement.snapshot.isSecure,
-              CFEqual(element, currentElement.element) else { return false }
-        return applicationProvider.activeApplication()?.bundleIdentifier == application.bundleIdentifier
+        validateFocus(for: element, in: application) == nil
     }
 
     private func validatedProcessIdentifier(for element: AXUIElement, in application: ApplicationIdentity) -> pid_t? {
@@ -270,20 +294,20 @@ final class AccessibilityTextService {
         )
     }
 
-    private func readSelectedText(from element: AXUIElement, range: SelectionRangeSnapshot) -> SelectionProbe {
+    private func readSelectedText(from element: AXUIElement, range: SelectionRangeSnapshot) -> Result<SelectionSnapshot, SelectionProbeFailure> {
         var selectedTextValue: CFTypeRef?
         let textStatus = AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedTextValue)
         guard textStatus == .success else {
             switch textStatus {
-            case .attributeUnsupported: return .unavailable(.unsupported)
-            case .noValue: return .unavailable(.noSelection)
-            default: return .unavailable(.accessibilityError(textStatus))
+            case .attributeUnsupported: return .failure(.unsupported)
+            case .noValue: return .failure(.noSelection)
+            default: return .failure(.accessibilityError(textStatus))
             }
         }
         guard let text = selectedTextValue as? String else {
-            return .unavailable(.unsupported)
+            return .failure(.unsupported)
         }
-        return .available(SelectionSnapshot(text: text, range: range))
+        return .success(SelectionSnapshot(text: text, range: range))
     }
 
     private func isCurrentTextContext(context: SelectionSnapshot, targetRange: SelectionRangeSnapshot, expectedText: String, element: AXUIElement) -> Bool {

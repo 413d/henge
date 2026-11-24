@@ -11,7 +11,6 @@ struct ApplicationState: Equatable {
     var hotkeyRegistered: Bool
     var hotkeyRegistrationError: String?
     var lastFixOutcome: FixOutcome?
-    var lastProbeSummary: String?
     var launchAtLoginEnabled: Bool
     var launchAtLoginStatus: LoginItemStatus = .disabled
     var launchAtLoginError: String?

@@ -64,4 +64,13 @@ struct NativeKeyboardLayoutMapperTests {
         #expect(mapper.map("й", from: .russian, to: .english) == "q")
         #expect(mapper.map(text: "ghbdtn, vbh!", from: .english, to: .russian) == "привет, мир!")
     }
+
+    @Test
+    func defaultInitializerWorksSafelyOffMainThread() async {
+        let mapped = await Task.detached {
+            NativeKeyboardLayoutMapper().map(text: "ghbdtn", from: .english, to: .russian)
+        }.value
+
+        #expect(mapped == "привет")
+    }
 }
