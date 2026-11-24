@@ -32,12 +32,19 @@ enum ActivationWaiter {
         }
     }
 
+    static func sleepNanoseconds(for timeout: TimeInterval) -> UInt64 {
+        guard timeout.isFinite, timeout > 0 else { return 0 }
+        let clamped = min(timeout, 60.0)
+        return UInt64((clamped * 1_000_000_000).rounded())
+    }
+
     static func wait(
         bundleIdentifier: String,
         source: WorkspaceApplicationSource,
         timeout: TimeInterval
     ) async {
-        guard timeout > 0 else { return }
+        let nanoseconds = sleepNanoseconds(for: timeout)
+        guard nanoseconds > 0 else { return }
 
         let gate = ActivationGate()
         let token = source.observeActivations { snapshot in
@@ -49,7 +56,6 @@ enum ActivationWaiter {
         }
         defer { source.stopObserving(token) }
 
-        let nanoseconds = UInt64(min(timeout * 1_000_000_000, Double(UInt64.max - 1)).rounded())
         let timeoutTask = Task {
             try? await Task.sleep(nanoseconds: nanoseconds)
             gate.resume()

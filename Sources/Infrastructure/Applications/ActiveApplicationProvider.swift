@@ -121,8 +121,8 @@ extension ActiveApplicationProviding {
     func setActivationHandler(_ handler: (@Sendable () -> Void)?) {}
 
     func waitForActivation(of application: ApplicationIdentity, timeout: TimeInterval) async {
-        guard timeout > 0 else { return }
-        let nanoseconds = UInt64(min(timeout * 1_000_000_000, Double(UInt64.max - 1)).rounded())
+        let nanoseconds = ActivationWaiter.sleepNanoseconds(for: timeout)
+        guard nanoseconds > 0 else { return }
         try? await Task.sleep(nanoseconds: nanoseconds)
     }
 }
