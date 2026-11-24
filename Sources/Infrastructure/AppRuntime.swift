@@ -293,13 +293,14 @@ extension HotkeyRegistrationError: LocalizedError {
 
 final class LiveAppRuntime: AppRuntime {
     var hasAccessibilityPermission: Bool {
-        AXIsProcessTrusted()
+        permissionProbe.isTrusted()
     }
 
     let layoutMapper: LayoutMapping
     let clipboardManager: ClipboardManaging
     private let clipboardReplacement: ClipboardReplacing
     private let applicationProvider: ActiveApplicationProviding
+    private let permissionProbe: AccessibilityPermissionProbe
     private let globalHotkeyCenter = GlobalHotkeyCenter()
 
     var activeApplication: ApplicationIdentity? {
@@ -311,22 +312,34 @@ final class LiveAppRuntime: AppRuntime {
     }
 
     func setActivationHandler(_ handler: (@Sendable () -> Void)?) {
-        applicationProvider.setActivationHandler(handler)
+        guard let handler else {
+            applicationProvider.setActivationHandler(nil)
+            return
+        }
+
+        let permissionProbe = permissionProbe
+        applicationProvider.setActivationHandler {
+            permissionProbe.invalidate()
+            handler()
+        }
     }
 
     init(
         layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper(),
         clipboardManager: ClipboardManaging = AppKitClipboardManager(),
         clipboardReplacement: ClipboardReplacing? = nil,
-        applicationProvider: ActiveApplicationProviding = WorkspaceActiveApplicationProvider()
+        applicationProvider: ActiveApplicationProviding = WorkspaceActiveApplicationProvider(),
+        permissionProbe: AccessibilityPermissionProbe = AccessibilityPermissionProbe()
     ) {
         self.layoutMapper = layoutMapper
         self.clipboardManager = clipboardManager
         self.clipboardReplacement = clipboardReplacement ?? AppKitClipboardReplacement(clipboardManager: clipboardManager)
         self.applicationProvider = applicationProvider
+        self.permissionProbe = permissionProbe
     }
 
     func openAccessibilitySettings() {
+        permissionProbe.invalidate()
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
             return
         }
@@ -353,6 +366,7 @@ final class LiveAppRuntime: AppRuntime {
             let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
             _ = AXIsProcessTrustedWithOptions(options)
         }
+        permissionProbe.invalidate()
         openAccessibilitySettings()
     }
 

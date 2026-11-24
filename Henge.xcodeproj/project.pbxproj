@@ -42,6 +42,7 @@
 		8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2232E00000000000001 /* SMAppServiceLoginItemManager.swift */; };
 		8480A2302E00000000000001 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2312E00000000000001 /* Diagnostics.swift */; };
 		8480A23D2E00000000000001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A23E2E00000000000001 /* OnboardingView.swift */; };
+		8480A2402E00000000000001 /* AccessibilityPermissionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8480A2412E00000000000001 /* AccessibilityPermissionProbe.swift */; };
 		8480A2272E00000000000001 /* Henge.icns in Resources */ = {isa = PBXBuildFile; fileRef = 8480A2282E00000000000001 /* Henge.icns */; };
 		8480A2292E00000000000001 /* HengeMenuBar.png in Resources */ = {isa = PBXBuildFile; fileRef = 8480A22A2E00000000000001 /* HengeMenuBar.png */; };
 		8480A2392E00000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8480A23A2E00000000000001 /* Localizable.strings */; };
@@ -90,6 +91,7 @@
 		8480A23B2E00000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Localization/en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8480A23C2E00000000000001 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = Localization/ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8480A23E2E00000000000001 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		8480A2412E00000000000001 /* AccessibilityPermissionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionProbe.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				8480A1292E00000000000001 /* AppRuntime.swift */,
+				8480A2422E00000000000001 /* Accessibility */,
 				8480A2202E00000000000001 /* Applications */,
 				8480A1362E00000000000001 /* Clipboard */,
 				8480A2322E00000000000001 /* Diagnostics */,
@@ -245,6 +248,14 @@
 				8480A1382E00000000000001 /* Probes */,
 			);
 			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		8480A2422E00000000000001 /* Accessibility */ = {
+			isa = PBXGroup;
+			children = (
+				8480A2412E00000000000001 /* AccessibilityPermissionProbe.swift */,
+			);
+			path = Accessibility;
 			sourceTree = "<group>";
 		};
 		8480A2322E00000000000001 /* Diagnostics */ = {
@@ -424,6 +435,7 @@
 				8480A2252E00000000000001 /* SMAppServiceLoginItemManager.swift in Sources */,
 				8480A2302E00000000000001 /* Diagnostics.swift in Sources */,
 				8480A23D2E00000000000001 /* OnboardingView.swift in Sources */,
+				8480A2402E00000000000001 /* AccessibilityPermissionProbe.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
