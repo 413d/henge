@@ -145,12 +145,15 @@ struct ConfigurationStoreTests {
     }
 
     @Test
-    func initSortsAndDeduplicatesExcludedApplicationBundleIdentifiers() {
-        let configuration = AppConfiguration(
+    func initAndMutationSortAndDeduplicateExcludedApplicationBundleIdentifiers() {
+        var configuration = AppConfiguration(
             excludedApplicationBundleIdentifiers: ["com.example.Beta", "com.example.Alpha", "com.example.Alpha"]
         )
 
         #expect(configuration.excludedApplicationBundleIdentifiers == ["com.example.Alpha", "com.example.Beta"])
+
+        configuration.excludedApplicationBundleIdentifiers.append(contentsOf: ["com.example.Alpha", "com.example.AAA"])
+        #expect(configuration.excludedApplicationBundleIdentifiers == ["com.example.AAA", "com.example.Alpha", "com.example.Beta"])
     }
 
     private func temporaryDirectoryURL() throws -> URL {

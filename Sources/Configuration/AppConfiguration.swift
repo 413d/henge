@@ -12,7 +12,14 @@ struct AppConfiguration: Codable, Equatable {
     var isEnabled: Bool
     var launchAtLogin: Bool
     var shortcut: Shortcut
-    var excludedApplicationBundleIdentifiers: [String]
+    var excludedApplicationBundleIdentifiers: [String] {
+        didSet {
+            let normalized = Self.normalizeExcludedBundleIdentifiers(excludedApplicationBundleIdentifiers)
+            if excludedApplicationBundleIdentifiers != normalized {
+                excludedApplicationBundleIdentifiers = normalized
+            }
+        }
+    }
     var hasCompletedOnboarding: Bool
 
     private enum CodingKeys: String, CodingKey {
@@ -36,8 +43,12 @@ struct AppConfiguration: Codable, Equatable {
         self.isEnabled = isEnabled
         self.launchAtLogin = launchAtLogin
         self.shortcut = shortcut
-        self.excludedApplicationBundleIdentifiers = Array(Set(excludedApplicationBundleIdentifiers)).sorted()
+        self.excludedApplicationBundleIdentifiers = Self.normalizeExcludedBundleIdentifiers(excludedApplicationBundleIdentifiers)
         self.hasCompletedOnboarding = hasCompletedOnboarding
+    }
+
+    private static func normalizeExcludedBundleIdentifiers(_ identifiers: [String]) -> [String] {
+        Array(Set(identifiers)).sorted()
     }
 
     init(from decoder: Decoder) throws {
