@@ -16,18 +16,15 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
     private let runtime: AppRuntime
     private let transformer: TextTransforming
     private let wordBoundaryDetector: WordBoundaryDetecting
-    private let exceptionMatcher: ExceptionMatcher
 
     init(
         runtime: AppRuntime,
         transformer: TextTransforming,
-        wordBoundaryDetector: WordBoundaryDetecting = DefaultWordBoundaryDetector(),
-        exceptionMatcher: ExceptionMatcher = ExceptionMatcher()
+        wordBoundaryDetector: WordBoundaryDetecting = DefaultWordBoundaryDetector()
     ) {
         self.runtime = runtime
         self.transformer = transformer
         self.wordBoundaryDetector = wordBoundaryDetector
-        self.exceptionMatcher = exceptionMatcher
     }
 
     @discardableResult
@@ -35,7 +32,7 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
         guard let application = runtime.activeApplication else {
             return .failed(.noActiveApplication)
         }
-        guard !exceptionMatcher.contains(application, in: Set(excludingApplicationBundleIdentifiers)) else {
+        guard !ExceptionMatcher.contains(application, in: excludingApplicationBundleIdentifiers) else {
             return .excluded
         }
 

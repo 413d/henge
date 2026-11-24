@@ -1,10 +1,11 @@
+import Combine
 import Foundation
 import OSLog
-import SwiftUI
 
 @MainActor
 final class HengeCoordinator: ObservableObject {
     @Published private(set) var state: ApplicationState
+    @Published private var observedFrontmostExcludableApplication: ApplicationIdentity?
 
     private static let hengeBundleIdentifier = "io.github.413d.Henge"
 
@@ -17,11 +18,8 @@ final class HengeCoordinator: ObservableObject {
     private let presentOnboarding: @MainActor () -> Void
     private let dismissOnboarding: @MainActor () -> Void
     private let terminateApplication: @MainActor () -> Void
-    private let exceptionManager = ExceptionManager()
-    private let exceptionMatcher = ExceptionMatcher()
     private let configLogger = Diagnostics.logger(.config)
     private var isExecutingFixText = false
-    private var lastObservedFrontmostExcludableApplication: ApplicationIdentity?
 
     init(
         environment: AppEnvironment,
@@ -39,29 +37,15 @@ final class HengeCoordinator: ObservableObject {
         self.presentSettings = presentSettings ?? {}
         self.presentOnboarding = presentOnboarding ?? {}
         self.dismissOnboarding = dismissOnboarding ?? {}
-        self.terminateApplication = terminateApplication ?? {
-            NSApplication.shared.terminate(nil)
-        }
+        self.terminateApplication = terminateApplication ?? {}
 
         let loadedConfiguration = environment.configurationStore.load()
-        let systemLaunchAtLoginStatus = environment.loginItemManager.status
-        let systemLaunchAtLoginEnabled = systemLaunchAtLoginStatus == .enabled
-        let resolvedConfigurationLaunchAtLogin: Bool = switch systemLaunchAtLoginStatus {
-        case .enabled:
-            true
-        case .disabled:
-            false
-        case .requiresApproval:
-            loadedConfiguration.launchAtLogin
-        }
-        let normalizedConfiguration = AppConfiguration(
-            schemaVersion: loadedConfiguration.schemaVersion,
-            isEnabled: loadedConfiguration.isEnabled,
-            launchAtLogin: resolvedConfigurationLaunchAtLogin,
-            shortcut: loadedConfiguration.shortcut,
-            excludedApplicationBundleIdentifiers: loadedConfiguration.excludedApplicationBundleIdentifiers,
-            hasCompletedOnboarding: loadedConfiguration.hasCompletedOnboarding
+        let reconciledLaunchAtLogin = Self.reconcileLaunchAtLogin(
+            status: environment.loginItemManager.status,
+            fallbackConfigurationFlag: loadedConfiguration.launchAtLogin
         )
+        var normalizedConfiguration = loadedConfiguration
+        normalizedConfiguration.launchAtLogin = reconciledLaunchAtLogin.configFlag
 
         if normalizedConfiguration != loadedConfiguration {
             environment.configurationStore.save(normalizedConfiguration)
@@ -75,13 +59,13 @@ final class HengeCoordinator: ObservableObject {
             hotkeyRegistered: false,
             hotkeyRegistrationError: nil,
             lastFixOutcome: nil,
-            launchAtLoginEnabled: systemLaunchAtLoginEnabled,
-            launchAtLoginStatus: systemLaunchAtLoginStatus,
+            launchAtLoginEnabled: reconciledLaunchAtLogin.enabled,
+            launchAtLoginStatus: reconciledLaunchAtLogin.status,
             launchAtLoginError: nil
         )
 
         updateHotkeyRegistration()
-        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
+        refreshFrontmostExcludableApplication()
 
         environment.runtime.setActivationHandler { [weak self] in
             Task { @MainActor [weak self] in
@@ -164,19 +148,13 @@ final class HengeCoordinator: ObservableObject {
             try loginItemManager.setEnabled(launchAtLogin)
             let actualStatus = loginItemManager.status
 
-            switch (launchAtLogin, actualStatus) {
+            let targetState: (status: LoginItemStatus, enabled: Bool, configFlag: Bool) = switch (launchAtLogin, actualStatus) {
             case (true, .enabled):
-                state.launchAtLoginStatus = .enabled
-                state.launchAtLoginEnabled = true
-                state.configuration.launchAtLogin = true
+                (.enabled, true, true)
             case (true, .requiresApproval):
-                state.launchAtLoginStatus = .requiresApproval
-                state.launchAtLoginEnabled = false
-                state.configuration.launchAtLogin = true
+                (.requiresApproval, false, true)
             case (false, .disabled):
-                state.launchAtLoginStatus = .disabled
-                state.launchAtLoginEnabled = false
-                state.configuration.launchAtLogin = false
+                (.disabled, false, false)
             default:
                 throw LoginItemUpdateError.updateFailed(
                     L10n.string(
@@ -186,46 +164,44 @@ final class HengeCoordinator: ObservableObject {
                 )
             }
 
+            state.launchAtLoginStatus = targetState.status
+            state.launchAtLoginEnabled = targetState.enabled
+            state.configuration.launchAtLogin = targetState.configFlag
             saveConfigurationIfChanged(from: previousConfiguration)
         } catch {
             state.launchAtLoginEnabled = previousEnabled
             state.launchAtLoginStatus = previousStatus
             state.configuration = previousConfiguration
             state.launchAtLoginError = error.localizedDescription
-            saveConfigurationIfChanged(from: previousConfiguration)
         }
     }
 
     func resetConfigurationToDefaults() {
         let previousConfiguration = state.configuration
+        let reconciled = Self.reconcileLaunchAtLogin(
+            status: loginItemManager.status,
+            fallbackConfigurationFlag: previousConfiguration.launchAtLogin
+        )
         var resetConfiguration = AppConfiguration.default
         resetConfiguration.hasCompletedOnboarding = previousConfiguration.hasCompletedOnboarding
+        resetConfiguration.launchAtLogin = reconciled.configFlag
         state.configuration = resetConfiguration
-        // launchAtLogin mirrors the system login-item state, not the config default.
-        let systemStatus = loginItemManager.status
-        state.launchAtLoginStatus = systemStatus
-        state.launchAtLoginEnabled = systemStatus == .enabled
-        switch systemStatus {
-        case .enabled:
-            state.configuration.launchAtLogin = true
-        case .disabled:
-            state.configuration.launchAtLogin = false
-        case .requiresApproval:
-            state.configuration.launchAtLogin = previousConfiguration.launchAtLogin
-        }
+        state.launchAtLoginStatus = reconciled.status
+        state.launchAtLoginEnabled = reconciled.enabled
         state.lastFixOutcome = nil
         saveConfigurationIfChanged(from: previousConfiguration)
         updateHotkeyRegistration()
-        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
+        refreshFrontmostExcludableApplication()
     }
 
     func setShortcut(_ shortcut: Shortcut) {
-        guard shortcut != state.configuration.shortcut else {
-            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
+        let previousConfiguration = state.configuration
+        guard shortcut != previousConfiguration.shortcut else {
+            saveConfigurationIfChanged(from: previousConfiguration)
             return
         }
 
-        if state.configuration.isEnabled {
+        if previousConfiguration.isEnabled {
             do {
                 try registerHotkey(shortcut)
             } catch {
@@ -237,31 +213,11 @@ final class HengeCoordinator: ObservableObject {
         }
 
         state.configuration.shortcut = shortcut
-        configurationStore.save(state.configuration)
+        saveConfigurationIfChanged(from: previousConfiguration)
     }
 
     func triggerFixText() {
-        guard state.configuration.isEnabled, !isExecutingFixText else {
-            return
-        }
-
-        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
-        guard let application = runtime.activeApplication else {
-            state.lastFixOutcome = .failed(.noActiveApplication)
-            return
-        }
-        guard !exceptionMatcher.contains(application, in: excluded) else {
-            return
-        }
-
-        let accessibilityGranted = runtime.hasAccessibilityPermission
-        state.accessibilityGranted = accessibilityGranted
-        guard accessibilityGranted else {
-            state.lastFixOutcome = .failed(.missingPermission)
-            return
-        }
-
-        guard canTriggerFixText else {
+        guard let application = preflightFixText() else {
             return
         }
 
@@ -276,7 +232,7 @@ final class HengeCoordinator: ObservableObject {
                 return
             }
 
-            self.executeFixTextWithPreflight()
+            self.executeFixText()
         }
     }
 
@@ -292,7 +248,7 @@ final class HengeCoordinator: ObservableObject {
 
     func addApplicationException(_ application: ApplicationIdentity) {
         let previousConfiguration = state.configuration
-        let updated = exceptionManager.add(
+        let updated = ExceptionManager.add(
             application,
             to: state.configuration.excludedApplicationBundleIdentifiers
         )
@@ -300,12 +256,12 @@ final class HengeCoordinator: ObservableObject {
             state.configuration.excludedApplicationBundleIdentifiers = updated
         }
         saveConfigurationIfChanged(from: previousConfiguration)
-        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
+        refreshFrontmostExcludableApplication()
     }
 
     func removeApplicationException(bundleIdentifier: String) {
         let previousConfiguration = state.configuration
-        let updated = exceptionManager.remove(
+        let updated = ExceptionManager.remove(
             bundleIdentifier: bundleIdentifier,
             from: state.configuration.excludedApplicationBundleIdentifiers
         )
@@ -313,7 +269,7 @@ final class HengeCoordinator: ObservableObject {
             state.configuration.excludedApplicationBundleIdentifiers = updated
         }
         saveConfigurationIfChanged(from: previousConfiguration)
-        lastObservedFrontmostExcludableApplication = resolveFrontmostExcludableApplication()
+        refreshFrontmostExcludableApplication()
     }
 
     func refreshPermissions() {
@@ -378,28 +334,41 @@ final class HengeCoordinator: ObservableObject {
         terminateApplication()
     }
 
-    private func syncLaunchAtLoginState() {
-        let currentStatus = loginItemManager.status
-        let resolvedEnabled = currentStatus == .enabled
-        if state.launchAtLoginStatus != currentStatus {
-            state.launchAtLoginStatus = currentStatus
+    private static func reconcileLaunchAtLogin(
+        status: LoginItemStatus,
+        fallbackConfigurationFlag: Bool
+    ) -> (enabled: Bool, status: LoginItemStatus, configFlag: Bool) {
+        // launchAtLogin mirrors the system login-item state unless awaiting user approval.
+        let configFlag: Bool = switch status {
+        case .enabled:
+            true
+        case .disabled:
+            false
+        case .requiresApproval:
+            fallbackConfigurationFlag
         }
-        if state.launchAtLoginEnabled != resolvedEnabled {
-            state.launchAtLoginEnabled = resolvedEnabled
+        return (enabled: status == .enabled, status: status, configFlag: configFlag)
+    }
+
+    private func syncLaunchAtLoginState() {
+        let previousConfiguration = state.configuration
+        let reconciled = Self.reconcileLaunchAtLogin(
+            status: loginItemManager.status,
+            fallbackConfigurationFlag: previousConfiguration.launchAtLogin
+        )
+        if state.launchAtLoginStatus != reconciled.status {
+            state.launchAtLoginStatus = reconciled.status
+        }
+        if state.launchAtLoginEnabled != reconciled.enabled {
+            state.launchAtLoginEnabled = reconciled.enabled
         }
         if state.launchAtLoginError != nil {
             state.launchAtLoginError = nil
         }
-        guard currentStatus != .requiresApproval else {
-            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=requiresApproval")
-            return
+        if state.configuration.launchAtLogin != reconciled.configFlag {
+            state.configuration.launchAtLogin = reconciled.configFlag
         }
-        guard state.configuration.launchAtLogin != resolvedEnabled else {
-            configLogger.debug("\(DiagnosticsLabel.configSaveSkipped.rawValue, privacy: .public) reason=unchanged")
-            return
-        }
-        state.configuration.launchAtLogin = resolvedEnabled
-        configurationStore.save(state.configuration)
+        saveConfigurationIfChanged(from: previousConfiguration)
     }
 
     private func saveConfigurationIfChanged(from previousConfiguration: AppConfiguration) {
@@ -439,48 +408,60 @@ final class HengeCoordinator: ObservableObject {
     }
 
     private func handleFixTextHotkey() {
-        guard !isExecutingFixText else {
+        guard preflightFixText() != nil else {
             return
         }
 
-        executeFixTextWithPreflight()
+        executeFixText()
     }
 
-    private func executeFixTextWithPreflight() {
-        guard state.configuration.isEnabled else {
-            return
+    private func preflightFixText() -> ApplicationIdentity? {
+        guard state.configuration.isEnabled, !isExecutingFixText else {
+            return nil
         }
 
-        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
         guard let application = runtime.activeApplication else {
             state.lastFixOutcome = .failed(.noActiveApplication)
-            return
+            return nil
         }
-        guard !exceptionMatcher.contains(application, in: excluded) else {
-            return
+        guard !ExceptionMatcher.contains(
+            application,
+            in: state.configuration.excludedApplicationBundleIdentifiers
+        ) else {
+            return nil
         }
 
         let accessibilityGranted = runtime.hasAccessibilityPermission
-        state.accessibilityGranted = accessibilityGranted
-
+        if state.accessibilityGranted != accessibilityGranted {
+            state.accessibilityGranted = accessibilityGranted
+        }
         guard accessibilityGranted else {
             state.lastFixOutcome = .failed(.missingPermission)
+            return nil
+        }
+
+        return application
+    }
+
+    private func executeFixText() {
+        guard state.configuration.isEnabled else {
             return
         }
 
         let outcome = fixTextUseCase.execute(
             excludingApplicationBundleIdentifiers: state.configuration.excludedApplicationBundleIdentifiers
         )
+        if outcome == .failed(.missingPermission), state.accessibilityGranted {
+            state.accessibilityGranted = false
+        }
         state.lastFixOutcome = outcome == .excluded ? nil : outcome
     }
 
     private func refreshFrontmostExcludableApplication() {
         let resolved = resolveFrontmostExcludableApplication()
-        guard resolved != lastObservedFrontmostExcludableApplication else {
-            return
+        if observedFrontmostExcludableApplication != resolved {
+            observedFrontmostExcludableApplication = resolved
         }
-        objectWillChange.send()
-        lastObservedFrontmostExcludableApplication = resolved
     }
 
     private func resolveFrontmostExcludableApplication() -> ApplicationIdentity? {
@@ -497,8 +478,8 @@ final class HengeCoordinator: ObservableObject {
             return nil
         }
 
-        let excluded = Set(state.configuration.excludedApplicationBundleIdentifiers)
-        guard !exceptionMatcher.contains(application, in: excluded),
+        let excluded = state.configuration.excludedApplicationBundleIdentifiers
+        guard !ExceptionMatcher.contains(application, in: excluded),
               !excluded.contains(bundleIdentifier) else {
             return nil
         }

@@ -554,8 +554,9 @@ struct HengeCoordinatorTests {
 
     @Test
     func coordinatorRollsBackLaunchAtLoginStateOnFailure() {
-        let store = InMemoryConfigurationStore()
-        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true)
+        )
 
         let coordinator = HengeCoordinator(
             environment: AppEnvironment(
@@ -571,12 +572,14 @@ struct HengeCoordinatorTests {
         #expect(coordinator.state.launchAtLoginEnabled == true)
         #expect(coordinator.state.configuration.launchAtLogin == true)
         #expect(coordinator.state.launchAtLoginError != nil)
+        #expect(store.saveCount == 0)
     }
 
     @Test
     func coordinatorRejectsUnverifiedLaunchAtLoginStateChanges() {
-        let store = InMemoryConfigurationStore()
-        store.save(AppConfiguration(isEnabled: true, launchAtLogin: true))
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true)
+        )
         let loginItemManager = NonMutatingLoginItemManager(currentStatus: .enabled)
 
         let coordinator = HengeCoordinator(
@@ -594,6 +597,7 @@ struct HengeCoordinatorTests {
         #expect(coordinator.state.launchAtLoginEnabled == true)
         #expect(coordinator.state.configuration.launchAtLogin == true)
         #expect(coordinator.state.launchAtLoginError?.contains("could not be verified") == true)
+        #expect(store.saveCount == 0)
     }
 
     @Test
@@ -800,6 +804,55 @@ struct HengeCoordinatorTests {
         #expect(runtime.unregisterCount == 1)
         #expect(terminateCallCount == 1)
         #expect(store.load() == configurationBeforeQuit)
+    }
+
+    @Test
+    func quitApplicationDefaultsToNoOpTerminateHandler() {
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: InMemoryConfigurationStore(),
+                fixTextUseCase: NoopFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: FakeLoginItemManager(currentStatus: .enabled)
+            )
+        )
+
+        coordinator.quitApplication()
+
+        #expect(runtime.unregisterCount == 1)
+        #expect(coordinator.state.hotkeyRegistered == false)
+    }
+
+    @Test
+    func setShortcutPersistsOnlyWhenChangedAndPreservesConfigOnFailure() {
+        let store = CountingConfigurationStore(
+            initialConfiguration: AppConfiguration(isEnabled: true, launchAtLogin: true, shortcut: .defaultFixText)
+        )
+        let runtime = StubRuntime(hasAccessibilityPermission: true)
+        let coordinator = HengeCoordinator(
+            environment: AppEnvironment(
+                configurationStore: store,
+                fixTextUseCase: NoopFixTextUseCase(),
+                runtime: runtime,
+                loginItemManager: FakeLoginItemManager(currentStatus: .enabled)
+            )
+        )
+
+        coordinator.setShortcut(.defaultFixText)
+        #expect(store.saveCount == 0)
+        #expect(runtime.registeredShortcuts == [.defaultFixText])
+
+        let updatedShortcut = Shortcut(key: "Z", modifiers: [.option])
+        coordinator.setShortcut(updatedShortcut)
+        #expect(store.saveCount == 1)
+        #expect(store.load().shortcut == updatedShortcut)
+        #expect(runtime.registeredShortcuts == [.defaultFixText, updatedShortcut])
+
+        coordinator.setShortcut(Shortcut(key: "🙂", modifiers: [.option]))
+        #expect(store.saveCount == 1)
+        #expect(store.load().shortcut == updatedShortcut)
+        #expect(coordinator.state.hotkeyRegistrationError != nil)
     }
 
     @Test

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -34,6 +35,9 @@ struct HengeApp: App {
             },
             dismissOnboarding: {
                 onboardingWindowController.closeWindow()
+            },
+            terminateApplication: {
+                NSApplication.shared.terminate(nil)
             }
         )
         settingsWindowController.bind(coordinator: coordinator)

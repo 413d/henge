@@ -15,20 +15,32 @@ struct ApplicationIdentity: Equatable, Hashable {
 }
 
 struct ExceptionMatcher {
-    func contains(_ application: ApplicationIdentity, in excludedBundleIdentifiers: Set<String>) -> Bool {
+    static func contains(_ application: ApplicationIdentity, in excludedBundleIdentifiers: some Collection<String>) -> Bool {
         excludedBundleIdentifiers.contains(application.bundleIdentifier)
+    }
+
+    func contains(_ application: ApplicationIdentity, in excludedBundleIdentifiers: Set<String>) -> Bool {
+        Self.contains(application, in: excludedBundleIdentifiers)
     }
 }
 
 struct ExceptionManager {
-    func add(_ application: ApplicationIdentity, to bundleIdentifiers: [String]) -> [String] {
+    static func add(_ application: ApplicationIdentity, to bundleIdentifiers: [String]) -> [String] {
         guard !bundleIdentifiers.contains(application.bundleIdentifier) else {
             return bundleIdentifiers
         }
         return bundleIdentifiers + [application.bundleIdentifier]
     }
 
-    func remove(bundleIdentifier: String, from bundleIdentifiers: [String]) -> [String] {
+    static func remove(bundleIdentifier: String, from bundleIdentifiers: [String]) -> [String] {
         bundleIdentifiers.filter { $0 != bundleIdentifier }
+    }
+
+    func add(_ application: ApplicationIdentity, to bundleIdentifiers: [String]) -> [String] {
+        Self.add(application, to: bundleIdentifiers)
+    }
+
+    func remove(bundleIdentifier: String, from bundleIdentifiers: [String]) -> [String] {
+        Self.remove(bundleIdentifier: bundleIdentifier, from: bundleIdentifiers)
     }
 }
