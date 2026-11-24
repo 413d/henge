@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1]
+
+### Changed
+
+- **Unified Accessibility & clipboard replacement pipeline** (`AccessibilityTextService`, `AppKitClipboardReplacement`) merging direct AX replacement and clipboard fallback under a single `prepareElementForWrite` validation pass, narrowing `ClipboardReplacing` and `ClipboardEventPosting`, and testing via `AccessibilityElementAccessing`.
+- **Preflight & layer boundary cleanup** (`HengeCoordinator`, `HengeApp`) removing SwiftUI/AppKit coupling from `Sources/Application/`, consolidating `preflightFixText()` / `executeFixText()` and `reconcileLaunchAtLogin`, and replacing manual `objectWillChange.send()` with reactive state.
+- **Word boundary & configuration normalization** (`DefaultWordBoundaryDetector`, `AppConfiguration`) simplifying delimiter scanning and normalizing `excludedApplicationBundleIdentifiers` at initialization and mutation boundaries.
+- **UI window controller & shortcut capture extraction** (`SingletonWindowController`, `ShortcutCaptureEvaluator`) consolidating singleton `NSWindow` lifecycle across Settings and Onboarding and separating Carbon hotkey capture evaluation from SwiftUI views.
+
 ## [0.2.0]
 
 ### Added
@@ -67,6 +76,7 @@ Initial open-source release of Henge for macOS 13 Ventura and later.
 - **Launch at Login** integration via `SMAppService` and local JSON configuration at `~/Library/Application Support/Henge/config.json` with automatic backup recovery for corrupt files.
 - **Universal macOS builds (`arm64` + `x86_64`)** and packaging scripts (`scripts/build.sh`, `scripts/package.sh`) with `SHA256SUMS.txt` verification and `--probe` CLI diagnostics (`HengeProbeRunner`).
 
-[Unreleased]: https://github.com/413d/henge/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/413d/henge/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/413d/henge/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/413d/henge/compare/v0.1.2...v0.2.0
 [0.1.0]: https://github.com/413d/henge/releases/tag/v0.1.0

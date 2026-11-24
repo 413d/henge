@@ -18,7 +18,7 @@ fail() {
 : "${HENGE_SIGNING_IDENTITY:?Set HENGE_SIGNING_IDENTITY to the exact Developer ID Application identity.}"
 : "${HENGE_NOTARY_PROFILE:?Set HENGE_NOTARY_PROFILE to an existing notarytool Keychain profile name.}"
 
-VERSION="${HENGE_VERSION:-0.2.0}"
+VERSION="${HENGE_VERSION:-0.2.1}"
 BUILD_NUMBER="${HENGE_BUILD_NUMBER:-2}"
 RC_NUMBER="${HENGE_RC_NUMBER:-1}"
 RELEASE_DIR="$REPO_ROOT/.build/release"
