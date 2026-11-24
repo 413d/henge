@@ -23,13 +23,6 @@ protocol AppRuntime {
         expectedText: String,
         with text: String
     ) -> SelectionWriteResult
-    func replaceTextUsingClipboard(
-        _ target: TextTarget,
-        range: SelectionRangeSnapshot,
-        context: SelectionSnapshot,
-        expectedText: String,
-        with text: String
-    ) -> SelectionWriteResult
 }
 
 extension AppRuntime {
@@ -46,16 +39,6 @@ extension AppRuntime {
 
     func applicationIdentity(for bundleIdentifier: String) -> ApplicationIdentity? {
         ApplicationIdentity(bundleIdentifier: bundleIdentifier, displayName: bundleIdentifier)
-    }
-
-    func replaceTextUsingClipboard(
-        _ target: TextTarget,
-        range: SelectionRangeSnapshot,
-        context: SelectionSnapshot,
-        expectedText: String,
-        with text: String
-    ) -> SelectionWriteResult {
-        .unavailable(.unsupported)
     }
 }
 
@@ -184,15 +167,5 @@ final class LiveAppRuntime: AppRuntime {
         with text: String
     ) -> SelectionWriteResult {
         textService.replaceText(target, range: range, context: context, expectedText: expectedText, with: text)
-    }
-
-    func replaceTextUsingClipboard(
-        _ target: TextTarget,
-        range: SelectionRangeSnapshot,
-        context: SelectionSnapshot,
-        expectedText: String,
-        with text: String
-    ) -> SelectionWriteResult {
-        textService.replaceTextUsingClipboard(target, range: range, context: context, expectedText: expectedText, with: text)
     }
 }

@@ -1025,7 +1025,7 @@ private final class MenuBarEditorRuntime: AppRuntime {
         } else {
             selection = SelectionSnapshot(text: text, range: selectedRange, isCaretContext: true)
         }
-        return makeTestTextContext(.available(selection), in: application, snapshot: snapshot)
+        return makeTestTextContext(.success(selection), in: application, snapshot: snapshot)
     }
 
     func replaceText(
@@ -1053,7 +1053,7 @@ private final class MenuBarEditorRuntime: AppRuntime {
         text = nsText.replacingCharacters(in: targetNSRange, with: replacement)
         let newLength = (replacement as NSString).length
         selectedRange = SelectionRangeSnapshot(location: range.location + newLength, length: 0)
-        return .success(SelectionRangeSnapshot(location: range.location, length: newLength))
+        return .success(SelectionRangeSnapshot(location: range.location, length: newLength), viaClipboard: false)
     }
 
     @MainActor

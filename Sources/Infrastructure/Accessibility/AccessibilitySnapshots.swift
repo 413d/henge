@@ -54,11 +54,6 @@ struct FocusedElementSnapshot: Equatable {
     }
 }
 
-enum SelectionProbe: Equatable {
-    case unavailable(SelectionProbeFailure)
-    case available(SelectionSnapshot)
-}
-
 enum SelectionProbeFailure: Error, Equatable {
     case missingPermission
     case noFocusedElement
@@ -127,54 +122,59 @@ struct SelectionRangeSnapshot: Equatable {
 }
 
 enum SelectionWriteResult: Equatable {
-    case success(SelectionRangeSnapshot)
+    case success(SelectionRangeSnapshot, viaClipboard: Bool)
     case unavailable(SelectionWriteFailure)
 }
 
 enum SelectionWriteFailure: Equatable {
-    case missingPermission
-    case noFocusedElement
-    case secureField
-    case noSelection
-    case unsupported
-    case accessibilityError(AXError)
+    case probe(SelectionProbeFailure)
     case pasteUnverified
     case clipboardRestoreFailed
     case clipboardSuperseded
 
+    static let missingPermission: Self = .probe(.missingPermission)
+    static let noFocusedElement: Self = .probe(.noFocusedElement)
+    static let secureField: Self = .probe(.secureField)
+    static let noSelection: Self = .probe(.noSelection)
+    static let unsupported: Self = .probe(.unsupported)
+    static func accessibilityError(_ error: AXError) -> Self { .probe(.accessibilityError(error)) }
+
     var description: String {
         switch self {
-        case .missingPermission:
-            return L10n.string(
-                "probe.write.missing_permission",
-                defaultValue: "Accessibility access is required before Henge can replace the current selection."
-            )
-        case .noFocusedElement:
-            return L10n.string(
-                "probe.write.no_focused_element",
-                defaultValue: "No focused text element is currently available for replacement."
-            )
-        case .secureField:
-            return L10n.string(
-                "probe.write.secure_field",
-                defaultValue: "Focused secure text field detected. Henge left the selection untouched."
-            )
-        case .noSelection:
-            return L10n.string(
-                "probe.write.no_selection",
-                defaultValue: "No text selection is currently available for replacement."
-            )
-        case .unsupported:
-            return L10n.string(
-                "probe.write.unsupported",
-                defaultValue: "The focused element does not support direct selection replacement through Accessibility."
-            )
-        case let .accessibilityError(error):
-            return L10n.format(
-                "probe.write.accessibility_error",
-                defaultValue: "Henge could not replace the current selection (AXError %d).",
-                error.rawValue
-            )
+        case let .probe(failure):
+            switch failure {
+            case .missingPermission:
+                return L10n.string(
+                    "probe.write.missing_permission",
+                    defaultValue: "Accessibility access is required before Henge can replace the current selection."
+                )
+            case .noFocusedElement:
+                return L10n.string(
+                    "probe.write.no_focused_element",
+                    defaultValue: "No focused text element is currently available for replacement."
+                )
+            case .secureField:
+                return L10n.string(
+                    "probe.write.secure_field",
+                    defaultValue: "Focused secure text field detected. Henge left the selection untouched."
+                )
+            case .noSelection:
+                return L10n.string(
+                    "probe.write.no_selection",
+                    defaultValue: "No text selection is currently available for replacement."
+                )
+            case .unsupported:
+                return L10n.string(
+                    "probe.write.unsupported",
+                    defaultValue: "The focused element does not support direct selection replacement through Accessibility."
+                )
+            case let .accessibilityError(error):
+                return L10n.format(
+                    "probe.write.accessibility_error",
+                    defaultValue: "Henge could not replace the current selection (AXError %d).",
+                    error.rawValue
+                )
+            }
         case .pasteUnverified:
             return L10n.string(
                 "fix_outcome.paste_unverified",

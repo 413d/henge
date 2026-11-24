@@ -67,32 +67,15 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
             return .nothingToFix
         }
 
-        let directResult = runtime.replaceText(
+        switch runtime.replaceText(
             resolvedContext.target,
             range: targetRange,
             context: context,
             expectedText: targetText,
             with: replacement
-        )
-        switch directResult {
-        case .success:
-            return .fixed(viaClipboard: false)
-        case .unavailable(.unsupported):
-            break
-        case let .unavailable(reason):
-            return outcome(from: reason)
-        }
-
-        let clipboardResult = runtime.replaceTextUsingClipboard(
-            resolvedContext.target,
-            range: targetRange,
-            context: context,
-            expectedText: targetText,
-            with: replacement
-        )
-        switch clipboardResult {
-        case .success:
-            return .fixed(viaClipboard: true)
+        ) {
+        case let .success(_, viaClipboard):
+            return .fixed(viaClipboard: viaClipboard)
         case let .unavailable(reason):
             return outcome(from: reason)
         }
@@ -117,18 +100,8 @@ struct LiveFixTextUseCase: FixTextUseCaseProtocol {
 
     private func outcome(from failure: SelectionWriteFailure) -> FixOutcome {
         switch failure {
-        case .missingPermission:
-            return .failed(.missingPermission)
-        case .noFocusedElement:
-            return .failed(.noFocusedElement)
-        case .secureField:
-            return .secureField
-        case .noSelection:
-            return .nothingToFix
-        case .unsupported:
-            return .unsupported
-        case let .accessibilityError(error):
-            return .failed(.accessibilityError(error.rawValue))
+        case let .probe(probeFailure):
+            return outcome(from: probeFailure)
         case .pasteUnverified:
             return .pasteUnverified
         case .clipboardRestoreFailed:

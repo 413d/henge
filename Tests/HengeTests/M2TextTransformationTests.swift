@@ -109,7 +109,7 @@ struct M2TextTransformationTests {
 
     @Test
     func liveUseCaseReplacesSelectedText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = LiveFixTextUseCase(
@@ -127,7 +127,7 @@ struct M2TextTransformationTests {
 
     @Test
     func liveUseCaseSkipsNeutralText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "12345", range: SelectionRangeSnapshot(location: 0, length: 5))
         ))
         let useCase = LiveFixTextUseCase(
@@ -146,7 +146,7 @@ struct M2TextTransformationTests {
 
     @Test
     func liveUseCaseSkipsUnavailableSelection() {
-        let runtime = SelectionStubRuntime(selection: .unavailable(.noSelection))
+        let runtime = SelectionStubRuntime(selection: .failure(.noSelection))
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
             transformer: SimpleTextTransformer(
@@ -164,7 +164,7 @@ struct M2TextTransformationTests {
     @Test
     func liveUseCaseDoesNotRetryFailedReplacement() {
         let runtime = SelectionStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
             replacementResult: .unavailable(.unsupported)
@@ -190,12 +190,12 @@ final class SelectionStubRuntime: AppRuntime {
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
-    private let selection: SelectionProbe
+    private let selection: Result<SelectionSnapshot, SelectionProbeFailure>
     private let replacementResult: SelectionWriteResult?
     private(set) var replacedText: String?
     private(set) var replaceCallCount = 0
 
-    init(selection: SelectionProbe, replacementResult: SelectionWriteResult? = nil) {
+    init(selection: Result<SelectionSnapshot, SelectionProbeFailure>, replacementResult: SelectionWriteResult? = nil) {
         self.selection = selection
         self.replacementResult = replacementResult
     }
@@ -229,10 +229,10 @@ final class SelectionStubRuntime: AppRuntime {
         }
 
         switch selection {
-        case let .available(snapshot):
-            return .success(snapshot.range)
-        case let .unavailable(reason):
-            return .unavailable(.init(from: reason))
+        case let .success(snapshot):
+            return .success(snapshot.range, viaClipboard: false)
+        case let .failure(reason):
+            return .unavailable(.probe(reason))
         }
     }
 }
@@ -245,39 +245,20 @@ func makeTestTextTarget(
 }
 
 func makeTestTextContext(
-    _ selection: SelectionProbe,
+    _ selection: Result<SelectionSnapshot, SelectionProbeFailure>,
     in application: ApplicationIdentity,
     snapshot: FocusedElementSnapshot = FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
 ) -> TextContextProbe {
     switch selection {
-    case let .available(selectionSnapshot):
+    case let .success(selectionSnapshot):
         return .available(
             TextContext(
                 target: makeTestTextTarget(application: application, snapshot: snapshot),
                 selection: selectionSnapshot
             )
         )
-    case let .unavailable(reason):
+    case let .failure(reason):
         return .unavailable(reason)
-    }
-}
-
-extension SelectionWriteFailure {
-    init(from reason: SelectionProbeFailure) {
-        switch reason {
-        case .missingPermission:
-            self = .missingPermission
-        case .noFocusedElement:
-            self = .noFocusedElement
-        case .secureField:
-            self = .secureField
-        case .noSelection:
-            self = .noSelection
-        case .unsupported:
-            self = .unsupported
-        case let .accessibilityError(error):
-            self = .accessibilityError(error)
-        }
     }
 }
 

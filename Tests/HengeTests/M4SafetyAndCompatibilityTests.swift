@@ -8,7 +8,7 @@ import Testing
 struct M4SafetyAndCompatibilityTests {
     @Test
     func selectionTakesPriorityOverCaretResolution() {
-        let runtime = M4RuntimeStub(context: .available(
+        let runtime = M4RuntimeStub(context: .success(
             SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 4, length: 6))
         ))
         let useCase = makeUseCase(runtime)
@@ -22,7 +22,7 @@ struct M4SafetyAndCompatibilityTests {
 
     @Test
     func caretInsideTokenReplacesWholeWordAndPreservesUtf16Range() {
-        let runtime = M4RuntimeStub(context: .available(
+        let runtime = M4RuntimeStub(context: .success(
             SelectionSnapshot(
                 text: "café ghbdtn!",
                 range: SelectionRangeSnapshot(location: 9, length: 0),
@@ -40,7 +40,7 @@ struct M4SafetyAndCompatibilityTests {
 
     @Test
     func excludedApplicationReturnsBeforeAccessibilityRead() {
-        let runtime = M4RuntimeStub(context: .available(
+        let runtime = M4RuntimeStub(context: .success(
             SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = makeUseCase(runtime)
@@ -55,24 +55,23 @@ struct M4SafetyAndCompatibilityTests {
     @Test
     func unsupportedAXReplacementUsesClipboardFallback() {
         let runtime = M4RuntimeStub(
-            context: .available(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
-            directResult: .unavailable(.unsupported)
+            context: .success(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
+            writeResult: .success(SelectionRangeSnapshot(location: 0, length: 6), viaClipboard: true)
         )
         let outcome = makeUseCase(runtime).execute()
 
         #expect(outcome == .fixed(viaClipboard: true))
-        #expect(runtime.clipboardReplacement == "привет")
-        #expect(runtime.clipboardCallCount == 1)
+        #expect(runtime.directReplacement == "привет")
+        #expect(runtime.directCallCount == 1)
     }
 
     @Test
     func secureFieldNeverReachesReplacementPaths() {
-        let runtime = M4RuntimeStub(context: .unavailable(.secureField))
+        let runtime = M4RuntimeStub(context: .failure(.secureField))
         let outcome = makeUseCase(runtime).execute()
 
         #expect(outcome == .secureField)
         #expect(runtime.directCallCount == 0)
-        #expect(runtime.clipboardCallCount == 0)
     }
 
     @Test
@@ -421,31 +420,22 @@ struct M4SafetyAndCompatibilityTests {
             element: element
         )
         let snapshot = SelectionSnapshot(text: "secret", range: SelectionRangeSnapshot(location: 0, length: 6))
-        let directResult = runtime.replaceText(
+        let writeResult = runtime.replaceText(
             secureTarget,
             range: snapshot.range,
             context: snapshot,
             expectedText: "secret",
             with: "ыускуе"
         )
-        let clipboardResult = runtime.replaceTextUsingClipboard(
-            secureTarget,
-            range: snapshot.range,
-            context: snapshot,
-            expectedText: "secret",
-            with: "ыускуе"
-        )
-        #expect(directResult == .unavailable(.secureField))
-        #expect(clipboardResult == .unavailable(.secureField))
+        #expect(writeResult == .unavailable(.secureField))
         #expect(resolveCount == 1)
         #expect(spyClipboard.callCount == 0)
 
-        let stub = M4RuntimeStub(context: .unavailable(.secureField))
+        let stub = M4RuntimeStub(context: .failure(.secureField))
         let outcome = makeUseCase(stub).execute()
         #expect(outcome == .secureField)
         #expect(stub.axValueReadCount == 0)
         #expect(stub.directCallCount == 0)
-        #expect(stub.clipboardCallCount == 0)
     }
 
     @Test
@@ -478,23 +468,14 @@ struct M4SafetyAndCompatibilityTests {
         // Element swaps before write
         currentFocused = swappedElement
 
-        let directResult = runtime.replaceText(
+        let writeResult = runtime.replaceText(
             target,
             range: snapshot.range,
             context: snapshot,
             expectedText: "ghbdtn",
             with: "привет"
         )
-        #expect(directResult == .unavailable(.noFocusedElement))
-
-        let clipboardResult = runtime.replaceTextUsingClipboard(
-            target,
-            range: snapshot.range,
-            context: snapshot,
-            expectedText: "ghbdtn",
-            with: "привет"
-        )
-        #expect(clipboardResult == .unavailable(.unsupported))
+        #expect(writeResult == .unavailable(.noFocusedElement))
         #expect(spyClipboard.callCount == 0)
 
         // Also verify validateTarget aborting mid-clipboard-replacement prevents paste
@@ -648,19 +629,20 @@ private final class M4RuntimeStub: AppRuntime {
     var activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test")
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
-    private let context: SelectionProbe
-    private let directResult: SelectionWriteResult
+    private let context: Result<SelectionSnapshot, SelectionProbeFailure>
+    private let writeResult: SelectionWriteResult
     private(set) var contextReadCount = 0
     private(set) var axValueReadCount = 0
     private(set) var directCallCount = 0
-    private(set) var clipboardCallCount = 0
     private(set) var directRange: SelectionRangeSnapshot?
     private(set) var directReplacement: String?
-    private(set) var clipboardReplacement: String?
 
-    init(context: SelectionProbe, directResult: SelectionWriteResult = .success(SelectionRangeSnapshot(location: 0, length: 0))) {
+    init(
+        context: Result<SelectionSnapshot, SelectionProbeFailure>,
+        writeResult: SelectionWriteResult = .success(SelectionRangeSnapshot(location: 0, length: 0), viaClipboard: false)
+    ) {
         self.context = context
-        self.directResult = directResult
+        self.writeResult = writeResult
     }
 
     func openAccessibilitySettings() {}
@@ -669,7 +651,7 @@ private final class M4RuntimeStub: AppRuntime {
     func inspectFocusedElement() -> FocusedElementProbe { .available(FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)) }
     func inspectTextContext(in application: ApplicationIdentity) -> TextContextProbe {
         contextReadCount += 1
-        if case .available = context {
+        if case .success = context {
             axValueReadCount += 1
         }
         return makeTestTextContext(context, in: application)
@@ -679,13 +661,7 @@ private final class M4RuntimeStub: AppRuntime {
         directCallCount += 1
         directRange = range
         directReplacement = text
-        return directResult
-    }
-
-    func replaceTextUsingClipboard(_ target: TextTarget, range: SelectionRangeSnapshot, context: SelectionSnapshot, expectedText: String, with text: String) -> SelectionWriteResult {
-        clipboardCallCount += 1
-        clipboardReplacement = text
-        return .success(SelectionRangeSnapshot(location: range.location, length: text.utf16.count))
+        return writeResult
     }
 }
 

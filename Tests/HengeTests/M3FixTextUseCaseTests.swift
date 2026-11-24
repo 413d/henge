@@ -5,7 +5,7 @@ import Testing
 struct M3FixTextUseCaseTests {
     @Test
     func liveUseCaseTransformsSelectionText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = LiveFixTextUseCase(
@@ -25,7 +25,7 @@ struct M3FixTextUseCaseTests {
 
     @Test
     func liveUseCasePreservesTitleCaseSelectionText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "Ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = LiveFixTextUseCase(
@@ -45,7 +45,7 @@ struct M3FixTextUseCaseTests {
 
     @Test
     func liveUseCaseTransformsRussianSelectionText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "Привет", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = LiveFixTextUseCase(
@@ -65,7 +65,7 @@ struct M3FixTextUseCaseTests {
 
     @Test
     func liveUseCasePreservesUppercaseSelectionText() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "GHBDTN", range: SelectionRangeSnapshot(location: 0, length: 6))
         ))
         let useCase = LiveFixTextUseCase(
@@ -85,7 +85,7 @@ struct M3FixTextUseCaseTests {
 
     @Test
     func liveUseCaseSkipsNoOpSelectionAndReturnsNothingToFix() {
-        let runtime = SelectionStubRuntime(selection: .available(
+        let runtime = SelectionStubRuntime(selection: .success(
             SelectionSnapshot(text: "12345", range: SelectionRangeSnapshot(location: 0, length: 5))
         ))
         let useCase = LiveFixTextUseCase(
@@ -106,11 +106,10 @@ struct M3FixTextUseCaseTests {
     @Test
     func liveUseCaseReturnsClipboardFallbackSuccessOutcome() {
         let runtime = OutcomeStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .success(SelectionRangeSnapshot(location: 0, length: 6))
+            writeResult: .success(SelectionRangeSnapshot(location: 0, length: 6), viaClipboard: true)
         )
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
@@ -128,11 +127,10 @@ struct M3FixTextUseCaseTests {
     @Test
     func liveUseCaseReturnsDirectSuccessAndClipboardFailureOutcomes() {
         let directRuntime = OutcomeStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
-            directResult: .success(SelectionRangeSnapshot(location: 0, length: 6)),
-            clipboardResult: .unavailable(.unsupported)
+            writeResult: .success(SelectionRangeSnapshot(location: 0, length: 6), viaClipboard: false)
         )
         let directOutcome = LiveFixTextUseCase(
             runtime: directRuntime,
@@ -144,11 +142,10 @@ struct M3FixTextUseCaseTests {
         #expect(directOutcome == .fixed(viaClipboard: false))
 
         let unverifiedRuntime = OutcomeStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.pasteUnverified)
+            writeResult: .unavailable(.pasteUnverified)
         )
         let unverifiedOutcome = LiveFixTextUseCase(
             runtime: unverifiedRuntime,
@@ -160,11 +157,10 @@ struct M3FixTextUseCaseTests {
         #expect(unverifiedOutcome == .pasteUnverified)
 
         let restoreFailedRuntime = OutcomeStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.clipboardRestoreFailed)
+            writeResult: .unavailable(.clipboardRestoreFailed)
         )
         let restoreFailedOutcome = LiveFixTextUseCase(
             runtime: restoreFailedRuntime,
@@ -176,11 +172,10 @@ struct M3FixTextUseCaseTests {
         #expect(restoreFailedOutcome == .failed(.clipboardRestoreFailed))
 
         let supersededRuntime = OutcomeStubRuntime(
-            selection: .available(
+            selection: .success(
                 SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))
             ),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.clipboardSuperseded)
+            writeResult: .unavailable(.clipboardSuperseded)
         )
         let supersededOutcome = LiveFixTextUseCase(
             runtime: supersededRuntime,
@@ -196,60 +191,46 @@ struct M3FixTextUseCaseTests {
     func liveUseCaseReturnsStructuredOutcomesForNonSuccessPaths() {
         let noAppRuntime = OutcomeStubRuntime(
             activeApplication: nil,
-            selection: .unavailable(.noFocusedElement),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.noFocusedElement)
         )
         #expect(makeUseCase(noAppRuntime).execute() == .failed(.noActiveApplication))
 
         let excludedRuntime = OutcomeStubRuntime(
-            selection: .available(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
-            directResult: .success(SelectionRangeSnapshot(location: 0, length: 6)),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .success(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
+            writeResult: .success(SelectionRangeSnapshot(location: 0, length: 6), viaClipboard: false)
         )
         #expect(
             makeUseCase(excludedRuntime).execute(excludingApplicationBundleIdentifiers: ["test.application"]) == .excluded
         )
 
         let missingPermissionRuntime = OutcomeStubRuntime(
-            selection: .unavailable(.missingPermission),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.missingPermission)
         )
         #expect(makeUseCase(missingPermissionRuntime).execute() == .failed(.missingPermission))
 
         let noFocusedRuntime = OutcomeStubRuntime(
-            selection: .unavailable(.noFocusedElement),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.noFocusedElement)
         )
         #expect(makeUseCase(noFocusedRuntime).execute() == .failed(.noFocusedElement))
 
         let secureRuntime = OutcomeStubRuntime(
-            selection: .unavailable(.secureField),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.secureField)
         )
         #expect(makeUseCase(secureRuntime).execute() == .secureField)
 
         let noSelectionRuntime = OutcomeStubRuntime(
-            selection: .unavailable(.noSelection),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.noSelection)
         )
         #expect(makeUseCase(noSelectionRuntime).execute() == .nothingToFix)
 
         let axErrorRuntime = OutcomeStubRuntime(
-            selection: .unavailable(.accessibilityError(.cannotComplete)),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .failure(.accessibilityError(.cannotComplete))
         )
         #expect(makeUseCase(axErrorRuntime).execute() == .failed(.accessibilityError(AXError.cannotComplete.rawValue)))
 
         let unsupportedRuntime = OutcomeStubRuntime(
-            selection: .available(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
-            directResult: .unavailable(.unsupported),
-            clipboardResult: .unavailable(.unsupported)
+            selection: .success(SelectionSnapshot(text: "ghbdtn", range: SelectionRangeSnapshot(location: 0, length: 6))),
+            writeResult: .unavailable(.unsupported)
         )
         #expect(makeUseCase(unsupportedRuntime).execute() == .unsupported)
     }
@@ -262,7 +243,7 @@ struct M3FixTextUseCaseTests {
             range: SelectionRangeSnapshot(location: 8, length: 0),
             isCaretContext: true
         )
-        let runtime = RecordingStubRuntime(selection: .available(snapshot))
+        let runtime = RecordingStubRuntime(selection: .success(snapshot))
         let detector = RecordingWordBoundaryDetector()
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
@@ -297,7 +278,7 @@ struct M3FixTextUseCaseTests {
             range: SelectionRangeSnapshot(location: text.utf16.count, length: 0),
             isCaretContext: true
         )
-        let runtime = RecordingStubRuntime(selection: .available(snapshot))
+        let runtime = RecordingStubRuntime(selection: .success(snapshot))
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
             transformer: SimpleTextTransformer(
@@ -327,7 +308,7 @@ struct M3FixTextUseCaseTests {
                 range: SelectionRangeSnapshot(location: caretUTF16Offset, length: 0),
                 isCaretContext: true
             )
-            let runtime = RecordingStubRuntime(selection: .available(snapshot))
+            let runtime = RecordingStubRuntime(selection: .success(snapshot))
             let useCase = LiveFixTextUseCase(
                 runtime: runtime,
                 transformer: SimpleTextTransformer(
@@ -353,7 +334,7 @@ struct M3FixTextUseCaseTests {
             range: SelectionRangeSnapshot(location: 4, length: 0),
             isCaretContext: true
         )
-        let midClusterRuntime = RecordingStubRuntime(selection: .available(midClusterSnapshot))
+        let midClusterRuntime = RecordingStubRuntime(selection: .success(midClusterSnapshot))
         let midClusterOutcome = LiveFixTextUseCase(
             runtime: midClusterRuntime,
             transformer: SimpleTextTransformer(
@@ -375,7 +356,7 @@ struct M3FixTextUseCaseTests {
             range: SelectionRangeSnapshot(location: text.utf16.count, length: 0),
             isCaretContext: true
         )
-        let runtime = RecordingStubRuntime(selection: .available(snapshot))
+        let runtime = RecordingStubRuntime(selection: .success(snapshot))
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
             transformer: SimpleTextTransformer(
@@ -408,7 +389,7 @@ struct M3FixTextUseCaseTests {
             range: SelectionRangeSnapshot(location: 1, length: 0),
             isCaretContext: true
         )
-        let runtime = RecordingStubRuntime(selection: .available(snapshot))
+        let runtime = RecordingStubRuntime(selection: .success(snapshot))
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
             transformer: SimpleTextTransformer(
@@ -431,7 +412,7 @@ struct M3FixTextUseCaseTests {
             isCaretContext: true
         )
         let expectedApplication = ApplicationIdentity(bundleIdentifier: "com.apple.Notes", displayName: "Notes")!
-        let runtime = RecordingStubRuntime(activeApplication: expectedApplication, selection: .available(snapshot))
+        let runtime = RecordingStubRuntime(activeApplication: expectedApplication, selection: .success(snapshot))
         let useCase = LiveFixTextUseCase(
             runtime: runtime,
             transformer: SimpleTextTransformer(
@@ -464,20 +445,17 @@ private final class OutcomeStubRuntime: AppRuntime {
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
-    private let selection: SelectionProbe
-    private let directResult: SelectionWriteResult
-    private let clipboardResult: SelectionWriteResult
+    private let selection: Result<SelectionSnapshot, SelectionProbeFailure>
+    private let writeResult: SelectionWriteResult
 
     init(
         activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application"),
-        selection: SelectionProbe,
-        directResult: SelectionWriteResult,
-        clipboardResult: SelectionWriteResult
+        selection: Result<SelectionSnapshot, SelectionProbeFailure>,
+        writeResult: SelectionWriteResult = .unavailable(.unsupported)
     ) {
         self.activeApplication = activeApplication
         self.selection = selection
-        self.directResult = directResult
-        self.clipboardResult = clipboardResult
+        self.writeResult = writeResult
     }
 
     func openAccessibilitySettings() {}
@@ -495,14 +473,7 @@ private final class OutcomeStubRuntime: AppRuntime {
         context: SelectionSnapshot,
         expectedText: String,
         with text: String
-    ) -> SelectionWriteResult { directResult }
-    func replaceTextUsingClipboard(
-        _ target: TextTarget,
-        range: SelectionRangeSnapshot,
-        context: SelectionSnapshot,
-        expectedText: String,
-        with text: String
-    ) -> SelectionWriteResult { clipboardResult }
+    ) -> SelectionWriteResult { writeResult }
 }
 
 private struct RecordedReplacement: Equatable {
@@ -531,13 +502,13 @@ private final class RecordingStubRuntime: AppRuntime {
     let layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled()
     let clipboardManager: ClipboardManaging = MockClipboardManager()
 
-    private let selection: SelectionProbe
+    private let selection: Result<SelectionSnapshot, SelectionProbeFailure>
     private(set) var recordedReplacements: [RecordedReplacement] = []
     private(set) var recordedTargets: [TextTarget] = []
 
     init(
         activeApplication: ApplicationIdentity? = ApplicationIdentity(bundleIdentifier: "test.application", displayName: "Test Application"),
-        selection: SelectionProbe
+        selection: Result<SelectionSnapshot, SelectionProbeFailure>
     ) {
         self.activeApplication = activeApplication
         self.selection = selection
@@ -566,6 +537,6 @@ private final class RecordingStubRuntime: AppRuntime {
             expectedText: expectedText,
             text: text
         ))
-        return .success(range)
+        return .success(range, viaClipboard: false)
     }
 }

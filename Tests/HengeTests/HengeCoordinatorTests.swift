@@ -289,7 +289,7 @@ struct HengeCoordinatorTests {
     func hotkeyCallbackExecutesUseCaseWhenFired() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .available(
+            selectionProbe: .success(
                 SelectionSnapshot(
                     text: "ghbdtn",
                     range: SelectionRangeSnapshot(location: 6, length: 6)
@@ -426,7 +426,7 @@ struct HengeCoordinatorTests {
     func statusReportsOutcomeWithoutUserText() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .available(
+            selectionProbe: .success(
                 SelectionSnapshot(
                     text: "ghbdtn",
                     range: SelectionRangeSnapshot(location: 6, length: 6)
@@ -456,7 +456,7 @@ struct HengeCoordinatorTests {
     func coordinatorDelegatesMissingSelectionHandlingToUseCase() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .unavailable(.noSelection)
+            selectionProbe: .failure(.noSelection)
         )
         let useCase = SpyFixTextUseCase(returnedOutcome: .nothingToFix)
 
@@ -481,7 +481,7 @@ struct HengeCoordinatorTests {
     func coordinatorDelegatesUnsupportedSelectionHandlingToUseCase() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .unavailable(.unsupported)
+            selectionProbe: .failure(.unsupported)
         )
         let useCase = SpyFixTextUseCase(returnedOutcome: .unsupported)
 
@@ -506,7 +506,7 @@ struct HengeCoordinatorTests {
     func availableUseCaseExecutesWhenSelectionIsAvailable() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .available(
+            selectionProbe: .success(
                 SelectionSnapshot(
                     text: "ghbdtn",
                     range: SelectionRangeSnapshot(location: 6, length: 6)
@@ -806,7 +806,7 @@ struct HengeCoordinatorTests {
     func coordinatorShowsReportedOutcome() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .available(
+            selectionProbe: .success(
                 SelectionSnapshot(
                     text: "ghbdtn",
                     range: SelectionRangeSnapshot(location: 0, length: 6)
@@ -840,7 +840,7 @@ struct HengeCoordinatorTests {
     func coordinatorLeavesStateCleanWhenUseCaseReturnsExcluded() async {
         let runtime = StubRuntime(
             hasAccessibilityPermission: true,
-            selectionProbe: .available(
+            selectionProbe: .success(
                 SelectionSnapshot(
                     text: "ghbdtn",
                     range: SelectionRangeSnapshot(location: 0, length: 6)
@@ -1109,7 +1109,7 @@ private final class StubRuntime: AppRuntime {
     let clipboardManager: ClipboardManaging
     private let registrationError: Error?
     private let focusedElementProbe: FocusedElementProbe
-    private let selectionProbe: SelectionProbe
+    private let selectionProbe: Result<SelectionSnapshot, SelectionProbeFailure>
     private let textContextResult: TextContextProbe?
 
     private(set) var registeredShortcuts: [Shortcut] = []
@@ -1125,7 +1125,7 @@ private final class StubRuntime: AppRuntime {
         focusedElementProbe: FocusedElementProbe = .available(
             FocusedElementSnapshot(role: "AXTextField", subrole: nil, isSecure: false)
         ),
-        selectionProbe: SelectionProbe = .unavailable(.noSelection),
+        selectionProbe: Result<SelectionSnapshot, SelectionProbeFailure> = .failure(.noSelection),
         textContextResult: TextContextProbe? = nil,
         layoutMapper: LayoutMapping = NativeKeyboardLayoutMapper.bundled(),
         clipboardManager: ClipboardManaging = MockClipboardManager()
@@ -1179,10 +1179,10 @@ private final class StubRuntime: AppRuntime {
     ) -> SelectionWriteResult {
         replaceTextCallCount += 1
         switch selectionProbe {
-        case let .available(snapshot):
-            return .success(snapshot.range)
-        case let .unavailable(reason):
-            return .unavailable(.init(from: reason))
+        case let .success(snapshot):
+            return .success(snapshot.range, viaClipboard: false)
+        case let .failure(reason):
+            return .unavailable(.probe(reason))
         }
     }
 
