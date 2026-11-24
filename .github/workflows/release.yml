@@ -53,6 +53,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      archive_sha256: ${{ steps.publish.outputs.archive_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -110,6 +114,7 @@ jobs:
           rm -rf "${TMP_DIR}"
 
       - name: Publish GitHub Release
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.meta.outputs.tag }}
@@ -168,6 +173,12 @@ jobs:
               "dist/SHA256SUMS.txt" \
               "dist/LICENSE.txt" \
               --clobber
+            EXISTING_BODY="$(gh release view "${TAG}" --json body -q '.body // ""' || true)"
+            if [[ -z "${EXISTING_BODY//[[:space:]]/}" ]]; then
+              gh release edit "${TAG}" \
+                --title "Henge ${TAG}" \
+                --notes-file "${NOTES_FILE}"
+            fi
           else
             EXTRA_ARGS=()
             if [[ "${PRERELEASE}" == "true" ]]; then
@@ -185,7 +196,13 @@ jobs:
               "${EXTRA_ARGS[@]}"
           fi
 
-          ARCHIVE_SHA256="$(awk '{print $1}' dist/SHA256SUMS.txt)"
+          ARCHIVE_SHA256="$(awk -v f="${ARCHIVE_NAME}" '$2 == f || $2 == "*"f { print $1; exit }' dist/SHA256SUMS.txt)"
+          if [[ ! "${ARCHIVE_SHA256}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "error: invalid or missing SHA-256 '${ARCHIVE_SHA256}' for ${ARCHIVE_NAME}" >&2
+            exit 1
+          fi
+          echo "archive_sha256=${ARCHIVE_SHA256}" >> "${GITHUB_OUTPUT}"
+
           if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
             {
               echo "### Published Henge ${TAG}"
@@ -193,11 +210,58 @@ jobs:
               echo "- Archive: \`${ARCHIVE_NAME}\`"
               echo "- SHA-256: \`${ARCHIVE_SHA256}\`"
               if [[ "${PRERELEASE}" != "true" ]]; then
-                echo ""
-                echo "Update in-repo Homebrew Cask (\`Casks/henge.rb\`) on \`main\`:"
-                echo '```bash'
-                echo "./scripts/release/update-cask.sh ${APP_VERSION} ${ARCHIVE_SHA256}"
-                echo '```'
+                echo "- Homebrew Cask (\`Casks/henge.rb\`): automatically synced on \`main\` by \`update-cask\` job."
               fi
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
+
+  update-cask:
+    name: Update Homebrew Cask on main
+    needs: release
+    if: needs.release.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: release-update-cask-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update and push Casks/henge.rb
+        env:
+          APP_VERSION: ${{ needs.release.outputs.app_version }}
+          ARCHIVE_SHA256: ${{ needs.release.outputs.archive_sha256 }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            ./scripts/release/update-cask.sh --no-downgrade "${APP_VERSION}" "${ARCHIVE_SHA256}"
+
+            if git diff --quiet -- Casks/henge.rb; then
+              echo "Casks/henge.rb is already up to date (or newer than ${APP_VERSION})."
+              exit 0
+            fi
+
+            git add Casks/henge.rb
+            git commit -m "chore(cask): bump henge to ${APP_VERSION}"
+
+            if git push origin HEAD:refs/heads/main; then
+              echo "Pushed Casks/henge.rb update for ${APP_VERSION} to main."
+              exit 0
+            fi
+
+            echo "Push attempt ${attempt} failed due to concurrent main update; retrying..." >&2
+            sleep 2
+          done
+
+          echo "error: failed to push Casks/henge.rb update to main after 3 attempts" >&2
+          exit 1

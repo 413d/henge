@@ -158,13 +158,13 @@ swift run Henge --probe help      # проверка нативных зондо
 HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
 ```
 
-Мейнтейнеры могут опубликовать новый тегированный релиз на GitHub Releases и обновить формулу Homebrew в репозитории:
+Мейнтейнеры могут опубликовать новый тегированный релиз на GitHub Releases (для стабильных тегов воркфлоу `Release` автоматически обновляет `Casks/henge.rb` в `main` после загрузки `SHA256SUMS.txt`):
 
 ```bash
-git tag v0.1.2
-git push origin v0.1.2
-# После того как рабочий процесс Release опубликует SHA256SUMS.txt:
-./scripts/release/update-cask.sh 0.1.2 <sha256>
+git tag v0.2.0
+git push origin v0.2.0
+# Ручной резервный запуск при необходимости:
+./scripts/release/update-cask.sh --no-downgrade 0.2.0 <sha256>
 ```
 
 ## Лицензия

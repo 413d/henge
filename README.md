@@ -158,13 +158,13 @@ To preserve macOS Accessibility permissions across local rebuilds, sign with a l
 HENGE_SIGNING_IDENTITY="Henge Local" ./scripts/build.sh --install
 ```
 
-Maintainers can publish a new tagged release to GitHub Releases and bump the in-repo Homebrew cask with:
+Maintainers can publish a new tagged release to GitHub Releases (for stable tags, the `Release` workflow automatically updates `Casks/henge.rb` on `main` after uploading `SHA256SUMS.txt`):
 
 ```bash
-git tag v0.1.2
-git push origin v0.1.2
-# After the Release workflow publishes SHA256SUMS.txt:
-./scripts/release/update-cask.sh 0.1.2 <sha256>
+git tag v0.2.0
+git push origin v0.2.0
+# Manual fallback if needed:
+./scripts/release/update-cask.sh --no-downgrade 0.2.0 <sha256>
 ```
 
 ## License

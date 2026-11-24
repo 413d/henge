@@ -77,14 +77,15 @@ sed -E \
     -e "s/^([[:space:]]*sha256[[:space:]]+\")[^\"]+(\")/\1${SHA256}\2/" \
     "${CASK_PATH}" > "${TMP_FILE}"
 
-grep -q "version \"${VERSION}\"" "${TMP_FILE}" \
+grep -Fq "version \"${VERSION}\"" "${TMP_FILE}" \
     || { echo "error: failed to update version in ${CASK_PATH}" >&2; exit 1; }
-grep -q "sha256 \"${SHA256}\"" "${TMP_FILE}" \
+grep -Fq "sha256 \"${SHA256}\"" "${TMP_FILE}" \
     || { echo "error: failed to update sha256 in ${CASK_PATH}" >&2; exit 1; }
 
 if command -v ruby >/dev/null 2>&1; then
     ruby -c "${TMP_FILE}" >/dev/null
 fi
 
+chmod 0644 "${TMP_FILE}"
 mv "${TMP_FILE}" "${CASK_PATH}"
 echo "Updated ${CASK_PATH} -> version ${VERSION} (sha256: ${SHA256})"

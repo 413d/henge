@@ -70,3 +70,30 @@ test('release workflow uploads INSTALL.txt and documents Homebrew, curl installe
   assert.match(release, /System Settings\s*→\s*Privacy & Security/);
   assert.match(release, /xattr -dr com\.apple\.quarantine/);
 });
+
+test('release workflow automatically updates Casks/henge.rb on main for stable releases only', () => {
+  const rel = readFileSync('.github/workflows/release.yml', 'utf8');
+
+  // release job exposes metadata outputs for downstream job
+  assert.match(rel, /outputs:\s*\n[\s\S]*?app_version:\s*\$\{\{\s*steps\.meta\.outputs\.app_version\s*\}\}/);
+  assert.match(rel, /outputs:\s*\n[\s\S]*?prerelease:\s*\$\{\{\s*steps\.meta\.outputs\.prerelease\s*\}\}/);
+  assert.match(rel, /outputs:\s*\n[\s\S]*?archive_sha256:\s*\$\{\{\s*steps\.publish\.outputs\.archive_sha256\s*\}\}/);
+
+  // Pre-created UI releases with empty body receive installation notes
+  assert.match(rel, /gh release edit "\$\{TAG\}"[\s\S]*?--notes-file "\$\{NOTES_FILE\}"/);
+
+  // Dedicated update-cask job runs only after release succeeds and only for non-prereleases
+  const updateJobMatch = rel.match(/^  update-cask:\n([\s\S]*)$/m);
+  assert.ok(updateJobMatch, 'Expected update-cask job in .github/workflows/release.yml');
+  const updateJob = updateJobMatch[1];
+
+  assert.match(updateJob, /needs:\s*release/);
+  assert.match(updateJob, /if:\s*needs\.release\.outputs\.prerelease\s*==\s*'false'/);
+  assert.match(updateJob, /permissions:\s*\n\s*contents:\s*write/);
+  assert.match(updateJob, /concurrency:\s*\n\s*group:\s*release-update-cask-main\s*\n\s*cancel-in-progress:\s*false/);
+  assert.match(updateJob, /uses:\s*actions\/checkout@v4[\s\S]*?ref:\s*main/);
+  assert.match(updateJob, /\.\/scripts\/release\/update-cask\.sh --no-downgrade "\$\{APP_VERSION\}" "\$\{ARCHIVE_SHA256\}"/);
+  assert.match(updateJob, /git diff --quiet -- Casks\/henge\.rb/);
+  assert.match(updateJob, /chore\(cask\): bump henge to \$\{APP_VERSION\}/);
+  assert.match(updateJob, /git push origin HEAD:refs\/heads\/main/);
+});
