@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
 ### Added
 
 - **Xcode CI verification job** in `.github/workflows/ci.yml` (`xcode` job) running `plutil -lint Henge.xcodeproj/project.pbxproj` and building the `Henge` scheme on `macos-15`.
@@ -40,7 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Plain-text clipboard restore fallback** (`AppKitClipboardManager.restore(_:)` + `PasteboardBacking`) attempting full-fidelity multi-UTI restoration and falling back to restoring plain text (UTF-8, UTF-16 with BOM handling, plain text, or RTF) when rich item restoration fails, surfacing `.clipboardRestoreFailed` otherwise.
 - **Concurrent clipboard copy protection** (`ownedChangeCount` supersede guard in `AppKitClipboardReplacement`) returning `.superseded` and skipping snapshot restoration when the user copies newer content during the fallback window.
 - **Onboarding permission polling lifecycle** stopping background Accessibility polling immediately when the onboarding window closes or dismisses.
-- **Activation wait timeout clamping** (`ActivationWaiter.sleepNanoseconds(for:)`) guarding against `NaN`, non-finite, non-positive, and oversized timeouts (clamped to 60 seconds) so `Task.sleep` never traps.
+- **Activation wait timeout clamping and focus-settle timing** (`ActivationWaiter`, `ApplicationActivator`) guarding against `NaN`, non-finite, non-positive, and oversized timeouts (clamped to 60 seconds), checking frontmost state immediately after observer registration, and settling Accessibility focus without waiting out the activation timeout.
+- **Shortcut recorder cancel and unsupported-key handling** (`ShortcutCaptureEvaluator`) allowing `Escape` to cancel recording cleanly without showing a modifier error and surfacing clear feedback when a modified key is unsupported by the Carbon hotkey backend.
+- **Thread-safe layout table loading and paste verification bounds** guarding Carbon TIS layout table reads off the main thread (`NativeKeyboardLayoutMapper`) and bounds-checking UTF-16 paste verification ranges (`AccessibilityTextService`).
 
 ### Removed
 
@@ -63,5 +67,6 @@ Initial open-source release of Henge for macOS 13 Ventura and later.
 - **Launch at Login** integration via `SMAppService` and local JSON configuration at `~/Library/Application Support/Henge/config.json` with automatic backup recovery for corrupt files.
 - **Universal macOS builds (`arm64` + `x86_64`)** and packaging scripts (`scripts/build.sh`, `scripts/package.sh`) with `SHA256SUMS.txt` verification and `--probe` CLI diagnostics (`HengeProbeRunner`).
 
-[Unreleased]: https://github.com/413d/henge/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/413d/henge/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/413d/henge/compare/v0.1.2...v0.2.0
 [0.1.0]: https://github.com/413d/henge/releases/tag/v0.1.0
