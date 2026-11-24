@@ -228,10 +228,19 @@ test('All images have accessible alt attributes and point to existing local ./as
   }
 });
 
-test('Zero external runtime dependencies, CDNs, remote fonts, or trackers', () => {
+test('Zero external runtime dependencies, CDNs, remote fonts, or trackers (except allowlisted GoatCounter)', () => {
   for (const match of html.matchAll(/<script\b([^>]*)>/gi)) {
     const attrs = parseAttributes(match[1]);
     if (attrs.src) {
+      if (attrs.src === 'https://gc.zgo.at/count.js') {
+        assert.equal(
+          attrs['data-goatcounter'],
+          'https://henge.goatcounter.com/count',
+          'GoatCounter script must point to https://henge.goatcounter.com/count'
+        );
+        assert.ok('async' in attrs, 'GoatCounter script must be async');
+        continue;
+      }
       assert.doesNotMatch(attrs.src, /^(?:https?:)?\/\//i, `External script disallowed: ${attrs.src}`);
       assert.ok(attrs.src.startsWith('./'), `Local script must use relative path: ${attrs.src}`);
       assert.ok(existsSync(path.join('site', attrs.src)), `Local script missing on disk: ${attrs.src}`);

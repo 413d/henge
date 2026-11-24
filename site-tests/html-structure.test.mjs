@@ -125,3 +125,47 @@ test('Every data-i18n* key in site/index.html exists in site/app.js I18N.en and 
     assert.ok(key in I18N.ru, `data-i18n key "${key}" missing in I18N.ru`);
   }
 });
+
+test('HTML includes async GoatCounter analytics script and unique click event attributes', () => {
+  const gcScripts = [...html.matchAll(/<script\b([^>]*)>/gi)].filter((m) =>
+    /src="https:\/\/gc\.zgo\.at\/count\.js"/.test(m[1])
+  );
+  assert.equal(gcScripts.length, 1, 'Expected exactly one GoatCounter script tag');
+  const scriptAttrs = gcScripts[0][1];
+  assert.match(scriptAttrs, /\basync\b/, 'GoatCounter script must be async');
+  assert.match(
+    scriptAttrs,
+    /data-goatcounter="https:\/\/henge\.goatcounter\.com\/count"/,
+    'GoatCounter endpoint must be https://henge.goatcounter.com/count'
+  );
+
+  const expectedEvents = [
+    'download-macos',
+    'click-github-hero',
+    'demo-fix',
+    'copy-brew',
+    'copy-curl',
+    'copy-xattr',
+    'click-releases-footer',
+  ];
+
+  const clickTags = [...html.matchAll(/<(a|button)\b([^>]*\bdata-goatcounter-click="([^"]+)"[^>]*)>/gi)];
+  const nonClickableEvents = [...html.matchAll(/<(?!a\b|button\b)[a-z0-9-]+\b[^>]*\bdata-goatcounter-click="([^"]+)"/gi)];
+  assert.equal(nonClickableEvents.length, 0, 'data-goatcounter-click must only be placed on <a> or <button> elements');
+
+  const seenEvents = [];
+  for (const [, , attrs, eventName] of clickTags) {
+    seenEvents.push(eventName);
+    assert.match(
+      attrs,
+      /\bdata-goatcounter-title="[^"]+"/,
+      `Event "${eventName}" must define a non-empty data-goatcounter-title`
+    );
+  }
+
+  assert.equal(new Set(seenEvents).size, seenEvents.length, 'Duplicate data-goatcounter-click event names found');
+  for (const eventName of expectedEvents) {
+    assert.ok(seenEvents.includes(eventName), `Missing expected data-goatcounter-click="${eventName}"`);
+  }
+});
+

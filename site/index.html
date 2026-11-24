@@ -190,7 +190,14 @@
         <p class="hero-subtitle" data-i18n="hero.subtitle">Henge lives quietly in your macOS menu bar and turns ghbdtn into привет or руддщ into hello when you press ⌥X — without switching input sources first.</p>
 
         <div class="hero-actions">
-          <a class="btn btn-primary" href="https://github.com/413d/henge/releases/latest" target="_blank" rel="noopener noreferrer">
+          <a
+            class="btn btn-primary"
+            href="https://github.com/413d/henge/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-goatcounter-click="download-macos"
+            data-goatcounter-title="Download for macOS"
+          >
             <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3v12"></path>
               <path d="M7 10l5 5 5-5"></path>
@@ -198,7 +205,15 @@
             </svg>
             <span data-i18n="hero.ctaDownload">Download for macOS</span>
           </a>
-          <a class="btn btn-secondary" href="https://github.com/413d/henge" target="_blank" rel="noopener noreferrer" data-i18n="hero.ctaGithub">View on GitHub</a>
+          <a
+            class="btn btn-secondary"
+            href="https://github.com/413d/henge"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-i18n="hero.ctaGithub"
+            data-goatcounter-click="click-github-hero"
+            data-goatcounter-title="View on GitHub (Hero)"
+          >View on GitHub</a>
         </div>
 
         <p class="hero-meta" data-i18n="hero.meta">macOS 13+ · Universal (Apple Silicon &amp; Intel) · Free&nbsp;&amp;&nbsp;MIT</p>
@@ -288,7 +303,13 @@
             >Ghbdtn, vbh!</textarea>
 
             <div class="demo-controls">
-              <button type="button" id="demo-fix-btn" class="btn btn-primary demo-fix-btn">
+              <button
+                type="button"
+                id="demo-fix-btn"
+                class="btn btn-primary demo-fix-btn"
+                data-goatcounter-click="demo-fix"
+                data-goatcounter-title="Live Playground Fix Text"
+              >
                 <span data-i18n="demo.fixBtn">Fix Text</span>
                 <kbd>⌥X</kbd>
               </button>
@@ -447,6 +468,8 @@
                 class="copy-btn"
                 data-copy-target="#brew-cmd"
                 data-copy-text="brew tap 413d/henge https://github.com/413d/henge && brew install --cask 413d/henge/henge"
+                data-goatcounter-click="copy-brew"
+                data-goatcounter-title="Copy Homebrew install command"
               >
                 <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="9" y="9" width="11" height="11" rx="2"></rect>
@@ -471,6 +494,8 @@
                 class="copy-btn"
                 data-copy-target="#curl-cmd"
                 data-copy-text="curl -fsSL https://raw.githubusercontent.com/413d/henge/main/scripts/install.sh | bash"
+                data-goatcounter-click="copy-curl"
+                data-goatcounter-title="Copy curl install command"
               >
                 <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="9" y="9" width="11" height="11" rx="2"></rect>
@@ -515,6 +540,8 @@
                       class="copy-btn"
                       data-copy-target="#xattr-cmd"
                       data-copy-text="xattr -dr com.apple.quarantine ~/Applications/Henge.app"
+                      data-goatcounter-click="copy-xattr"
+                      data-goatcounter-title="Copy xattr quarantine command"
                     >
                       <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="9" y="9" width="11" height="11" rx="2"></rect>
@@ -591,7 +618,14 @@
       </div>
 
       <div class="footer-links">
-        <a href="https://github.com/413d/henge/releases" target="_blank" rel="noopener noreferrer" data-i18n="footer.releases">Releases</a>
+        <a
+          href="https://github.com/413d/henge/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-i18n="footer.releases"
+          data-goatcounter-click="click-releases-footer"
+          data-goatcounter-title="Releases (Footer)"
+        >Releases</a>
         <a href="https://github.com/413d/henge/issues/new" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Report an Issue</a>
         <a href="https://github.com/413d/henge/blob/main/docs/architecture.md" target="_blank" rel="noopener noreferrer" data-i18n="footer.architecture">Architecture</a>
         <a href="./llms.txt">llms.txt</a>
@@ -615,5 +649,6 @@
       root.classList.remove('is-i18n-pending');
     })();
   </script>
+  <script data-goatcounter="https://henge.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
