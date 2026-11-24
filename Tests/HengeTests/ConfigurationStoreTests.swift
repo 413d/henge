@@ -144,6 +144,15 @@ struct ConfigurationStoreTests {
         #expect(directoryContents.contains(where: { $0.lastPathComponent.starts(with: "config.corrupt-") }))
     }
 
+    @Test
+    func initSortsAndDeduplicatesExcludedApplicationBundleIdentifiers() {
+        let configuration = AppConfiguration(
+            excludedApplicationBundleIdentifiers: ["com.example.Beta", "com.example.Alpha", "com.example.Alpha"]
+        )
+
+        #expect(configuration.excludedApplicationBundleIdentifiers == ["com.example.Alpha", "com.example.Beta"])
+    }
+
     private func temporaryDirectoryURL() throws -> URL {
         let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         return directoryURL

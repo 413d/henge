@@ -42,13 +42,13 @@ struct AppConfiguration: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try values.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
-        isEnabled = try values.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
-        shortcut = try values.decodeIfPresent(Shortcut.self, forKey: .shortcut) ?? .defaultFixText
-        excludedApplicationBundleIdentifiers = Array(
-            Set(try values.decodeIfPresent([String].self, forKey: .excludedApplicationBundleIdentifiers) ?? [])
-        ).sorted()
-        hasCompletedOnboarding = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        self.init(
+            schemaVersion: try values.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1,
+            isEnabled: try values.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true,
+            launchAtLogin: try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true,
+            shortcut: try values.decodeIfPresent(Shortcut.self, forKey: .shortcut) ?? .defaultFixText,
+            excludedApplicationBundleIdentifiers: try values.decodeIfPresent([String].self, forKey: .excludedApplicationBundleIdentifiers) ?? [],
+            hasCompletedOnboarding: try values.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        )
     }
 }

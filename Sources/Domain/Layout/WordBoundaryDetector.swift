@@ -40,20 +40,60 @@ public struct DefaultWordBoundaryDetector: WordBoundaryDetecting {
             safeOffset = text.count
         }
 
+        let anchor: (index: String.Index, offset: Int)?
         if caretIndex < text.endIndex && isWordCharacter(text[caretIndex]) {
-            return wordBoundary(in: text, startingAt: caretIndex, offset: safeOffset)
+            anchor = (caretIndex, safeOffset)
+        } else {
+            anchor = findNearbyWordCharacter(in: text, from: caretIndex, offset: safeOffset, direction: .backward)
+                ?? findNearbyWordCharacter(in: text, from: caretIndex, offset: safeOffset, direction: .forward)
         }
 
-        if let previousWord = previousWord(in: text, before: caretIndex, offset: safeOffset) {
-            return previousWord
+        guard let anchor else {
+            return nil
         }
 
-        return nextWord(in: text, after: caretIndex, offset: safeOffset)
+        return expandWord(in: text, around: anchor.index, offset: anchor.offset)
     }
 
-    private func wordBoundary(
+    private enum SearchDirection {
+        case backward
+        case forward
+    }
+
+    private func findNearbyWordCharacter(
         in text: String,
-        startingAt index: String.Index,
+        from index: String.Index,
+        offset: Int,
+        direction: SearchDirection
+    ) -> (index: String.Index, offset: Int)? {
+        var cursor = index
+        var cursorOffset = offset
+
+        for _ in 0..<Self.windowSize {
+            switch direction {
+            case .backward:
+                guard cursor > text.startIndex else { return nil }
+                cursor = text.index(before: cursor)
+                cursorOffset -= 1
+                if isWordCharacter(text[cursor]) {
+                    return (cursor, cursorOffset)
+                }
+            case .forward:
+                guard cursor < text.endIndex else { return nil }
+                if isWordCharacter(text[cursor]) {
+                    return (cursor, cursorOffset)
+                }
+                cursor = text.index(after: cursor)
+                cursorOffset += 1
+            }
+        }
+
+        return nil
+    }
+
+    private func expandWord(
+        in text: String,
+        around index: String.Index,
         offset: Int
     ) -> WordBoundary? {
         var start = index
@@ -69,88 +109,6 @@ public struct DefaultWordBoundaryDetector: WordBoundaryDetecting {
 
         var end = text.index(after: index)
         var endOffset = offset + 1
-        while end < text.endIndex && isWordCharacter(text[end]) {
-            end = text.index(after: end)
-            endOffset += 1
-        }
-
-        guard startOffset < endOffset else {
-            return nil
-        }
-
-        return WordBoundary(text: String(text[start..<end]), range: startOffset..<endOffset)
-    }
-
-    private func previousWord(
-        in text: String,
-        before index: String.Index,
-        offset: Int
-    ) -> WordBoundary? {
-        guard index > text.startIndex else {
-            return nil
-        }
-
-        var end = index
-        var endOffset = offset
-        var steps = 0
-
-        while end > text.startIndex && steps < Self.windowSize {
-            let prev = text.index(before: end)
-            if isWordCharacter(text[prev]) {
-                break
-            }
-            end = prev
-            endOffset -= 1
-            steps += 1
-        }
-
-        guard end > text.startIndex, steps < Self.windowSize else {
-            return nil
-        }
-
-        var start = end
-        var startOffset = endOffset
-        while start > text.startIndex {
-            let prev = text.index(before: start)
-            guard isWordCharacter(text[prev]) else {
-                break
-            }
-            start = prev
-            startOffset -= 1
-        }
-
-        guard startOffset < endOffset else {
-            return nil
-        }
-
-        return WordBoundary(text: String(text[start..<end]), range: startOffset..<endOffset)
-    }
-
-    private func nextWord(
-        in text: String,
-        after index: String.Index,
-        offset: Int
-    ) -> WordBoundary? {
-        guard index < text.endIndex else {
-            return nil
-        }
-
-        var start = index
-        var startOffset = offset
-        var steps = 0
-
-        while start < text.endIndex && steps < Self.windowSize && !isWordCharacter(text[start]) {
-            start = text.index(after: start)
-            startOffset += 1
-            steps += 1
-        }
-
-        guard start < text.endIndex, steps < Self.windowSize else {
-            return nil
-        }
-
-        var end = text.index(after: start)
-        var endOffset = startOffset + 1
         while end < text.endIndex && isWordCharacter(text[end]) {
             end = text.index(after: end)
             endOffset += 1

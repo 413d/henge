@@ -179,4 +179,17 @@ struct WordBoundaryDetectorTests {
 
         #expect(detector.detect(in: "...,,,!!!", caretOffset: 4) == nil)
     }
+
+    @Test
+    func prefersPreviousWordOnDelimiterBetweenWordsAndClampsNegativeOffset() {
+        let detector = DefaultWordBoundaryDetector()
+
+        let between = detector.detect(in: "hello world", caretOffset: 5)
+        #expect(between?.text == "hello")
+        #expect(between?.range == 0..<5)
+
+        let clampedNegative = detector.detect(in: "hello", caretOffset: -5)
+        #expect(clampedNegative?.text == "hello")
+        #expect(clampedNegative?.range == 0..<5)
+    }
 }

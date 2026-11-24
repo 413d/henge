@@ -20,7 +20,6 @@ struct ConfigurationMigrator {
            normalized.shortcut.modifiers == Shortcut.defaultFixText.modifiers {
             normalized.shortcut = .defaultFixText
         }
-        normalized.excludedApplicationBundleIdentifiers = Array(Set(normalized.excludedApplicationBundleIdentifiers)).sorted()
         return normalized
     }
 }
