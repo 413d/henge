@@ -177,7 +177,6 @@ final class AppKitClipboardReplacement: ClipboardReplacing {
             return .failed
         }
 
-        pasteboard.clear()
         guard pasteboard.setTransientString(replacement) else {
             logger.warning("\(DiagnosticsLabel.replacementFailed.rawValue, privacy: .public) stage=write")
             return .failed

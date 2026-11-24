@@ -92,6 +92,14 @@ struct Shortcut: Codable, Equatable {
             return "Space"
         case "return", "enter":
             return "↩"
+        case "left", "leftarrow":
+            return "←"
+        case "right", "rightarrow":
+            return "→"
+        case "up", "uparrow":
+            return "↑"
+        case "down", "downarrow":
+            return "↓"
         case "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12":
             return key.uppercased()
         default:

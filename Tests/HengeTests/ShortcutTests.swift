@@ -26,9 +26,17 @@ struct ShortcutTests {
         #expect(Shortcut(key: "f1", modifiers: [.option]).displayString == "⌥F1")
         #expect(Shortcut(key: "F12", modifiers: [.control]).displayString == "⌃F12")
         #expect(Shortcut(key: "←", modifiers: [.option]).displayString == "⌥←")
+        #expect(Shortcut(key: "left", modifiers: [.option]).displayString == "⌥←")
+        #expect(Shortcut(key: "leftarrow", modifiers: [.option]).displayString == "⌥←")
         #expect(Shortcut(key: "→", modifiers: [.option]).displayString == "⌥→")
+        #expect(Shortcut(key: "right", modifiers: [.option]).displayString == "⌥→")
+        #expect(Shortcut(key: "rightarrow", modifiers: [.option]).displayString == "⌥→")
         #expect(Shortcut(key: "↑", modifiers: [.option]).displayString == "⌥↑")
+        #expect(Shortcut(key: "up", modifiers: [.option]).displayString == "⌥↑")
+        #expect(Shortcut(key: "uparrow", modifiers: [.option]).displayString == "⌥↑")
         #expect(Shortcut(key: "↓", modifiers: [.option]).displayString == "⌥↓")
+        #expect(Shortcut(key: "down", modifiers: [.option]).displayString == "⌥↓")
+        #expect(Shortcut(key: "downarrow", modifiers: [.option]).displayString == "⌥↓")
     }
 
     @Test

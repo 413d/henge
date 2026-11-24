@@ -128,7 +128,7 @@ enum MenuBarIcon {
         let image = NSImage(size: pointSize)
         image.addRepresentation(bitmap)
         image.isTemplate = true
-        image.accessibilityDescription = "Henge"
+        image.accessibilityDescription = baseImage.accessibilityDescription ?? "Henge"
         return image
     }
 

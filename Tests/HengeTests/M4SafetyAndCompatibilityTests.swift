@@ -610,10 +610,9 @@ private final class TestReplacementPasteboard: ReplacementPasteboard {
     }
 
     func setTransientString(_ string: String) -> Bool {
-        pendingCopy = nil
+        clear()
         lastTransientWrittenString = string
         contents = string
-        storedChangeCount += 1
         return true
     }
 

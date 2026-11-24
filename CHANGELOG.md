@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Plain-text clipboard restore fallback** (`AppKitClipboardManager.restore(_:)` + `PasteboardBacking`) extracting plain text (UTF-8, UTF-16 with BOM handling, plain text, or RTF) when multi-UTI pasteboard restoration fails, preventing an empty clipboard.
+- **Plain-text clipboard restore fallback** (`AppKitClipboardManager.restore(_:)` + `PasteboardBacking`) attempting full-fidelity multi-UTI restoration and falling back to restoring plain text (UTF-8, UTF-16 with BOM handling, plain text, or RTF) when rich item restoration fails, surfacing `.clipboardRestoreFailed` otherwise.
 - **Concurrent clipboard copy protection** (`ownedChangeCount` supersede guard in `AppKitClipboardReplacement`) returning `.superseded` and skipping snapshot restoration when the user copies newer content during the fallback window.
 - **Onboarding permission polling lifecycle** stopping background Accessibility polling immediately when the onboarding window closes or dismisses.
 - **Activation wait timeout clamping** (`ActivationWaiter.sleepNanoseconds(for:)`) guarding against `NaN`, non-finite, non-positive, and oversized timeouts (clamped to 60 seconds) so `Task.sleep` never traps.

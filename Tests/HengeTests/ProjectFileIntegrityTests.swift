@@ -19,7 +19,7 @@ struct ProjectFileIntegrityTests {
         let objectsRangeStart = try #require(content.range(of: "objects = {"))
         let objectsContent = String(content[objectsRangeStart.upperBound...])
 
-        let pattern = #"^\t\t([0-9A-F]{24}) /\* .* \*/ = \{"#
+        let pattern = #"^\t\t([0-9A-F]{24})(?: /\*.*?\*/)? = \{"#
         let regex = try NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines])
         let range = NSRange(objectsContent.startIndex..<objectsContent.endIndex, in: objectsContent)
 

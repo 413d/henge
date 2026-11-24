@@ -9,3 +9,5 @@ Henge.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 .DS_Store
 .superpowers/
+docs/superpowers/
+
